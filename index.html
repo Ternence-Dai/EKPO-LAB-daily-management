@@ -484,6 +484,8 @@ img,svg,canvas,video{max-width:100%}
         // Guard browser storage access: a blocked/corrupt cache must not prevent the lab app from opening.
         let DB;
         let storageWarning = false;
+        // Never let fallback demo records overwrite an unreadable or malformed user cache.
+        let storageRecoveryRequired = false;
         let cachedLabRaw = null;
         try {
             cachedLabRaw = localStorage.getItem('lab_management_db_v9');
@@ -505,6 +507,7 @@ img,svg,canvas,video{max-width:100%}
             console.warn('本地缓存不可用或结构异常，已载入内置演示数据。请检查浏览器存储并恢复备份。', storageError);
             DB = JSON.parse(JSON.stringify(defaultData));
             storageWarning = true;
+            storageRecoveryRequired = true;
         }
         
         // 兼容旧版本数据升级
@@ -521,6 +524,13 @@ img,svg,canvas,video{max-width:100%}
         let fileHandle = null;
 
         async function saveToLocal() {
+            if (storageRecoveryRequired) {
+                storageWarning = true;
+                showToast('检测到原实验室缓存异常，已阻止演示数据覆盖；请先导入有效 JSON 备份。', 'error');
+                const status = document.getElementById('saveText');
+                if (status) status.innerText = '缓存待恢复 · 自动保存已锁定';
+                return false;
+            }
             try {
                 localStorage.setItem('lab_management_db_v9', JSON.stringify(DB));
                 storageWarning = false;
@@ -626,6 +636,10 @@ img,svg,canvas,video{max-width:100%}
 
         // ==================== 4. 本地实时保存 ====================
         async function enableLocalRealTimeSave() {
+            if (storageRecoveryRequired) {
+                showToast('原缓存尚未恢复，已阻止将演示数据写入新文件；请先导入有效备份。', 'error');
+                return;
+            }
             if (!window.showSaveFilePicker) { showToast('请使用Edge或Chrome浏览器', 'error'); return; }
             try {
                 fileHandle = await window.showSaveFilePicker({
@@ -1261,7 +1275,8 @@ img,svg,canvas,video{max-width:100%}
                         Array.isArray(imported.spareParts) && Array.isArray(imported.testDiary) &&
                         (imported.maintLogs == null || Array.isArray(imported.maintLogs)) &&
                         (imported.spareLogs == null || Array.isArray(imported.spareLogs))) {
-                        DB = imported; 
+                        DB = imported;
+                        storageRecoveryRequired = false;
                         if (!DB.maintLogs) DB.maintLogs = [];
                         if (!DB.spareLogs) DB.spareLogs = [];
                         saveToLocal(); showToast('数据导入成功！'); switchTab('dashboard', document.querySelector('.nav-item'));
