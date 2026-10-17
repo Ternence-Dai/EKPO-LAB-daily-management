@@ -18,6 +18,8 @@ jobs:
           node-version: 22
       - name: Validate lab maintenance and timeline logic
         run: node scripts/validate-lab-timeline.cjs
+      - name: Validate maintenance calendar intervals
+        run: node scripts/validate-maintenance-calendar.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
