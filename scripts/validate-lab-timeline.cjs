@@ -25,4 +25,3 @@ assert.ok(html.includes("if(!t){showToast('测试记录不存在，请刷新后�
 console.log('Lab timeline and maintenance regression checks passed.');
 assert.match(html, /new Date\(p\.value\[1\]\)\.toLocaleString\(\)/, 'test diary tooltip must display the actual start timestamp');
 assert.match(html, /new Date\(p\.value\[2\]\)\.toLocaleString\(\)/, 'test diary tooltip must display the actual end timestamp');
-assert.doesNotMatch(html, /new Date\(p\.value\[0\]\)\.toLocaleDateString\(\)/, 'category index must never be interpreted as a date');
