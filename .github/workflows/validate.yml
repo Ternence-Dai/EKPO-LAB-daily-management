@@ -24,6 +24,8 @@ jobs:
         run: node scripts/validate-spare-stock.cjs
       - name: Validate imported-data HTML escaping
         run: node scripts/validate-html-escaping.cjs
+      - name: Validate cache recovery write protection
+        run: node scripts/validate-storage-recovery.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
