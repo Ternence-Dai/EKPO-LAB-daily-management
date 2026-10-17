@@ -568,6 +568,21 @@
         }
 
         // ==================== 9. 测试台日志 ====================
+        function diaryTimestamp(value) {
+            const match = typeof value === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+            if (match) {
+                const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+                const date = new Date(year, month - 1, day);
+                if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return NaN;
+                return date.getTime();
+            }
+            return new Date(value).getTime();
+        }
+        function diaryYear(value) {
+            const timestamp = diaryTimestamp(value);
+            return Number.isFinite(timestamp) ? new Date(timestamp).getFullYear() : NaN;
+        }
+
         function renderTestDiary() {
             let search = document.getElementById('search-testDiary').value.toLowerCase();
             let tbody = document.querySelector('#table-testDiary tbody'); tbody.innerHTML = '';
@@ -597,8 +612,8 @@
             let timeChart = initChart('chart-testDiary-timeline');
             if(timeChart && filtered.length > 0) {
                 let data = filtered.map((t, index) => {
-                    const start = new Date(t.start).getTime();
-                    const end = new Date(t.end).getTime();
+                    const start = diaryTimestamp(t.start);
+                    const end = diaryTimestamp(t.end);
                     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
                     // Keep the category index as the first value for the custom series.
                     return { name: t.unit + '-' + t.start, value: [index, start, end], itemStyle: { color: '#f59e0b' } };
@@ -628,7 +643,7 @@
                 DB.gases.forEach(g => years.add(g.year));
                 DB.maintLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
                 DB.spareLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
-                DB.testDiary.forEach(t => years.add(new Date(t.start).getFullYear()));
+                DB.testDiary.forEach(t => years.add(diaryYear(t.start)));
                 let sortedYears = [...years].sort((a,b) => b - a);
                 sortedYears.forEach(y => {
                     let opt = document.createElement('option'); opt.value = y; opt.innerText = y + '年'; select.appendChild(opt);
@@ -644,7 +659,7 @@
             let totalGasCost = DB.gases.filter(g => yearFilter(g.year)).reduce((sum, g) => sum + (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0), 0);
             let totalMaintCost = DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
             let totalSpareCost = DB.spareParts.filter(s => yearFilter(new Date(s.update || getToday()).getFullYear())).reduce((sum, s) => sum + ((Number(s.qty) || 0) * (Number(s.price) || 0)), 0);
-            let totalHours = DB.testDiary.filter(t => yearFilter(new Date(t.start).getFullYear())).reduce((sum, t) => sum + (Number(t.duration) || 0), 0);
+            let totalHours = DB.testDiary.filter(t => yearFilter(diaryYear(t.start))).reduce((sum, t) => sum + (Number(t.duration) || 0), 0);
             let totalCost = totalGasCost + totalMaintCost;
             
             document.getElementById('year-total-cost').innerText = '¥' + totalCost.toLocaleString();
@@ -691,7 +706,7 @@
                 <tr><td>气体使用</td><td>总费用</td><td>¥${totalGasCost.toLocaleString()}</td></tr>
                 <tr><td>设备维保</td><td>维保次数 / 总费用</td><td>${DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).length} 次 / ¥${totalMaintCost.toLocaleString()}</td></tr>
                 <tr><td>备件库存</td><td>所选年度更新记录的当前库存估值（非年度采购额）</td><td>¥${totalSpareCost.toLocaleString()}</td></tr>
-                <tr><td>测试台日志</td><td>总运行时长 / 故障次数</td><td>${totalHours} h / ${DB.testDiary.filter(t => yearFilter(new Date(t.start).getFullYear()) && t.error).length} 次</td></tr>
+                <tr><td>测试台日志</td><td>总运行时长 / 故障次数</td><td>${totalHours} h / ${DB.testDiary.filter(t => yearFilter(diaryYear(t.start)) && t.error).length} 次</td></tr>
             </tbody></table>`;
         }
 
