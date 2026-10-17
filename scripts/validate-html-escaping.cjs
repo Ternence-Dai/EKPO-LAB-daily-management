@@ -3,9 +3,11 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync('index.html', 'utf8');
-const match = html.match(/const esc = value => String\(value == null \? '' : value\)\.replace\(\/\[&<>"'\]\/g,[\s\S]*?\n\s*\);/);
-if (!match) throw new Error('HTML escaping helper not found');
-const esc = vm.runInNewContext('(' + match[0].replace(/^const esc = /, '').replace(/;$/, '') + ')');
+const helperStart = html.indexOf('const esc = value =>');
+const helperEnd = html.indexOf('\\n', helperStart);
+if (helperStart < 0 || helperEnd < 0) throw new Error('HTML escaping helper not found');
+const helperSource = html.slice(helperStart, helperEnd).replace(/^const esc = /, '').replace(/;$/, '');
+const esc = vm.runInNewContext('(' + helperSource + ')');
 assert.equal(esc('<img src=x onerror=alert(1)>'), '&lt;img src=x onerror=alert(1)&gt;');
 assert.equal(esc('A&B "quoted"'), 'A&amp;B &quot;quoted&quot;');
 for (const token of [
