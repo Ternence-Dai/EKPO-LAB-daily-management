@@ -758,6 +758,45 @@ img,svg,canvas,video{max-width:100%}
         function saveGas() { let id=document.getElementById('g-id').value; let year=+document.getElementById('g-year').value; let monthNum=+document.getElementById('g-month').value; let monthStr = year + '-' + (monthNum < 10 ? '0'+monthNum : monthNum); let data={item:document.getElementById('g-item').value, spec:document.getElementById('g-spec').value, supplier:document.getElementById('g-supplier').value, batch:document.getElementById('g-batch').value, year:year, monthNum:monthNum, month:monthStr, delivery:+document.getElementById('g-delivery').value, return:+document.getElementById('g-return').value, consumption:+document.getElementById('g-consumption').value, cost:+document.getElementById('g-cost').value, rent:+document.getElementById('g-rent').value, freight:+document.getElementById('g-freight').value}; if(id){let i=DB.gases.findIndex(x=>x.id==id); DB.gases[i]={...DB.gases[i],...data}; showToast('已更新');}else{data.id=Date.now(); DB.gases.push(data); showToast('已新增');} saveToLocal(); closeModal('modal-gas'); renderGases(); }
 
         // ==================== 7. 维保管理 ====================
+        function isValidDateOnly(value) {
+            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value || ''))) return false;
+            const [year, month, day] = value.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+            return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+        function maintenanceIntervalMonths(freq) {
+            const value = String(freq || '').trim();
+            if (/季度/.test(value)) return 3;
+            if (/半年/.test(value)) return 6;
+            if (/年度|每年|年/.test(value)) return 12;
+            if (/月度|每月/.test(value)) return 1;
+            const match = value.match(/(\\d+)\\s*个?月/);
+            return match ? Math.max(1, Number(match[1])) : null;
+        }
+        function addCalendarMonths(dateValue, months) {
+            if (!isValidDateOnly(dateValue) || !Number.isInteger(months) || months < 1) return '';
+            const [year, month, day] = dateValue.split('-').map(Number);
+            const first = new Date(year, month - 1 + months, 1);
+            const lastDay = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+            const result = new Date(first.getFullYear(), first.getMonth(), Math.min(day, lastDay));
+            return result.getFullYear() + '-' +
+                String(result.getMonth() + 1).padStart(2, '0') + '-' +
+                String(result.getDate()).padStart(2, '0');
+        }
+        function syncMaintenanceSchedule(eqId) {
+            const eq = DB.maintenance.find(item => item.id === eqId);
+            if (!eq) return false;
+            const logs = DB.maintLogs.filter(log => log.eqId === eqId && isValidDateOnly(log.date));
+            if (!logs.length) return false;
+            logs.sort((a, b) => a.date.localeCompare(b.date));
+            const latest = logs[logs.length - 1];
+            eq.last = latest.date;
+            const months = maintenanceIntervalMonths(eq.freq);
+            // Unknown/custom frequencies must be scheduled manually; never assume annual.
+            eq.next = months ? addCalendarMonths(latest.date, months) : '';
+            return true;
+        }
+
         function renderMaintenance() {
             let search = document.getElementById('search-maint').value.toLowerCase();
             let tbody = document.querySelector('#table-maintenance tbody'); tbody.innerHTML = '';
@@ -846,20 +885,29 @@ img,svg,canvas,video{max-width:100%}
             openModal('modal-maint-log');
         }
         function saveMaintLog() {
-            let id = document.getElementById('ml-id').value;
-            let eqId = +document.getElementById('ml-eq').value;
-            let data = { eqId: eqId, date: document.getElementById('ml-date').value, checker: document.getElementById('ml-checker').value, operator: document.getElementById('ml-operator').value, cost: +document.getElementById('ml-cost').value, record: document.getElementById('ml-record').value };
-            if (id) { let i = DB.maintLogs.findIndex(x => x.id == id); DB.maintLogs[i] = { ...DB.maintLogs[i], ...data }; showToast('维保记录已更新'); }
-            else { data.id = Date.now(); DB.maintLogs.push(data); showToast('维保记录已新增'); }
-            // 同步更新设备台账的 last 和 next 日期
-            let eq = DB.maintenance.find(m => m.id === eqId);
-            if (eq) {
-                eq.last = data.date;
-                let cycleDays = eq.freq === '季度' ? 90 : (eq.freq === '月度' ? 30 : 365);
-                let next = new Date(data.date); next.setDate(next.getDate() + cycleDays);
-                eq.next = next.toISOString().split('T')[0];
+            const id = document.getElementById('ml-id').value;
+            const eqId = Number(document.getElementById('ml-eq').value);
+            const date = document.getElementById('ml-date').value;
+            const costRaw = document.getElementById('ml-cost').value;
+            const cost = costRaw === '' ? 0 : Number(costRaw);
+            if (!DB.maintenance.some(item => item.id === eqId)) {
+                showToast('请选择有效的设备台账记录', 'error'); return;
             }
-            saveToLocal(); closeModal('modal-maint-log'); renderMaintenance();
+            if (!isValidDateOnly(date)) { showToast('维保日期无效', 'error'); return; }
+            if (!Number.isFinite(cost) || cost < 0) { showToast('维保费用必须是大于或等于 0 的有效数字', 'error'); return; }
+            const data = { eqId, date, checker: document.getElementById('ml-checker').value,
+                operator: document.getElementById('ml-operator').value, cost,
+                record: document.getElementById('ml-record').value };
+            if (id) {
+                const i = DB.maintLogs.findIndex(x => String(x.id) === String(id));
+                if (i < 0) { showToast('原维保记录已不存在，请刷新后重试', 'error'); return; }
+                DB.maintLogs[i] = { ...DB.maintLogs[i], ...data };
+                showToast('维保记录已更新');
+            } else {
+                data.id = Date.now(); DB.maintLogs.push(data); showToast('维保记录已新增');
+            }
+            syncMaintenanceSchedule(eqId);
+            saveToLocal(); closeModal('modal-maint-log'); renderMaintenance(); renderMaintLogs();
         }
 
         // ==================== 8. 备件管理 ====================
@@ -1105,9 +1153,13 @@ img,svg,canvas,video{max-width:100%}
         // ==================== 12. 导出与删除 ====================
         async function deleteItem(table, id) {
             if (confirm('确认删除这条记录吗？')) {
+                const affectedMaintenanceIds = table === 'maintLogs'
+                    ? [...new Set(DB.maintLogs.filter(item => item.id === id).map(item => item.eqId))] : [];
                 DB[table] = DB[table].filter(item => item.id !== id);
+                if (table === 'maintLogs') affectedMaintenanceIds.forEach(syncMaintenanceSchedule);
                 await saveToLocal();
                 if (table === 'gases') renderGases();
+                if (table === 'maintLogs') { renderMaintenance(); renderMaintLogs(); }
                 if (table === 'maintenance') renderMaintenance();
                 if (table === 'spareParts') renderSpareParts();
                 if (table === 'testDiary') renderTestDiary();
