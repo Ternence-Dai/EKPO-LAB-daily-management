@@ -688,7 +688,7 @@ img,svg,canvas,video{max-width:100%}
             }
             
             let alerts = [];
-            let maintAlerts = DB.maintenance.filter(m => m.next && new Date(m.next) < new Date()).length;
+            let maintAlerts = DB.maintenance.filter(m => isOverdueDateOnly(m.next)).length;
             let spareAlerts = DB.spareParts.filter(s => s.replenish === 'Y').length;
             if (maintAlerts > 0) alerts.push(`⚙️ 有 ${maintAlerts} 项设备维保已逾期！`);
             if (spareAlerts > 0) alerts.push(`📦 有 ${spareAlerts} 项备件需要补货！`);
@@ -791,6 +791,9 @@ img,svg,canvas,video{max-width:100%}
             const [year, month, day] = value.split('-').map(Number);
             const date = new Date(year, month - 1, day);
             return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+        function isOverdueDateOnly(value, today = getToday()) {
+            return isValidDateOnly(value) && value < today;
         }
         function maintenanceIntervalMonths(freq) {
             const value = String(freq || '').trim();
