@@ -605,7 +605,7 @@
                 }).filter(Boolean);
                 if (!data.length) { timeChart.clear(); return; }
                 timeChart.setOption({
-                    tooltip: { formatter: p => `${p.name}<br/>开始: ${new Date(p.value[0]).toLocaleDateString()}<br/>结束: ${new Date(p.value[1]).toLocaleDateString()}` },
+                    tooltip: { formatter: p => `${p.name}<br/>开始: ${new Date(p.value[1]).toLocaleString()}<br/>结束: ${new Date(p.value[2]).toLocaleString()}` },
                     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
                     xAxis: { type: 'time', boundaryGap: false, axisLabel: { formatter: '{yyyy}-{MM}-{dd}', rotate: 45 }, minInterval: 3600 * 24 * 1000 },
                     yAxis: { type: 'category', data: filtered.map(t => t.unit) },
