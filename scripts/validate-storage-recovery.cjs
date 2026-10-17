@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const html = fs.readFileSync('index.html', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 assert.match(html, /let storageRecoveryRequired = false;/,
   'app must track a separate persistence recovery lock');
 assert.match(html, /storageRecoveryRequired = true;/,
