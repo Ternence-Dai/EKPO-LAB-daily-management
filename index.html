@@ -507,7 +507,16 @@ img,svg,canvas,video{max-width:100%}
         let fileHandle = null;
 
         async function saveToLocal() {
-            localStorage.setItem('lab_management_db_v9', JSON.stringify(DB));
+            try {
+                localStorage.setItem('lab_management_db_v9', JSON.stringify(DB));
+                storageWarning = false;
+            } catch (storageError) {
+                storageWarning = true;
+                console.error('浏览器缓存保存失败；请立即导出 JSON 备份。', storageError);
+                showToast('浏览器缓存不可用，修改尚未可靠保存；请立即导出备份。', 'error');
+                const status = document.getElementById('saveText');
+                if (status) status.innerText = '浏览器缓存保存失败 · 请导出备份';
+            }
             if (fileHandle) {
                 try {
                     const writable = await fileHandle.createWritable();
@@ -523,7 +532,13 @@ img,svg,canvas,video{max-width:100%}
             }
         }
 
-        function getToday() { return new Date().toISOString().split('T')[0]; }
+        function getToday() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
         function showToast(msg, type = 'success') { let t = document.getElementById('toast'); t.className = `toast toast-${type} show`; t.innerText = msg; setTimeout(() => t.classList.remove('show'), 3000); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
