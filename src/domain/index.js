@@ -14,3 +14,15 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
   const expiry = Date.parse(calibratedAt) + validForDays * 86400000;
   return at.getTime() <= expiry;
 }
+
+export function validateTestDiaryEntry(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError("test diary entry is required");
+  const { start, end, duration, unit, operator } = entry;
+  if (typeof start !== "string" || !start.trim() || !Number.isFinite(Date.parse(start))) throw new TypeError("test start time must be valid");
+  if (typeof end !== "string" || !end.trim() || !Number.isFinite(Date.parse(end))) throw new TypeError("test end time must be valid");
+  if (Date.parse(end) < Date.parse(start)) throw new RangeError("test end time cannot precede start time");
+  if (!Number.isFinite(duration) || duration <= 0) throw new RangeError("test duration must be a positive finite number");
+  if (typeof unit !== "string" || !unit.trim()) throw new TypeError("test unit is required");
+  if (typeof operator !== "string" || !operator.trim()) throw new TypeError("test operator is required");
+  return Object.freeze({ ...entry, start:new Date(start).toISOString(), end:new Date(end).toISOString(), unit:unit.trim(), operator:operator.trim() });
+}
