@@ -20,6 +20,8 @@ jobs:
         run: node scripts/validate-lab-timeline.cjs
       - name: Validate maintenance calendar intervals
         run: node scripts/validate-maintenance-calendar.cjs
+      - name: Validate spare stock movements
+        run: node scripts/validate-spare-stock.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
