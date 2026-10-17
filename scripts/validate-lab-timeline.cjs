@@ -21,4 +21,5 @@ assert.match(html, /非年度采购额/,
   'spare inventory valuation must not be mislabeled as annual procurement');
 assert.doesNotMatch(html, /年度备件采购总额/,
   'current stock valuation must not be presented as annual purchases');
+assert.ok(html.includes("if(!t){showToast('测试记录不存在，请刷新后重试','error');return;}"), 'stale test diary edit IDs must be handled without dereferencing a missing record');
 console.log('Lab timeline and maintenance regression checks passed.');
