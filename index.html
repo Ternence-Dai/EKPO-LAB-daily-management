@@ -962,21 +962,28 @@ img,svg,canvas,video{max-width:100%}
         function saveSpare() { let id=document.getElementById('s-id').value; let update=document.getElementById('s-update').value || getToday(); let data={category:document.getElementById('s-category').value, desc:document.getElementById('s-desc').value, catalog:document.getElementById('s-catalog').value, purpose:document.getElementById('s-purpose').value, qty:+document.getElementById('s-qty').value, brand:document.getElementById('s-brand').value, price:+document.getElementById('s-price').value, location:document.getElementById('s-location').value, update:update}; if(id){let i=DB.spareParts.findIndex(x=>x.id==id); DB.spareParts[i]={...DB.spareParts[i],...data}; showToast('已更新');}else{data.id=Date.now(); DB.spareParts.push(data); showToast('已新增');} saveToLocal(); closeModal('modal-spare'); renderSpareParts(); }
 
         function saveSpareLog() {
-            let partId = +document.getElementById('sl-part').value;
-            let action = document.getElementById('sl-action').value;
-            let qty = +document.getElementById('sl-qty').value;
-            let data = { partId: partId, date: document.getElementById('sl-date').value, action: action, qty: qty, operator: document.getElementById('sl-operator').value, note: document.getElementById('sl-note').value };
-            data.id = Date.now();
-            DB.spareLogs.push(data);
-            // 更新备件库存
-            let part = DB.spareParts.find(p => p.id === partId);
-            if (part) {
-                if (action === '入库') part.qty += qty;
-                else part.qty = Math.max(0, part.qty - qty);
-                part.update = data.date;
+            const partId = Number(document.getElementById('sl-part').value);
+            const action = document.getElementById('sl-action').value;
+            const qtyRaw = document.getElementById('sl-qty').value;
+            const qty = qtyRaw === '' ? NaN : Number(qtyRaw);
+            const date = document.getElementById('sl-date').value;
+            const part = DB.spareParts.find(p => p.id === partId);
+            if (!part) { showToast('请选择有效的备件记录', 'error'); return; }
+            if (!['入库', '出库'].includes(action)) { showToast('请选择有效的出入库类型', 'error'); return; }
+            if (!Number.isFinite(qty) || qty <= 0) { showToast('出入库数量必须是大于 0 的有效数字', 'error'); return; }
+            if (!isValidDateOnly(date)) { showToast('出入库日期无效', 'error'); return; }
+            const currentQty = Number(part.qty);
+            if (!Number.isFinite(currentQty) || currentQty < 0) { showToast('当前库存数据异常，请先核对库存台账', 'error'); return; }
+            if (action === '出库' && qty > currentQty) {
+                showToast('出库数量超过当前库存，已阻止本次出库', 'error'); return;
             }
+            const data = { partId, date, action, qty, operator: document.getElementById('sl-operator').value,
+                note: document.getElementById('sl-note').value, id: Date.now() };
+            // Validate first, then atomically append the ledger entry and update stock.
+            part.qty = action === '入库' ? currentQty + qty : currentQty - qty;
+            part.update = date;
+            DB.spareLogs.push(data);
             saveToLocal(); closeModal('modal-spare-log'); renderSpareParts();
-            // 如果当前在流水界面，刷新流水
             if (!document.getElementById('spare-log-view').classList.contains('hidden')) renderSpareLogs();
             showToast('流水已保存，库存已更新');
         }
