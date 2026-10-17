@@ -32,3 +32,14 @@ test("rejects test diary records with reversed times, zero duration or missing t
  assert.throws(()=>validateTestDiaryEntry({...base,operator:" "}),TypeError);
  assert.throws(()=>validateTestDiaryEntry({...base,unit:""}),TypeError);
 });
+
+test("preserves date-only diary dates as local calendar values",()=>{
+ const valid=validateTestDiaryEntry({start:"2026-10-17",end:"2026-10-18",duration:2,unit:"Cell-A",operator:"operator-1"});
+ assert.equal(valid.start,"2026-10-17");
+ assert.equal(valid.end,"2026-10-18");
+});
+test("rejects impossible date-only diary calendar values",()=>{
+ const base={start:"2026-02-28",end:"2026-03-01",duration:1,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry({...base,start:"2026-02-30"}),/calendar date/);
+ assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-02-30"}),/calendar date/);
+});
