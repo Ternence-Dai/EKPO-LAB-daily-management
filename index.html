@@ -898,14 +898,17 @@ img,svg,canvas,video{max-width:100%}
             const data = { eqId, date, checker: document.getElementById('ml-checker').value,
                 operator: document.getElementById('ml-operator').value, cost,
                 record: document.getElementById('ml-record').value };
+            let previousEqId = null;
             if (id) {
                 const i = DB.maintLogs.findIndex(x => String(x.id) === String(id));
                 if (i < 0) { showToast('原维保记录已不存在，请刷新后重试', 'error'); return; }
+                previousEqId = DB.maintLogs[i].eqId;
                 DB.maintLogs[i] = { ...DB.maintLogs[i], ...data };
                 showToast('维保记录已更新');
             } else {
                 data.id = Date.now(); DB.maintLogs.push(data); showToast('维保记录已新增');
             }
+            if (previousEqId !== null && previousEqId !== eqId) syncMaintenanceSchedule(previousEqId);
             syncMaintenanceSchedule(eqId);
             saveToLocal(); closeModal('modal-maint-log'); renderMaintenance(); renderMaintLogs();
         }
