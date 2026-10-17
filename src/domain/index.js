@@ -15,14 +15,29 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
   return at.getTime() <= expiry;
 }
 
+function normalizeDiaryDate(value, label) {
+  if (typeof value !== "string" || !value.trim()) throw new TypeError(`test ${label} must be valid`);
+  // Date-only form controls represent calendar days, not UTC instants. Keep
+  // that representation stable so charts do not shift the day by timezone.
+  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+    const normalized = new Date(value + "T00:00:00.000Z");
+    if (!Number.isFinite(normalized.getTime()) || normalized.toISOString().slice(0,10) !== value) {
+      throw new TypeError(`test ${label} must be a valid calendar date`);
+    }
+    return value;
+  }
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) throw new TypeError(`test ${label} must be valid`);
+  return new Date(timestamp).toISOString();
+}
 export function validateTestDiaryEntry(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError("test diary entry is required");
   const { start, end, duration, unit, operator } = entry;
-  if (typeof start !== "string" || !start.trim() || !Number.isFinite(Date.parse(start))) throw new TypeError("test start time must be valid");
-  if (typeof end !== "string" || !end.trim() || !Number.isFinite(Date.parse(end))) throw new TypeError("test end time must be valid");
-  if (Date.parse(end) < Date.parse(start)) throw new RangeError("test end time cannot precede start time");
+  const normalizedStart = normalizeDiaryDate(start, "start time");
+  const normalizedEnd = normalizeDiaryDate(end, "end time");
+  if (Date.parse(normalizedEnd) < Date.parse(normalizedStart)) throw new RangeError("test end time cannot precede start time");
   if (!Number.isFinite(duration) || duration <= 0) throw new RangeError("test duration must be a positive finite number");
   if (typeof unit !== "string" || !unit.trim()) throw new TypeError("test unit is required");
   if (typeof operator !== "string" || !operator.trim()) throw new TypeError("test operator is required");
-  return Object.freeze({ ...entry, start:new Date(start).toISOString(), end:new Date(end).toISOString(), unit:unit.trim(), operator:operator.trim() });
+  return Object.freeze({ ...entry, start:normalizedStart, end:normalizedEnd, unit:unit.trim(), operator:operator.trim() });
 }
