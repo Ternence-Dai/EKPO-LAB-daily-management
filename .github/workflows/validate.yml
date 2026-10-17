@@ -22,6 +22,8 @@ jobs:
         run: node scripts/validate-maintenance-calendar.cjs
       - name: Validate spare stock movements
         run: node scripts/validate-spare-stock.cjs
+      - name: Validate imported-data HTML escaping
+        run: node scripts/validate-html-escaping.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
