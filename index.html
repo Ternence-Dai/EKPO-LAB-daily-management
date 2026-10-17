@@ -275,13 +275,13 @@ img,svg,canvas,video{max-width:100%}
                     </select>
                 </div>
                 <div class="metrics-grid">
-                    <div class="card"><div class="card-title">年度总费用 (气体+备件+维保)</div><div class="card-value" id="year-total-cost">--</div></div>
+                    <div class="card"><div class="card-title">年度已记录费用（气体+维保）</div><div class="card-value" id="year-total-cost">--</div></div>
                     <div class="card"><div class="card-title">年度设备维保总数</div><div class="card-value" id="year-maint-count">--</div></div>
-                    <div class="card"><div class="card-title">年度备件采购总额</div><div class="card-value" id="year-spare-cost">--</div></div>
+                    <div class="card"><div class="card-title">所选年度更新的备件库存估值</div><div class="card-value" id="year-spare-cost">--</div></div>
                     <div class="card"><div class="card-title">年度测试总时长 (h)</div><div class="card-value" id="year-test-hours">--</div></div>
                 </div>
                 <div class="charts-row">
-                    <div class="card"><div class="card-title">📊 年度各科目费用构成（树状图）</div><div id="chart-yearly-treemap" class="chart-box"></div></div>
+                    <div class="card"><div class="card-title">📊 年度已记录费用构成（不含库存估值）</div><div id="chart-yearly-treemap" class="chart-box"></div></div>
                     <div class="card"><div class="card-title">📈 全年费用与消耗趋势</div><div id="chart-yearly-gas-trend" class="chart-box"></div></div>
                 </div>
                 <div class="card">
@@ -659,7 +659,7 @@ img,svg,canvas,video{max-width:100%}
                         data: [
                             { name: '气体费用', value: totalGasCost || 1 },
                             { name: '维保费用', value: totalMaintCost || 1 },
-                            { name: '备件总值', value: totalSpareCost || 1 }
+                            
                         ],
                         label: { formatter: '{b}\n¥{c}' },
                         itemStyle: { borderColor: '#fff' }
@@ -1096,7 +1096,7 @@ img,svg,canvas,video{max-width:100%}
             let totalMaintCost = DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
             let totalSpareCost = DB.spareParts.filter(s => yearFilter(new Date(s.update || getToday()).getFullYear())).reduce((sum, s) => sum + ((Number(s.qty) || 0) * (Number(s.price) || 0)), 0);
             let totalHours = DB.testDiary.filter(t => yearFilter(new Date(t.start).getFullYear())).reduce((sum, t) => sum + (Number(t.duration) || 0), 0);
-            let totalCost = totalGasCost + totalMaintCost + totalSpareCost;
+            let totalCost = totalGasCost + totalMaintCost;
             
             document.getElementById('year-total-cost').innerText = '¥' + totalCost.toLocaleString();
             document.getElementById('year-maint-count').innerText = DB.maintenance.length + ' 台';
@@ -1141,7 +1141,7 @@ img,svg,canvas,video{max-width:100%}
             container.innerHTML = `<table><thead><tr><th>类别</th><th>关键指标</th><th>数量/费用</th></tr></thead><tbody>
                 <tr><td>气体使用</td><td>总费用</td><td>¥${totalGasCost.toLocaleString()}</td></tr>
                 <tr><td>设备维保</td><td>维保次数 / 总费用</td><td>${DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).length} 次 / ¥${totalMaintCost.toLocaleString()}</td></tr>
-                <tr><td>备件库存</td><td>总价值</td><td>¥${totalSpareCost.toLocaleString()}</td></tr>
+                <tr><td>备件库存</td><td>所选年度更新记录的当前库存估值（非年度采购额）</td><td>¥${totalSpareCost.toLocaleString()}</td></tr>
                 <tr><td>测试台日志</td><td>总运行时长 / 故障次数</td><td>${totalHours} h / ${DB.testDiary.filter(t => yearFilter(new Date(t.start).getFullYear()) && t.error).length} 次</td></tr>
             </tbody></table>`;
         }
