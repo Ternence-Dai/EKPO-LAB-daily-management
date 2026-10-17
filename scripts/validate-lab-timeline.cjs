@@ -13,4 +13,12 @@ assert.match(html, /Number\(l\.cost\)\s*\|\|\s*0/,
   'maintenance cost aggregation must coerce imported numeric values');
 assert.match(html, /days === null[\s\S]{0,160}未设置日期/,
   'missing due dates must not be shown as healthy/normal');
+assert.match(html, /年度已记录费用（气体\+维保）/,
+  'annual expense KPI must distinguish recorded costs from inventory valuation');
+assert.match(html, /let totalCost = totalGasCost \+ totalMaintCost;/,
+  'spare inventory valuation must not be added to annual expense');
+assert.match(html, /非年度采购额/,
+  'spare inventory valuation must not be mislabeled as annual procurement');
+assert.doesNotMatch(html, /年度备件采购总额/,
+  'current stock valuation must not be presented as annual purchases');
 console.log('Lab timeline and maintenance regression checks passed.');
