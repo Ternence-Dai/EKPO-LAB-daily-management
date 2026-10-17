@@ -640,9 +640,9 @@ img,svg,canvas,video{max-width:100%}
 
         // ==================== 5. 仪表盘渲染 ====================
         function renderDashboard() {
-            let totalGasCost = DB.gases.reduce((sum, g) => sum + (g.cost || 0) + (g.rent || 0) + (g.freight || 0), 0);
-            let totalMaintCost = DB.maintLogs.reduce((sum, m) => sum + (m.cost || 0), 0);
-            let totalSpareCost = DB.spareParts.reduce((sum, s) => sum + ((s.qty || 0) * (s.price || 0)), 0);
+            let totalGasCost = DB.gases.reduce((sum, g) => sum + (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0), 0);
+            let totalMaintCost = DB.maintLogs.reduce((sum, m) => sum + (Number(m.cost) || 0), 0);
+            let totalSpareCost = DB.spareParts.reduce((sum, s) => sum + ((Number(s.qty) || 0) * (Number(s.price) || 0)), 0);
             let testErrors = DB.testDiary.filter(t => t.error && t.error.trim() !== '').length;
 
             document.getElementById('dash-gas').innerText = '¥' + totalGasCost.toLocaleString();
@@ -717,7 +717,7 @@ img,svg,canvas,video{max-width:100%}
             });
 
             filtered.forEach(g => {
-                let total = (g.cost || 0) + (g.rent || 0) + (g.freight || 0);
+                let total = (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0);
                 tbody.innerHTML += `<tr>
                     <td>${g.year || '-'}</td><td>${g.monthNum || '-'}月</td><td><strong>${g.item||''}</strong></td><td>${g.spec||'-'}</td><td>${g.supplier||'-'}</td>
                     <td>${g.delivery||0}</td><td>${g.return||0}</td><td>${g.consumption||0}</td>
@@ -731,7 +731,7 @@ img,svg,canvas,video{max-width:100%}
             if(treemapChart) {
                 let gasCosts = {};
                 filtered.forEach(g => {
-                    let total = (g.cost || 0) + (g.rent || 0) + (g.freight || 0);
+                    let total = (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0);
                     gasCosts[g.item] = (gasCosts[g.item] || 0) + total;
                 });
                 treemapChart.setOption({
@@ -850,7 +850,7 @@ img,svg,canvas,video{max-width:100%}
             if(treemapChart) {
                 let deviceCosts = {};
                 DB.maintenance.forEach(m => {
-                    let total = DB.maintLogs.filter(l => l.eqId === m.id).reduce((sum, l) => sum + (l.cost || 0), 0);
+                    let total = DB.maintLogs.filter(l => l.eqId === m.id).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
                     if (total > 0) deviceCosts[m.name] = total;
                 });
                 treemapChart.setOption({
@@ -946,7 +946,7 @@ img,svg,canvas,video{max-width:100%}
             let tbody = document.querySelector('#table-spareParts tbody'); tbody.innerHTML = '';
             let filtered = DB.spareParts.filter(s => (s.desc||'').toLowerCase().includes(search) || (s.catalog||'').toLowerCase().includes(search));
             filtered.forEach(s => {
-                let totalPrice = (s.qty || 0) * (s.price || 0);
+                let totalPrice = (Number(s.qty) || 0) * (Number(s.price) || 0);
                 tbody.innerHTML += `<tr>
                     <td>${s.category||''}</td><td><strong>${s.desc||''}</strong></td><td>${s.catalog||'-'}</td><td>${s.purpose||''}</td><td>${s.brand||''}</td>
                     <td>${s.qty||0}</td><td>¥${(s.price||0).toLocaleString()}</td><td><strong>¥${totalPrice.toLocaleString()}</strong></td><td>${s.location||''}</td><td>${s.update || '-'}</td>
@@ -1092,10 +1092,10 @@ img,svg,canvas,video{max-width:100%}
             let isAll = filterYear === 'all';
             let yearFilter = (itemYear) => isAll || itemYear == filterYear;
 
-            let totalGasCost = DB.gases.filter(g => yearFilter(g.year)).reduce((sum, g) => sum + (g.cost || 0) + (g.rent || 0) + (g.freight || 0), 0);
-            let totalMaintCost = DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).reduce((sum, l) => sum + (l.cost || 0), 0);
-            let totalSpareCost = DB.spareParts.filter(s => yearFilter(new Date(s.update || getToday()).getFullYear())).reduce((sum, s) => sum + ((s.qty || 0) * (s.price || 0)), 0);
-            let totalHours = DB.testDiary.filter(t => yearFilter(new Date(t.start).getFullYear())).reduce((sum, t) => sum + (t.duration || 0), 0);
+            let totalGasCost = DB.gases.filter(g => yearFilter(g.year)).reduce((sum, g) => sum + (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0), 0);
+            let totalMaintCost = DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
+            let totalSpareCost = DB.spareParts.filter(s => yearFilter(new Date(s.update || getToday()).getFullYear())).reduce((sum, s) => sum + ((Number(s.qty) || 0) * (Number(s.price) || 0)), 0);
+            let totalHours = DB.testDiary.filter(t => yearFilter(new Date(t.start).getFullYear())).reduce((sum, t) => sum + (Number(t.duration) || 0), 0);
             let totalCost = totalGasCost + totalMaintCost + totalSpareCost;
             
             document.getElementById('year-total-cost').innerText = '¥' + totalCost.toLocaleString();
@@ -1124,8 +1124,8 @@ img,svg,canvas,video{max-width:100%}
             if(gasTrendChart) {
                 let sortedGases = DB.gases.filter(g => yearFilter(g.year)).sort((a,b) => (a.month||'').localeCompare(b.month||''));
                 let months = [...new Set(sortedGases.map(g => g.month))];
-                let totalConsump = months.map(m => sortedGases.filter(g => g.month === m).reduce((sum, g) => sum + g.consumption, 0));
-                let totalCosts = months.map(m => sortedGases.filter(g => g.month === m).reduce((sum, g) => sum + (g.cost||0)+(g.rent||0)+(g.freight||0), 0));
+                let totalConsump = months.map(m => sortedGases.filter(g => g.month === m).reduce((sum, g) => sum + (Number(g.consumption) || 0), 0));
+                let totalCosts = months.map(m => sortedGases.filter(g => g.month === m).reduce((sum, g) => sum + (Number(g.cost)||0)+(Number(g.rent)||0)+(Number(g.freight)||0), 0));
                 gasTrendChart.setOption({
                     tooltip: { trigger: 'axis' }, legend: { data: ['总余量', '气体总费用'] },
                     xAxis: { type: 'category', data: months },
