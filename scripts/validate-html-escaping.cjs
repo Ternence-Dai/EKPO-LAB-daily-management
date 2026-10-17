@@ -57,5 +57,6 @@ console.log('Imported-data HTML escaping regression checks passed.');
   await remove('spareParts', 4);
   assert.equal(sandbox.DB.spareParts.length, 1, 'spare parts with movement history must not be orphaned');
   assert.ok(html.includes('${esc(m.name)}') && html.includes('${esc(p.desc)}'), 'imported option labels must be HTML escaped');
+  assert.ok(html.includes('Array.isArray(imported.gases)') && html.includes('Array.isArray(imported.maintenance)') && html.includes('Array.isArray(imported.spareParts)') && html.includes('Array.isArray(imported.testDiary)'), 'imported tables must be arrays before replacing live data');
   console.log('Spare-parts ledger reversal and imported option escaping checks passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
