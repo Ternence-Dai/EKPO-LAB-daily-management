@@ -18,6 +18,8 @@ assert.equal(api.maintenanceIntervalMonths('季度'), 3);
 assert.equal(api.maintenanceIntervalMonths('半年'), 6);
 assert.equal(api.maintenanceIntervalMonths('年度'), 12);
 assert.equal(api.maintenanceIntervalMonths('每 2 个月'), 2);
+assert.equal(api.maintenanceIntervalMonths('每 2 年'), 24);
+assert.equal(api.maintenanceIntervalMonths('0 个月'), null);
 assert.equal(api.maintenanceIntervalMonths('按需'), null, 'unknown frequencies must not default to annual');
 assert.equal(api.addCalendarMonths('2026-01-31', 1), '2026-02-28');
 assert.equal(api.addCalendarMonths('2024-02-29', 12), '2025-02-28');
