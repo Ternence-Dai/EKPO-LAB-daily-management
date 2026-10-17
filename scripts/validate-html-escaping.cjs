@@ -22,3 +22,32 @@ for (const token of [
 for (const token of ['${g.item||\'\'}','${m.name||\'\'}','${l.record||\'\'}','${s.desc||\'\'}','${t.errorDesc || \'-\'}'])
   assert.ok(!html.includes(token), 'Unescaped imported value remains: ' + token);
 console.log('Imported-data HTML escaping regression checks passed.');
+
+(async function validateSpareLedgerDeletion() {
+  const start = html.indexOf('        async function deleteItem(table, id) {');
+  const end = html.indexOf('        function exportAllToJSON()', start);
+  assert.ok(start >= 0 && end > start, 'spare ledger delete function must be present');
+  const source = html.slice(start, end);
+  const sandbox = {
+    DB: { spareParts: [{id: 1, qty: 10}], spareLogs: [{id: 7, partId: 1, action: '入库', qty: 4}] },
+    confirm: () => true, showToast: () => {}, saveToLocal: async () => {},
+    renderSpareParts: () => {}, renderSpareLogs: () => {}, renderGases: () => {},
+    renderMaintenance: () => {}, renderMaintLogs: () => {}, renderTestDiary: () => {},
+    syncMaintenanceSchedule: () => {}
+  };
+  const remove = vm.runInNewContext('(' + source.replace(/^        /gm, '') + ')', sandbox);
+  await remove('spareLogs', 7);
+  assert.equal(sandbox.DB.spareParts[0].qty, 6, 'deleting a receipt must reverse its stock increase');
+  assert.equal(sandbox.DB.spareLogs.length, 0, 'deleted ledger entry must be removed');
+  sandbox.DB.spareParts[0].qty = 2;
+  sandbox.DB.spareLogs = [{id: 8, partId: 1, action: '入库', qty: 5}];
+  await remove('spareLogs', 8);
+  assert.equal(sandbox.DB.spareParts[0].qty, 2, 'deletion must not create negative stock');
+  assert.equal(sandbox.DB.spareLogs.length, 1, 'unsafe reversal must preserve the ledger entry');
+  sandbox.DB.spareParts[0].qty = 10;
+  sandbox.DB.spareLogs = [{id: 9, partId: 1, action: '出库', qty: 3}];
+  await remove('spareLogs', 9);
+  assert.equal(sandbox.DB.spareParts[0].qty, 13, 'deleting an issue must restore the stock');
+  assert.ok(html.includes('${esc(m.name)}') && html.includes('${esc(p.desc)}'), 'imported option labels must be HTML escaped');
+  console.log('Spare-parts ledger reversal and imported option escaping checks passed.');
+})().catch(error => { console.error(error); process.exitCode = 1; });
