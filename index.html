@@ -768,10 +768,12 @@ img,svg,canvas,video{max-width:100%}
             const value = String(freq || '').trim();
             if (/季度/.test(value)) return 3;
             if (/半年/.test(value)) return 6;
+            const yearMatch = value.match(/(\d+)\s*年/);
+            if (yearMatch) return Number(yearMatch[1]) > 0 ? Number(yearMatch[1]) * 12 : null;
             if (/年度|每年|年/.test(value)) return 12;
             if (/月度|每月/.test(value)) return 1;
-            const match = value.match(/(\d+)\s*个?月/);
-            return match ? Math.max(1, Number(match[1])) : null;
+            const monthMatch = value.match(/(\d+)\s*个?月/);
+            return monthMatch && Number(monthMatch[1]) > 0 ? Number(monthMatch[1]) : null;
         }
         function addCalendarMonths(dateValue, months) {
             if (!isValidDateOnly(dateValue) || !Number.isInteger(months) || months < 1) return '';
