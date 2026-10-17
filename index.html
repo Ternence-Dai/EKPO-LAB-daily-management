@@ -1200,6 +1200,12 @@ img,svg,canvas,video{max-width:100%}
             if (!Array.isArray(rows)) { showToast('数据表不存在，无法删除', 'error'); return; }
             const target = rows.find(item => String(item.id) === String(id));
             if (!target) { showToast('记录不存在或已被删除', 'error'); return; }
+            if (table === 'maintenance' && DB.maintLogs.some(item => String(item.eqId) === String(id))) {
+                showToast('该设备仍有关联维保历史，请先处理历史记录后再删除', 'error'); return;
+            }
+            if (table === 'spareParts' && DB.spareLogs.some(item => String(item.partId) === String(id))) {
+                showToast('该备件仍有关联出入库流水，请先处理流水后再删除', 'error'); return;
+            }
             if (table === 'spareLogs') {
                 const part = DB.spareParts.find(item => String(item.id) === String(target.partId));
                 const qty = Number(target.qty);
