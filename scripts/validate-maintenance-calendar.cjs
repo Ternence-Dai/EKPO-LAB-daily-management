@@ -1,0 +1,28 @@
+'use strict';
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const html = fs.readFileSync('index.html', 'utf8');
+const start = html.indexOf('function isValidDateOnly');
+const end = html.indexOf('function renderMaintenance', start);
+if (start < 0 || end < 0) throw new Error('Maintenance date helpers not found');
+const source = html.slice(start, end);
+const context = { DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
+  {id:1,eqId:1,date:'2026-01-31'},{id:2,eqId:1,date:'2026-04-30'}
+]}};
+vm.runInNewContext(source + '\nthis.testApi={isValidDateOnly,maintenanceIntervalMonths,addCalendarMonths,syncMaintenanceSchedule};', context);
+const api = context.testApi;
+assert.equal(api.isValidDateOnly('2026-02-28'), true);
+assert.equal(api.isValidDateOnly('2026-02-30'), false);
+assert.equal(api.maintenanceIntervalMonths('季度'), 3);
+assert.equal(api.maintenanceIntervalMonths('半年'), 6);
+assert.equal(api.maintenanceIntervalMonths('年度'), 12);
+assert.equal(api.maintenanceIntervalMonths('每 2 个月'), 2);
+assert.equal(api.maintenanceIntervalMonths('按需'), null, 'unknown frequencies must not default to annual');
+assert.equal(api.addCalendarMonths('2026-01-31', 1), '2026-02-28');
+assert.equal(api.addCalendarMonths('2024-02-29', 12), '2025-02-28');
+assert.equal(api.addCalendarMonths('2026-01-31', 3), '2026-04-30');
+api.syncMaintenanceSchedule(1);
+assert.equal(context.DB.maintenance[0].last, '2026-04-30', 'latest log must win');
+assert.equal(context.DB.maintenance[0].next, '2026-07-30');
+console.log('Maintenance calendar interval regression checks passed.');
