@@ -481,15 +481,25 @@ img,svg,canvas,video{max-width:100%}
         // Guard browser storage access: a blocked/corrupt cache must not prevent the lab app from opening.
         let DB;
         let storageWarning = false;
+        let cachedLabRaw = null;
         try {
-            const cached = localStorage.getItem('lab_management_db_v9');
-            DB = cached ? JSON.parse(cached) : JSON.parse(JSON.stringify(defaultData));
+            cachedLabRaw = localStorage.getItem('lab_management_db_v9');
+            DB = cachedLabRaw ? JSON.parse(cachedLabRaw) : JSON.parse(JSON.stringify(defaultData));
             if (!DB || !Array.isArray(DB.gases) || !Array.isArray(DB.maintenance) ||
                 !Array.isArray(DB.spareParts) || !Array.isArray(DB.testDiary)) {
                 throw new Error('缓存数据结构不完整');
             }
         } catch (storageError) {
-            console.warn('本地缓存不可用，已载入内置演示数据。请检查浏览器存储并恢复备份。', storageError);
+            if (cachedLabRaw) {
+                try {
+                    const recoveryKey = 'lab_management_db_v9_recovery_' + Date.now();
+                    localStorage.setItem(recoveryKey, cachedLabRaw);
+                    console.warn('已保留无法识别的实验室缓存恢复副本：' + recoveryKey);
+                } catch (backupError) {
+                    console.error('实验室缓存恢复副本创建失败。', backupError);
+                }
+            }
+            console.warn('本地缓存不可用或结构异常，已载入内置演示数据。请检查浏览器存储并恢复备份。', storageError);
             DB = JSON.parse(JSON.stringify(defaultData));
             storageWarning = true;
         }
