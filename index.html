@@ -531,9 +531,11 @@ img,svg,canvas,video{max-width:100%}
                 if (status) status.innerText = '缓存待恢复 · 自动保存已锁定';
                 return false;
             }
+            let localSaved = false;
             try {
                 localStorage.setItem('lab_management_db_v9', JSON.stringify(DB));
                 storageWarning = false;
+                localSaved = true;
             } catch (storageError) {
                 storageWarning = true;
                 console.error('浏览器缓存保存失败；请立即导出 JSON 备份。', storageError);
@@ -546,14 +548,19 @@ img,svg,canvas,video{max-width:100%}
                     const writable = await fileHandle.createWritable();
                     await writable.write(JSON.stringify(DB, null, 2));
                     await writable.close();
-                    document.getElementById('saveText').innerText = '本地硬盘实时保存中...';
+                    document.getElementById('saveText').innerText = localSaved
+                        ? '本地硬盘实时保存中...'
+                        : '本地文件已保存 · 浏览器缓存仍失败';
                 } catch (err) {
                     console.error(err);
                     document.getElementById('saveText').innerText = '写入本地文件失败';
                 }
-            } else {
+            } else if (localSaved) {
                 document.getElementById('saveText').innerText = '浏览器缓存自动保存中...';
+            } else {
+                document.getElementById('saveText').innerText = '浏览器缓存保存失败 · 请导出备份';
             }
+            return localSaved;
         }
 
         function getToday() {
