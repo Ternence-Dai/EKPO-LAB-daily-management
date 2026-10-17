@@ -10,7 +10,7 @@ export function transitionExperiment(experiment, nextStatus, actor) {
 export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Date()) {
   if (typeof calibratedAt !== "string" || !calibratedAt.trim() || !Number.isFinite(Date.parse(calibratedAt))) throw new TypeError("calibratedAt must be a valid date string");
   if (!Number.isInteger(validForDays) || validForDays < 0) throw new RangeError("validForDays must be non-negative");
-  if (!(at instanceof Date) || !Number.isNaN(at.getTime()) === false) throw new TypeError("at must be a valid Date");
+  if (!(at instanceof Date) || !Number.isFinite(at.getTime())) throw new TypeError("at must be a valid Date");
   const expiry = Date.parse(calibratedAt) + validForDays * 86400000;
   return at.getTime() <= expiry;
 }
