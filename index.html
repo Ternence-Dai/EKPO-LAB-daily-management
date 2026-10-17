@@ -726,7 +726,7 @@ img,svg,canvas,video{max-width:100%}
                     <td>${g.delivery||0}</td><td>${g.return||0}</td><td>${g.consumption||0}</td>
                     <td>${g.cost ? '¥'+g.cost.toLocaleString() : '-'}</td><td>${g.rent ? '¥'+g.rent.toLocaleString() : '-'}</td><td>${g.freight ? '¥'+g.freight.toLocaleString() : '-'}</td>
                     <td><strong>¥${total.toLocaleString()}</strong></td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editGas(${Number(g.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${g.id})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editGas(${Number(g.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${Number(g.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -845,7 +845,7 @@ img,svg,canvas,video{max-width:100%}
                 tbody.innerHTML += `<tr>
                     <td><strong>${esc(m.name||'')}</strong></td><td>${esc(m.category||'')}</td><td>${esc(m.location||'')}</td><td>${esc(m.qty||0)}</td><td>${esc(m.cycle||'')}</td><td>${esc(m.freq||'')}</td>
                     <td>${esc(m.last || '-')}</td><td>${esc(m.next || '-')} ${badge}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${esc(m.responsible||'')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editMaint(${Number(m.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${m.id})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editMaint(${Number(m.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${Number(m.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -892,7 +892,7 @@ img,svg,canvas,video{max-width:100%}
                 let eq = DB.maintenance.find(m => m.id === l.eqId);
                 tbody.innerHTML += `<tr>
                     <td>${esc(l.date)}</td><td><strong>${esc(eq ? eq.name : '未知设备')}</strong></td><td>${esc(l.checker||'')}</td><td>${esc(l.operator||'')}</td><td>¥${(l.cost||0).toLocaleString()}</td><td>${esc(l.record||'')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editMaintLog(${Number(l.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintLogs', ${l.id}); renderMaintLogs();">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editMaintLog(${Number(l.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintLogs', ${Number(l.id)})">删除</button></td>
                 </tr>`;
             });
         }
@@ -904,7 +904,7 @@ img,svg,canvas,video{max-width:100%}
             let l = DB.maintLogs.find(x => x.id === id);
             // 动态生成设备下拉框
             let eqSelect = document.getElementById('ml-eq');
-            eqSelect.innerHTML = DB.maintenance.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+            eqSelect.innerHTML = DB.maintenance.map(m => `<option value="${Number(m.id)}">${esc(m.name)}</option>`).join('');
             document.getElementById('ml-id').value = l.id;
             document.getElementById('ml-eq').value = l.eqId;
             document.getElementById('ml-date').value = l.date;
@@ -953,7 +953,7 @@ img,svg,canvas,video{max-width:100%}
                 tbody.innerHTML += `<tr>
                     <td>${esc(s.category||'')}</td><td><strong>${esc(s.desc||'')}</strong></td><td>${esc(s.catalog||'-')}</td><td>${esc(s.purpose||'')}</td><td>${esc(s.brand||'')}</td>
                     <td>${s.qty||0}</td><td>¥${(s.price||0).toLocaleString()}</td><td><strong>¥${totalPrice.toLocaleString()}</strong></td><td>${esc(s.location||'')}</td><td>${esc(s.update || '-')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editSpare(${Number(s.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('spareParts', ${s.id})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editSpare(${Number(s.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('spareParts', ${Number(s.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -986,7 +986,7 @@ img,svg,canvas,video{max-width:100%}
                 let badge = l.action === '入库' ? '<span class="badge badge-success">入库</span>' : '<span class="badge badge-danger">出库</span>';
                 tbody.innerHTML += `<tr>
                     <td>${esc(l.date)}</td><td><strong>${esc(part ? part.desc : '未知备件')}</strong></td><td>${badge}</td><td>${esc(l.qty)}</td><td>${esc(l.operator||'')}</td><td>${esc(l.note||'')}</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="deleteItem('spareLogs', ${l.id}); renderSpareLogs();">删除</button></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteItem('spareLogs', ${Number(l.id)})">删除</button></td>
                 </tr>`;
             });
         }
@@ -1029,7 +1029,7 @@ img,svg,canvas,video{max-width:100%}
             filtered.forEach(t => {
                 tbody.innerHTML += `<tr>
                     <td>${esc(t.start||'')}</td><td>${esc(t.end||'')}</td><td>${esc(t.duration||0)}</td><td><strong>${esc(t.unit||'')}</strong></td><td>${esc(t.operator||'')}</td><td>${esc(t.sap||'')}</td><td>${esc(t.result||'')}</td><td>${esc(t.cycle||'')}</td><td>${esc(t.error || '-')}</td><td>${esc(t.errorDesc || '-')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editTestDiary(${Number(t.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('testDiary', ${t.id})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editTestDiary(${Number(t.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('testDiary', ${Number(t.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -1184,7 +1184,7 @@ img,svg,canvas,video{max-width:100%}
             if (table === 'spareParts') openModal('modal-spare'); 
             if (table === 'spareLogs') {
                 let partSelect = document.getElementById('sl-part');
-                partSelect.innerHTML = DB.spareParts.map(p => `<option value="${p.id}">${p.desc}</option>`).join('');
+                partSelect.innerHTML = DB.spareParts.map(p => `<option value="${Number(p.id)}">${esc(p.desc)}</option>`).join('');
                 openModal('modal-spare-log');
             }
             if (table === 'testDiary') openModal('modal-testDiary'); 
@@ -1192,19 +1192,37 @@ img,svg,canvas,video{max-width:100%}
 
         // ==================== 12. 导出与删除 ====================
         async function deleteItem(table, id) {
-            if (confirm('确认删除这条记录吗？')) {
-                const affectedMaintenanceIds = table === 'maintLogs'
-                    ? [...new Set(DB.maintLogs.filter(item => item.id === id).map(item => item.eqId))] : [];
-                DB[table] = DB[table].filter(item => item.id !== id);
-                if (table === 'maintLogs') affectedMaintenanceIds.forEach(syncMaintenanceSchedule);
-                await saveToLocal();
-                if (table === 'gases') renderGases();
-                if (table === 'maintLogs') { renderMaintenance(); renderMaintLogs(); }
-                if (table === 'maintenance') renderMaintenance();
-                if (table === 'spareParts') renderSpareParts();
-                if (table === 'testDiary') renderTestDiary();
-                showToast('删除成功');
+            if (!confirm('确认删除这条记录吗？')) return;
+            const rows = DB[table];
+            if (!Array.isArray(rows)) { showToast('数据表不存在，无法删除', 'error'); return; }
+            const target = rows.find(item => String(item.id) === String(id));
+            if (!target) { showToast('记录不存在或已被删除', 'error'); return; }
+            if (table === 'spareLogs') {
+                const part = DB.spareParts.find(item => String(item.id) === String(target.partId));
+                const qty = Number(target.qty);
+                const currentQty = part ? Number(part.qty) : NaN;
+                if (!part || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(currentQty)) {
+                    showToast('流水关联的备件或数量异常，未删除记录', 'error'); return;
+                }
+                const nextQty = target.action === '入库' ? currentQty - qty
+                    : target.action === '出库' ? currentQty + qty : NaN;
+                if (!Number.isFinite(nextQty) || nextQty < 0) {
+                    showToast('无法撤销该入库流水：当前库存不足，请先核对库存与后续流水', 'error'); return;
+                }
+                part.qty = nextQty;
             }
+            const affectedMaintenanceIds = table === 'maintLogs'
+                ? [...new Set(DB.maintLogs.filter(item => String(item.id) === String(id)).map(item => item.eqId))] : [];
+            DB[table] = rows.filter(item => String(item.id) !== String(id));
+            if (table === 'maintLogs') affectedMaintenanceIds.forEach(syncMaintenanceSchedule);
+            await saveToLocal();
+            if (table === 'gases') renderGases();
+            if (table === 'maintLogs') { renderMaintenance(); renderMaintLogs(); }
+            if (table === 'maintenance') renderMaintenance();
+            if (table === 'spareParts') renderSpareParts();
+            if (table === 'spareLogs') { renderSpareParts(); renderSpareLogs(); }
+            if (table === 'testDiary') renderTestDiary();
+            showToast('删除成功');
         }
         function exportAllToJSON() {
             let dataStr = JSON.stringify(DB, null, 2);
