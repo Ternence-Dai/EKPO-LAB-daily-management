@@ -759,7 +759,7 @@ img,svg,canvas,video{max-width:100%}
 
         // ==================== 7. 维保管理 ====================
         function isValidDateOnly(value) {
-            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value || ''))) return false;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
             const [year, month, day] = value.split('-').map(Number);
             const date = new Date(year, month - 1, day);
             return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
@@ -770,7 +770,7 @@ img,svg,canvas,video{max-width:100%}
             if (/半年/.test(value)) return 6;
             if (/年度|每年|年/.test(value)) return 12;
             if (/月度|每月/.test(value)) return 1;
-            const match = value.match(/(\\d+)\\s*个?月/);
+            const match = value.match(/(\d+)\s*个?月/);
             return match ? Math.max(1, Number(match[1])) : null;
         }
         function addCalendarMonths(dateValue, months) {
