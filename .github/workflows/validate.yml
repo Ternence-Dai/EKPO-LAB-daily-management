@@ -16,6 +16,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Validate lab maintenance and timeline logic
+        run: node scripts/validate-lab-timeline.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
