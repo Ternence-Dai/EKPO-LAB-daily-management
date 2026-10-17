@@ -1257,7 +1257,10 @@ img,svg,canvas,video{max-width:100%}
             reader.onload = function(e) {
                 try {
                     let imported = JSON.parse(e.target.result);
-                    if (imported.gases && imported.maintenance && imported.spareParts && imported.testDiary) {
+                    if (imported && Array.isArray(imported.gases) && Array.isArray(imported.maintenance) &&
+                        Array.isArray(imported.spareParts) && Array.isArray(imported.testDiary) &&
+                        (imported.maintLogs == null || Array.isArray(imported.maintLogs)) &&
+                        (imported.spareLogs == null || Array.isArray(imported.spareLogs))) {
                         DB = imported; 
                         if (!DB.maintLogs) DB.maintLogs = [];
                         if (!DB.spareLogs) DB.spareLogs = [];
