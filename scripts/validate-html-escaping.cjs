@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync('index.html', 'utf8');
 const helperStart = html.indexOf('const esc = value =>');
-const helperEnd = html.indexOf('\\n', helperStart);
+const helperEnd = html.indexOf('\n', helperStart);
 if (helperStart < 0 || helperEnd < 0) throw new Error('HTML escaping helper not found');
 const helperSource = html.slice(helperStart, helperEnd).replace(/^const esc = /, '').replace(/;$/, '');
 const esc = vm.runInNewContext('(' + helperSource + ')');
