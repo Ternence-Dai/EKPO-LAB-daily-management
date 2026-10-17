@@ -79,6 +79,9 @@ button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
 img,svg,canvas,video{max-width:100%}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @media print{*{box-shadow:none!important;text-shadow:none!important}body{overflow:visible!important;height:auto!important;min-height:0!important;background:#fff!important;color:#111!important}.sidebar,.bottomnav,.bottomnav,.tabbar,.toast,.toast-container,.modal-backdrop{display:none!important}.main,.main-content,.content,.view{overflow:visible!important;height:auto!important;min-height:0!important;margin:0!important;width:100%!important;color:#111!important;background:#fff!important}}
+
+/* EKPO LabOS product redesign v1 */
+.labos-intro{--intro-accent:#0d9488;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;margin-bottom:16px;border:1px solid #cfe8e4;border-radius:15px;background:linear-gradient(110deg,#f1fbf9,#eaf7f5 62%,#f8fcfb);box-shadow:0 7px 20px rgba(15,118,110,.05)}.labos-intro .eyebrow{font-size:10px;letter-spacing:1.6px;font-weight:800;color:#0f766e}.labos-intro h2{font-size:21px;color:#123b3a;margin:4px 0}.labos-intro p{font-size:12px;color:#547674;line-height:1.65;max-width:650px}.labos-intro .labos-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.labos-intro .labos-tags span{font-size:10px;padding:5px 9px;border-radius:7px;border:1px solid #cde8e3;background:#fff;color:#286b66}.labos-intro .labos-stamp{width:74px;height:74px;flex:0 0 74px;border-radius:19px;background:linear-gradient(145deg,#ccfbf1,#ecfdf5);color:#0f766e;display:grid;place-items:center;font-size:27px;font-weight:900}@media(max-width:680px){.labos-intro{padding:14px}.labos-intro .labos-stamp{display:none}}
 </style>
 </head>
 <body>
@@ -136,6 +139,7 @@ img,svg,canvas,video{max-width:100%}
 
         <div class="content-body">
             <!-- 1. 仪表盘 -->
+                <div class="labos-intro"><div><div class="eyebrow">EKPO LABOS · LAB OPERATIONS</div><h2>实验室运行与设备保障中心</h2><p>统一管理气体资源、设备维保、备件库存与测试台运行日志。请保持校准、维修和安全记录完整，避免用演示数据替代现场记录。</p><div class="labos-tags"><span>气体台账</span><span>设备维保</span><span>备件库存</span><span>测试日志</span><span>年度统计</span></div></div><div class="labos-stamp">LAB</div></div>
             <section id="page-dashboard">
                 <div class="metrics-grid">
                     <div class="card"><div class="card-title">累计气体总费用</div><div class="card-value" id="dash-gas">--</div></div>
