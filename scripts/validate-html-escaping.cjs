@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const html = fs.readFileSync('index.html', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const helperStart = html.indexOf('const esc = value =>');
 const helperEnd = html.indexOf('\n        // ==================== 1.', helperStart);
 if (helperStart < 0 || helperEnd < 0) throw new Error('HTML escaping helper not found');
