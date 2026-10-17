@@ -473,7 +473,21 @@ img,svg,canvas,video{max-width:100%}
             ]
         };
 
-        let DB = JSON.parse(localStorage.getItem('lab_management_db_v9')) || JSON.parse(JSON.stringify(defaultData));
+        // Guard browser storage access: a blocked/corrupt cache must not prevent the lab app from opening.
+        let DB;
+        let storageWarning = false;
+        try {
+            const cached = localStorage.getItem('lab_management_db_v9');
+            DB = cached ? JSON.parse(cached) : JSON.parse(JSON.stringify(defaultData));
+            if (!DB || !Array.isArray(DB.gases) || !Array.isArray(DB.maintenance) ||
+                !Array.isArray(DB.spareParts) || !Array.isArray(DB.testDiary)) {
+                throw new Error('缓存数据结构不完整');
+            }
+        } catch (storageError) {
+            console.warn('本地缓存不可用，已载入内置演示数据。请检查浏览器存储并恢复备份。', storageError);
+            DB = JSON.parse(JSON.stringify(defaultData));
+            storageWarning = true;
+        }
         
         // 兼容旧版本数据升级
         if (!DB.maintLogs) DB.maintLogs = [];
@@ -1096,7 +1110,10 @@ img,svg,canvas,video{max-width:100%}
         }
 
         // ==================== 初始化 ====================
-        window.onload = () => { renderDashboard(); };
+        window.onload = () => {
+            renderDashboard();
+            if (storageWarning) showToast('本地缓存损坏或不可用，当前为演示数据；请勿覆盖原始备份', 'error');
+        };
     </script>
 </body>
 </html>
