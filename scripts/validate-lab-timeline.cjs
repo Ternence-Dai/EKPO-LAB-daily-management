@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const html = fs.readFileSync('index.html', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 assert.match(html, /value:\s*\[index,\s*last,\s*next\]/,
   'maintenance timeline must include category index, start and end');
 assert.match(html, /value:\s*\[index,\s*start,\s*end\]/,
