@@ -64,3 +64,14 @@ img,svg,canvas{max-width:100%}
   body{background:#fff!important;color:#111!important}
   :where(.card,.panel,.stat-card,.metric-card){box-shadow:none!important;break-inside:avoid}
 }
+
+
+/* V2 application-specific visual layer */
+body .sidebar{background:linear-gradient(180deg,#14233b,#0f1a2d);border-right:0;box-shadow:10px 0 28px rgba(15,23,42,.12)}
+body .main-content{min-width:0;background:#f5f7fb}
+body .topbar{background:rgba(255,255,255,.96);border-bottom-color:#e7edf5;box-shadow:0 2px 12px rgba(15,23,42,.04)}
+body .content-body{padding:clamp(16px,2vw,30px)}
+body .card{border:1px solid #e6ebf2;border-radius:14px;box-shadow:0 5px 18px rgba(15,23,42,.045)}
+body .nav-item{border-radius:9px;margin:2px 10px}
+body .nav-item.active{background:rgba(59,130,246,.18);border-left:3px solid #3b82f6;color:#fff}
+body .btn-primary{background:linear-gradient(135deg,#2563eb,#0d9488);box-shadow:0 5px 14px rgba(37,99,235,.16)}
