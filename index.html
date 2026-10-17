@@ -451,6 +451,9 @@ img,svg,canvas,video{max-width:100%}
     <div id="toast" class="toast"></div>
 
     <script>
+        // Escape untrusted local/imported text before inserting it into HTML.
+        const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g,
+            char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
         // ==================== 1. 数据层（兼容升级） ====================
         const defaultData = {
             gases: [
@@ -691,7 +694,7 @@ img,svg,canvas,video{max-width:100%}
             if (spareAlerts > 0) alerts.push(`📦 有 ${spareAlerts} 项备件需要补货！`);
             if (testErrors > 0) alerts.push(`📅 测试台运行日志中存在 ${testErrors} 次故障记录`);
             let alertList = document.getElementById('alert-list');
-            alertList.innerHTML = alerts.length === 0 ? '<li>✅ 当前无待处理事项</li>' : alerts.map(a => `<li>${a}</li>`).join('');
+            alertList.innerHTML = alerts.length === 0 ? '<li>✅ 当前无待处理事项</li>' : alerts.map(a => `<li>${esc(a)}</li>`).join('');
         }
 
         // ==================== 6. 气体记录 ====================
@@ -719,11 +722,11 @@ img,svg,canvas,video{max-width:100%}
             filtered.forEach(g => {
                 let total = (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0);
                 tbody.innerHTML += `<tr>
-                    <td>${g.year || '-'}</td><td>${g.monthNum || '-'}月</td><td><strong>${g.item||''}</strong></td><td>${g.spec||'-'}</td><td>${g.supplier||'-'}</td>
+                    <td>${esc(g.year || '-')}</td><td>${esc(g.monthNum || '-')}月</td><td><strong>${esc(g.item||'')}</strong></td><td>${esc(g.spec||'-')}</td><td>${esc(g.supplier||'-')}</td>
                     <td>${g.delivery||0}</td><td>${g.return||0}</td><td>${g.consumption||0}</td>
                     <td>${g.cost ? '¥'+g.cost.toLocaleString() : '-'}</td><td>${g.rent ? '¥'+g.rent.toLocaleString() : '-'}</td><td>${g.freight ? '¥'+g.freight.toLocaleString() : '-'}</td>
                     <td><strong>¥${total.toLocaleString()}</strong></td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editGas(${g.id})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${g.id})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editGas(${Number(g.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${g.id})">删除</button></td>
                 </tr>`;
             });
 
@@ -840,9 +843,9 @@ img,svg,canvas,video{max-width:100%}
                     : days <= 30 ? '<span class="badge badge-warning">即将到期</span>'
                     : '<span class="badge badge-success">正常</span>';
                 tbody.innerHTML += `<tr>
-                    <td><strong>${m.name||''}</strong></td><td>${m.category||''}</td><td>${m.location||''}</td><td>${m.qty||0}</td><td>${m.cycle||''}</td><td>${m.freq||''}</td>
-                    <td>${m.last || '-'}</td><td>${m.next || '-'} ${badge}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${m.responsible||''}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editMaint(${m.id})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${m.id})">删除</button></td>
+                    <td><strong>${esc(m.name||'')}</strong></td><td>${esc(m.category||'')}</td><td>${esc(m.location||'')}</td><td>${esc(m.qty||0)}</td><td>${esc(m.cycle||'')}</td><td>${esc(m.freq||'')}</td>
+                    <td>${esc(m.last || '-')}</td><td>${esc(m.next || '-')} ${badge}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${esc(m.responsible||'')}</td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editMaint(${Number(m.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${m.id})">删除</button></td>
                 </tr>`;
             });
 
@@ -888,8 +891,8 @@ img,svg,canvas,video{max-width:100%}
             DB.maintLogs.sort((a,b) => (b.date||'').localeCompare(a.date||'')).forEach(l => {
                 let eq = DB.maintenance.find(m => m.id === l.eqId);
                 tbody.innerHTML += `<tr>
-                    <td>${l.date}</td><td><strong>${eq ? eq.name : '未知设备'}</strong></td><td>${l.checker||''}</td><td>${l.operator||''}</td><td>¥${(l.cost||0).toLocaleString()}</td><td>${l.record||''}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editMaintLog(${l.id})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintLogs', ${l.id}); renderMaintLogs();">删除</button></td>
+                    <td>${esc(l.date)}</td><td><strong>${esc(eq ? eq.name : '未知设备')}</strong></td><td>${esc(l.checker||'')}</td><td>${esc(l.operator||'')}</td><td>¥${(l.cost||0).toLocaleString()}</td><td>${esc(l.record||'')}</td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editMaintLog(${Number(l.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintLogs', ${l.id}); renderMaintLogs();">删除</button></td>
                 </tr>`;
             });
         }
@@ -948,9 +951,9 @@ img,svg,canvas,video{max-width:100%}
             filtered.forEach(s => {
                 let totalPrice = (Number(s.qty) || 0) * (Number(s.price) || 0);
                 tbody.innerHTML += `<tr>
-                    <td>${s.category||''}</td><td><strong>${s.desc||''}</strong></td><td>${s.catalog||'-'}</td><td>${s.purpose||''}</td><td>${s.brand||''}</td>
-                    <td>${s.qty||0}</td><td>¥${(s.price||0).toLocaleString()}</td><td><strong>¥${totalPrice.toLocaleString()}</strong></td><td>${s.location||''}</td><td>${s.update || '-'}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editSpare(${s.id})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('spareParts', ${s.id})">删除</button></td>
+                    <td>${esc(s.category||'')}</td><td><strong>${esc(s.desc||'')}</strong></td><td>${esc(s.catalog||'-')}</td><td>${esc(s.purpose||'')}</td><td>${esc(s.brand||'')}</td>
+                    <td>${s.qty||0}</td><td>¥${(s.price||0).toLocaleString()}</td><td><strong>¥${totalPrice.toLocaleString()}</strong></td><td>${esc(s.location||'')}</td><td>${esc(s.update || '-')}</td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editSpare(${Number(s.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('spareParts', ${s.id})">删除</button></td>
                 </tr>`;
             });
 
@@ -982,7 +985,7 @@ img,svg,canvas,video{max-width:100%}
                 let part = DB.spareParts.find(p => p.id === l.partId);
                 let badge = l.action === '入库' ? '<span class="badge badge-success">入库</span>' : '<span class="badge badge-danger">出库</span>';
                 tbody.innerHTML += `<tr>
-                    <td>${l.date}</td><td><strong>${part ? part.desc : '未知备件'}</strong></td><td>${badge}</td><td>${l.qty}</td><td>${l.operator||''}</td><td>${l.note||''}</td>
+                    <td>${esc(l.date)}</td><td><strong>${esc(part ? part.desc : '未知备件')}</strong></td><td>${badge}</td><td>${esc(l.qty)}</td><td>${esc(l.operator||'')}</td><td>${esc(l.note||'')}</td>
                     <td><button class="btn btn-danger btn-sm" onclick="deleteItem('spareLogs', ${l.id}); renderSpareLogs();">删除</button></td>
                 </tr>`;
             });
@@ -1025,8 +1028,8 @@ img,svg,canvas,video{max-width:100%}
             let filtered = DB.testDiary.filter(t => (t.unit||'').toLowerCase().includes(search) || (t.operator||'').toLowerCase().includes(search) || (t.error||'').toLowerCase().includes(search));
             filtered.forEach(t => {
                 tbody.innerHTML += `<tr>
-                    <td>${t.start||''}</td><td>${t.end||''}</td><td>${t.duration||0}</td><td><strong>${t.unit||''}</strong></td><td>${t.operator||''}</td><td>${t.sap||''}</td><td>${t.result||''}</td><td>${t.cycle||''}</td><td>${t.error || '-'}</td><td>${t.errorDesc || '-'}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editTestDiary(${t.id})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('testDiary', ${t.id})">删除</button></td>
+                    <td>${esc(t.start||'')}</td><td>${esc(t.end||'')}</td><td>${esc(t.duration||0)}</td><td><strong>${esc(t.unit||'')}</strong></td><td>${esc(t.operator||'')}</td><td>${esc(t.sap||'')}</td><td>${esc(t.result||'')}</td><td>${esc(t.cycle||'')}</td><td>${esc(t.error || '-')}</td><td>${esc(t.errorDesc || '-')}</td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editTestDiary(${Number(t.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('testDiary', ${t.id})">删除</button></td>
                 </tr>`;
             });
 
@@ -1153,10 +1156,10 @@ img,svg,canvas,video{max-width:100%}
             let data = DB[table];
             if (!data || data.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">暂无数据，请点击上方按钮新增</p>'; return; }
             let keys = Object.keys(data[0]);
-            let html = '<table><thead><tr>' + keys.map(k => `<th>${k}</th>`).join('') + '<th>操作</th></tr></thead><tbody>';
+            let html = '<table><thead><tr>' + keys.map(k => `<th>${esc(k)}</th>`).join('') + '<th>操作</th></tr></thead><tbody>';
             data.forEach(row => {
-                html += '<tr>' + keys.map(k => `<td>${row[k] !== undefined ? row[k] : ''}</td>`).join('');
-                html += `<td><button class="btn btn-outline btn-sm" onclick="systemEdit('${table}', ${row.id})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('${table}', ${row.id}); renderSystemTable('${table}');">删除</button></td></tr>`;
+                html += '<tr>' + keys.map(k => `<td>${esc(row[k] !== undefined ? row[k] : '')}</td>`).join('');
+                html += `<td><button class="btn btn-outline btn-sm" onclick="systemEdit('${table}', ${Number(row.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('${table}', ${row.id}); renderSystemTable('${table}');">删除</button></td></tr>`;
             });
             html += '</tbody></table>';
             container.innerHTML = html;
