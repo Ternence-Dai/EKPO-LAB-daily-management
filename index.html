@@ -755,7 +755,32 @@ img,svg,canvas,video{max-width:100%}
             }
         }
         function editGas(id) { let g = DB.gases.find(x => x.id === id); document.getElementById('g-id').value=g.id; document.getElementById('g-item').value=g.item||'Hydrogen'; document.getElementById('g-spec').value=g.spec||''; document.getElementById('g-supplier').value=g.supplier||''; document.getElementById('g-batch').value=g.batch||''; document.getElementById('g-year').value=g.year||new Date().getFullYear(); document.getElementById('g-month').value=g.monthNum||(new Date().getMonth()+1); document.getElementById('g-delivery').value=g.delivery||0; document.getElementById('g-return').value=g.return||0; document.getElementById('g-consumption').value=g.consumption||0; document.getElementById('g-cost').value=g.cost||0; document.getElementById('g-rent').value=g.rent||0; document.getElementById('g-freight').value=g.freight||0; openModal('modal-gas'); }
-        function saveGas() { let id=document.getElementById('g-id').value; let year=+document.getElementById('g-year').value; let monthNum=+document.getElementById('g-month').value; let monthStr = year + '-' + (monthNum < 10 ? '0'+monthNum : monthNum); let data={item:document.getElementById('g-item').value, spec:document.getElementById('g-spec').value, supplier:document.getElementById('g-supplier').value, batch:document.getElementById('g-batch').value, year:year, monthNum:monthNum, month:monthStr, delivery:+document.getElementById('g-delivery').value, return:+document.getElementById('g-return').value, consumption:+document.getElementById('g-consumption').value, cost:+document.getElementById('g-cost').value, rent:+document.getElementById('g-rent').value, freight:+document.getElementById('g-freight').value}; if(id){let i=DB.gases.findIndex(x=>x.id==id); DB.gases[i]={...DB.gases[i],...data}; showToast('已更新');}else{data.id=Date.now(); DB.gases.push(data); showToast('已新增');} saveToLocal(); closeModal('modal-gas'); renderGases(); }
+        function saveGas() {
+            const id = document.getElementById('g-id').value;
+            const year = Number(document.getElementById('g-year').value);
+            const monthNum = Number(document.getElementById('g-month').value);
+            const item = document.getElementById('g-item').value.trim();
+            if (!item) { showToast('请填写气体名称', 'error'); return; }
+            if (!Number.isInteger(year) || year < 1900 || year > 2200 || !Number.isInteger(monthNum) || monthNum < 1 || monthNum > 12) {
+                showToast('年份或月份无效', 'error'); return;
+            }
+            const values = {};
+            for (const key of ['delivery','return','consumption','cost','rent','freight']) {
+                const raw = document.getElementById('g-' + key).value;
+                const value = raw === '' ? 0 : Number(raw);
+                if (!Number.isFinite(value) || value < 0) { showToast('气体数量和费用不能为负数或非数字', 'error'); return; }
+                values[key] = value;
+            }
+            const data = { item, spec:document.getElementById('g-spec').value, supplier:document.getElementById('g-supplier').value,
+                batch:document.getElementById('g-batch').value, year, monthNum,
+                month:year + '-' + String(monthNum).padStart(2, '0'), ...values };
+            if (id) {
+                const i = DB.gases.findIndex(x => String(x.id) === String(id));
+                if (i < 0) { showToast('原气体记录已不存在，请刷新后重试', 'error'); return; }
+                DB.gases[i] = { ...DB.gases[i], ...data }; showToast('已更新');
+            } else { data.id = Date.now(); DB.gases.push(data); showToast('已新增'); }
+            saveToLocal(); closeModal('modal-gas'); renderGases();
+        }
 
         // ==================== 7. 维保管理 ====================
         function isValidDateOnly(value) {
