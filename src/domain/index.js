@@ -19,7 +19,7 @@ function normalizeDiaryDate(value, label) {
   if (typeof value !== "string" || !value.trim()) throw new TypeError(`test ${label} must be valid`);
   // Date-only form controls represent calendar days, not UTC instants. Keep
   // that representation stable so charts do not shift the day by timezone.
-  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const normalized = new Date(value + "T00:00:00.000Z");
     if (!Number.isFinite(normalized.getTime()) || normalized.toISOString().slice(0,10) !== value) {
       throw new TypeError(`test ${label} must be a valid calendar date`);
