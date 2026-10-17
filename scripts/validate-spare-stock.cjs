@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const html = fs.readFileSync('index.html', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const start = html.indexOf('function saveSpareLog()');
 const end = html.indexOf('// ==================== 9. 测试台日志', start);
 if (start < 0 || end < 0) throw new Error('saveSpareLog source not found');
