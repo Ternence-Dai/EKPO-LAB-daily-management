@@ -762,11 +762,17 @@ img,svg,canvas,video{max-width:100%}
             let search = document.getElementById('search-maint').value.toLowerCase();
             let tbody = document.querySelector('#table-maintenance tbody'); tbody.innerHTML = '';
             let filtered = DB.maintenance.filter(m => (m.name||'').toLowerCase().includes(search) || (m.category||'').toLowerCase().includes(search));
-            let today = new Date();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
             filtered.forEach(m => {
-                let totalCost = DB.maintLogs.filter(l => l.eqId === m.id).reduce((sum, l) => sum + (l.cost || 0), 0);
-                let days = m.next ? Math.ceil((new Date(m.next) - today) / (1000*60*60*24)) : 9999;
-                let badge = days < 0 ? '<span class="badge badge-danger">已逾期</span>' : (days <= 30 ? '<span class="badge badge-warning">即将到期</span>' : '<span class="badge badge-success">正常</span>');
+                let totalCost = DB.maintLogs.filter(l => l.eqId === m.id).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
+                const dueDate = m.next ? new Date(m.next + 'T00:00:00') : null;
+                const days = dueDate && Number.isFinite(dueDate.getTime())
+                    ? Math.round((dueDate - today) / 86400000) : null;
+                let badge = days === null ? '<span class="badge badge-normal">未设置日期</span>'
+                    : days < 0 ? '<span class="badge badge-danger">已逾期</span>'
+                    : days <= 30 ? '<span class="badge badge-warning">即将到期</span>'
+                    : '<span class="badge badge-success">正常</span>';
                 tbody.innerHTML += `<tr>
                     <td><strong>${m.name||''}</strong></td><td>${m.category||''}</td><td>${m.location||''}</td><td>${m.qty||0}</td><td>${m.cycle||''}</td><td>${m.freq||''}</td>
                     <td>${m.last || '-'}</td><td>${m.next || '-'} ${badge}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${m.responsible||''}</td>
@@ -789,12 +795,14 @@ img,svg,canvas,video{max-width:100%}
 
             let timelineChart = initChart('chart-maint-timeline');
             if(timelineChart && filtered.length > 0) {
-                let data = filtered.map(m => {
-                    let last = m.last ? new Date(m.last).getTime() : new Date().getTime() - 86400000 * 30;
-                    let next = m.next ? new Date(m.next).getTime() : new Date().getTime();
-                    if (next <= last) next = last + 86400000;
-                    return { name: m.name, value: [last, next], itemStyle: { color: '#3b82f6' } };
-                });
+                let data = filtered.map((m, index) => {
+                    const last = m.last ? new Date(m.last + 'T00:00:00').getTime() : NaN;
+                    const next = m.next ? new Date(m.next + 'T00:00:00').getTime() : NaN;
+                    if (!Number.isFinite(last) || !Number.isFinite(next) || next < last) return null;
+                    // ECharts custom renderItem expects [categoryIndex, start, end].
+                    return { name: m.name, value: [index, last, next], itemStyle: { color: '#3b82f6' } };
+                }).filter(Boolean);
+                if (!data.length) { timelineChart.clear(); return; }
                 timelineChart.setOption({
                     tooltip: { formatter: p => `${p.name}<br/>上次: ${new Date(p.value[0]).toLocaleDateString()}<br/>下次: ${new Date(p.value[1]).toLocaleDateString()}` },
                     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
@@ -954,12 +962,14 @@ img,svg,canvas,video{max-width:100%}
 
             let timeChart = initChart('chart-testDiary-timeline');
             if(timeChart && filtered.length > 0) {
-                let data = filtered.map(t => {
-                    let start = new Date(t.start).getTime();
-                    let end = new Date(t.end).getTime();
-                    if (end <= start) end = start + 86400000;
-                    return { name: t.unit + '-' + t.start, value: [start, end], itemStyle: { color: '#f59e0b' } };
-                });
+                let data = filtered.map((t, index) => {
+                    const start = new Date(t.start).getTime();
+                    const end = new Date(t.end).getTime();
+                    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+                    // Keep the category index as the first value for the custom series.
+                    return { name: t.unit + '-' + t.start, value: [index, start, end], itemStyle: { color: '#f59e0b' } };
+                }).filter(Boolean);
+                if (!data.length) { timeChart.clear(); return; }
                 timeChart.setOption({
                     tooltip: { formatter: p => `${p.name}<br/>开始: ${new Date(p.value[0]).toLocaleDateString()}<br/>结束: ${new Date(p.value[1]).toLocaleDateString()}` },
                     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
