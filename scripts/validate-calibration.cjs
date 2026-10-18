@@ -28,7 +28,7 @@ const renderStart = app.indexOf('async function renderCalibrationLogs()');
 const renderEnd = app.indexOf('async function saveCalibration()', renderStart);
 assert.ok(renderStart >= 0 && renderEnd > renderStart, 'calibration renderer must exist');
 const renderSource = app.slice(renderStart, renderEnd);
-assert.match(app, /return value \+ 'T00:00:00\\.000Z'/,
+assert.ok(app.includes("return value + 'T00:00:00.000Z'"),
   'date-only calibration input must be stored at UTC midnight as a calendar date, not converted from local midnight');
 assert.ok(renderSource.includes('domain.isCalibrationCurrent(record)'),
   'calibration UI must calculate current/expired status through the domain core');
