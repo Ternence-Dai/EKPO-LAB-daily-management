@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 
 const html = fs.readFileSync('index.html', 'utf8');
 const app = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
+const productCss = fs.readFileSync('assets/css/product-system.css', 'utf8');
 const combined = html + '\n' + app;
 
 assert.ok(html.includes('product-system.css?v=20261018-v3'),
