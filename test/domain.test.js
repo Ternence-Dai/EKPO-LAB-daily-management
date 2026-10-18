@@ -68,3 +68,18 @@ test("rejects unsafe experiment diary duration magnitudes",()=>{
  assert.throws(()=>validateTestDiaryEntry({...base,duration:1e308}),RangeError);
  assert.equal(validateTestDiaryEntry({...base,duration:0.25}).duration,0.25);
 });
+
+test("freezes copied experiment audit history and rejects malformed entries",()=>{
+ const prior={from:"planned",to:"in-progress",actor:"operator-1",at:"2026-10-17T09:00:00.000Z"};
+ const source={status:"in-progress",audit:[prior]};
+ const next=transitionExperiment(source,"completed","operator-2");
+ assert.ok(Object.isFrozen(next.audit));
+ assert.ok(Object.isFrozen(next.audit[0]));
+ assert.ok(Object.isFrozen(next.audit[1]));
+ assert.notEqual(next.audit[0],prior);
+ assert.throws(()=>{next.audit[0].actor="tampered";},TypeError);
+ assert.throws(()=>{next.audit.push({});},TypeError);
+ assert.equal(prior.actor,"operator-1");
+ assert.throws(()=>transitionExperiment({status:"planned",audit:[null]},"in-progress","operator-1"),TypeError);
+ assert.throws(()=>transitionExperiment({status:"planned",audit:["invalid"]},"in-progress","operator-1"),TypeError);
+});
