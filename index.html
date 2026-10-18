@@ -114,6 +114,7 @@
                 <div class="tabs">
                     <div class="tab active" id="tab-maint-eq" onclick="switchSubTab('maint', 'eq')">设备台账</div>
                     <div class="tab" id="tab-maint-log" onclick="switchSubTab('maint', 'log')">维保历史记录</div>
+                    <div class="tab" id="tab-maint-calibration" onclick="switchSubTab('maint', 'calibration')">设备校准记录</div>
                 </div>
                 
                 <div id="maint-eq-view">
@@ -135,6 +136,56 @@
                             <thead><tr><th>维保日期</th><th>设备名称</th><th>维保单位</th><th>维保人</th><th>维保费用 (¥)</th><th>故障/更换记录</th><th>操作</th></tr></thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+                </div>
+
+                <div id="maint-calibration-view" class="hidden">
+                    <div class="card" style="margin-bottom:16px">
+                        <div class="card-title">🧪 新增设备校准记录</div>
+                        <p style="color:#64748b;font-size:13px;line-height:1.6;margin:6px 0 14px">
+                            仅录入已取得证书或报告的真实校准结果。记录保存后追加到历史台账，不覆盖既有记录；系统不会自动生成证书或判定设备满足法规要求。
+                        </p>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">关联设备
+                                <select class="form-control" id="cal-asset"><option value="">请选择在册设备</option></select>
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">校准日期
+                                <input class="form-control" type="date" id="cal-date">
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">有效期（天）
+                                <input class="form-control" type="number" id="cal-valid-days" min="1" step="1" value="365">
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">证书/报告编号
+                                <input class="form-control" id="cal-certificate" maxlength="120" placeholder="必填">
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">校准机构
+                                <input class="form-control" id="cal-organization" maxlength="120" placeholder="必填">
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">校准操作人
+                                <input class="form-control" id="cal-operator" maxlength="80" placeholder="必填">
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">校准结论
+                                <select class="form-control" id="cal-result">
+                                    <option value="pass">合格</option>
+                                    <option value="fail">不合格</option>
+                                </select>
+                            </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">备注
+                                <input class="form-control" id="cal-notes" maxlength="500" placeholder="可选">
+                            </label>
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;margin-top:14px">
+                            <button class="btn btn-primary" type="button" onclick="saveCalibration()">保存校准记录</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">校准历史与有效期</div>
+                        <div style="overflow-x:auto">
+                            <table id="table-calibration">
+                                <thead><tr><th>设备</th><th>校准日期</th><th>证书/报告编号</th><th>校准机构</th><th>操作人</th><th>有效期</th><th>状态</th><th>备注</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
