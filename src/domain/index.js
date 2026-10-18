@@ -99,6 +99,55 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
   if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) throw new RangeError("calibration expiry is outside the supported date range");
   return at.getTime() <= expiry;
 }
+export function createCalibrationRecord(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    throw new TypeError("calibration record must be an object");
+  }
+  const id = entry.id;
+  if (!((typeof id === "string" && id.trim()) || Number.isSafeInteger(id))) {
+    throw new TypeError("calibration record id is required");
+  }
+  if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
+      String(entry.assetId).trim() === "") {
+    throw new TypeError("calibration asset reference is required");
+  }
+  const calibratedTimestamp = parseCalibrationInstant(entry.calibratedAt);
+  const normalizedDate = new Date(calibratedTimestamp);
+  const normalizedYear = normalizedDate.getUTCFullYear();
+  if (normalizedYear < 0 || normalizedYear > 9999) {
+    throw new TypeError("calibratedAt normalizes outside the supported four-digit UTC year range");
+  }
+  if (!Number.isSafeInteger(entry.validForDays) || entry.validForDays < 1) {
+    throw new RangeError("validForDays must be a positive safe integer");
+  }
+  const requiredText = (field) => {
+    if (typeof entry[field] !== "string" || !entry[field].trim()) {
+      throw new TypeError(`calibration ${field} is required`);
+    }
+    return entry[field].trim();
+  };
+  if (!["pass", "fail"].includes(entry.result)) {
+    throw new RangeError("calibration result must be pass or fail");
+  }
+  if (entry.notes !== undefined && entry.notes !== null && typeof entry.notes !== "string") {
+    throw new TypeError("calibration notes must be text");
+  }
+  const expiry = calibratedTimestamp + entry.validForDays * 86400000;
+  if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) {
+    throw new RangeError("calibration expiry is outside the supported date range");
+  }
+  return Object.freeze({
+    id,
+    assetId: String(entry.assetId).trim(),
+    calibratedAt: normalizedDate.toISOString(),
+    validForDays: entry.validForDays,
+    certificateNo: requiredText("certificateNo"),
+    organization: requiredText("organization"),
+    operator: requiredText("operator"),
+    result: entry.result,
+    notes: typeof entry.notes === "string" ? entry.notes.trim() : ""
+  });
+}
 
 function normalizeDiaryDate(value, label) {
   if (typeof value !== "string" || !value.trim()) throw new TypeError(`test ${label} must be valid`);
