@@ -25,8 +25,8 @@ test("validates a full experiment lifecycle and its chronological audit chain",(
   owner:"Operator A",purpose:"Verify planned operation",actor:"operator-1",
   createdAt:"2026-10-18T01:00:00.000Z"
  });
- const started=transitionExperiment(created,"in-progress","operator-2");
- const completed=transitionExperiment(started,"completed","reviewer-1");
+ const started=transitionExperiment(created,"in-progress","operator-2","2026-10-18T01:01:00.000Z");
+ const completed=transitionExperiment(started,"completed","reviewer-1","2026-10-18T01:02:00.000Z");
  const imported=validateExperimentRecord(completed);
  assert.equal(imported.status,"completed");
  assert.equal(imported.audit.length,3);
