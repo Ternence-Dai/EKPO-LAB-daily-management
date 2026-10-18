@@ -1181,7 +1181,7 @@
             if ((value.calibrationLogs || []).some(row =>
                 !maintenanceIds.has(String(row.assetId)) ||
                 typeof row.calibratedAt !== 'string' ||
-                !/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\\.\d{1,3})?(Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/.test(row.calibratedAt) ||
+                !/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/.test(row.calibratedAt) ||
                 !Number.isFinite(Date.parse(row.calibratedAt)) ||
                 !Number.isSafeInteger(row.validForDays) || row.validForDays < 1 ||
                 typeof row.certificateNo !== 'string' || !row.certificateNo.trim() ||
