@@ -11,8 +11,15 @@ assert.match(html, /if \(storageRecoveryRequired\)[\s\S]{0,500}return false;/,
   'autosave must stop before writing while recovery is required');
 assert.match(html, /if \(storageRecoveryRequired\)[\s\S]{0,300}阻止将演示数据写入新文件/,
   'linked-file creation must not persist demo fallback data');
-assert.match(html, /storageRecoveryRequired = false;[\s\S]{0,100}if \(!DB\.maintLogs\)/,
-  'only validated JSON import may release the lock');
+const importStart = html.indexOf('function importFromLocal(event)');
+const importEnd = html.indexOf('// ==================== 初始化', importStart);
+if (importStart < 0 || importEnd < 0) throw new Error('importFromLocal source not found');
+const importSource = html.slice(importStart, importEnd);
+const importValidation = importSource.indexOf('if (!isValidLabBackup(imported))');
+const lockRelease = importSource.indexOf('storageRecoveryRequired = false;');
+const importCommit = importSource.indexOf('await commitLabMutation(previousDB');
+assert.ok(importValidation >= 0 && lockRelease > importValidation && importCommit > lockRelease,
+  'only fully validated JSON import may release the recovery lock, and it must persist before success');
 const start = html.indexOf('async function saveToLocal()');
 const end = html.indexOf('function getToday()', start);
 if (start < 0 || end < 0) throw new Error('saveToLocal source not found');
