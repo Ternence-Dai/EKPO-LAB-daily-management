@@ -25,8 +25,8 @@ Track who/when/source for every critical record. Separate planned, measured, imp
 
 ## Delivery status
 
-The modernization work is being applied directly to `main`. The current baseline includes a domain-core module, automated domain tests, standalone-app validation, and a GitHub Pages deployment workflow. These checks passing confirms the current baseline is buildable; it does **not** mean the full product rebuild is complete.
+The modernization work is being applied directly to `main`. The verified slice includes equipment maintenance scheduling, validated test-diary records, spare-part stock movement checks, and an append-only equipment calibration workflow. Calibration entries require an asset, date, certificate/reference, organization, operator, validity period, and pass/fail outcome; the equipment register shows the latest status. Legacy caches/backups without a calibration table migrate to an empty list rather than fabricated records. Restore writes preserve the recovery lock on persistence failure. CI, tests, build, and Pages deployment pass.
 
-The current delivered slice includes equipment calibration entry and history, certificate/reference validation, expiry status, legacy-cache migration, backup import/export checks, and domain regression tests. Remaining delivery work includes a complete experiment lifecycle UI with audit display, broader end-to-end browser coverage, data verification against real laboratory source records, and further extraction of maintainable modules from the legacy entry point. Existing user data and the legacy application must be preserved while these changes are introduced.
+Remaining delivery work includes the experiment lifecycle UI with audit display, attachment and certificate-file handling, access controls and approval workflows, broader end-to-end browser coverage, and verification against the actual laboratory source records. The browser cache is not yet a durable multi-user LIMS backend.
 
 See [the rebuild plan](docs/REBUILD_PLAN.md) and [domain rules, units and validation boundaries](docs/DOMAIN_CORE.md).
