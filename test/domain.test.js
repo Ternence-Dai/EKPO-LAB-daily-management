@@ -77,12 +77,24 @@ test("rejects impossible, skipped, reordered or tampered experiment audit chains
   started.audit[0],{from:"planned",to:"in-progress",actor:"operator-2",at:"2026-10-18T01:01:00.000Z",metadata:"unreviewed"}
  ]}),/immutable lifecycle schema/);
 });
-test("records authorized experiment lifecycle transition",()=>{
- const next=transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1");
- assert.equal(next.status,"in-progress"); assert.equal(next.audit.length,1);
+test("records authorized experiment lifecycle transition only from a complete traceable record",()=>{
+ const created=createExperimentRecord({
+  id:"EXP-AUTH",title:"Authorized lifecycle",assetId:2,plannedDate:"2026-10-20",
+  owner:"Operator",purpose:"Verify traceable lifecycle transitions",actor:"operator-0",
+  createdAt:"2026-10-18T01:00:00.000Z"
+ });
+ const next=transitionExperiment(created,"in-progress","operator-1","2026-10-18T01:01:00.000Z");
+ assert.equal(next.status,"in-progress"); assert.equal(next.audit.length,2);
+ assert.equal(validateExperimentRecord(next).status,"in-progress");
+ assert.throws(()=>transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1"),/title is required/);
 });
 test("rejects skipping experiment lifecycle states",()=>{
- assert.throws(()=>transitionExperiment({status:"planned"},"completed","operator-1"),RangeError);
+ const created=createExperimentRecord({
+  id:"EXP-SKIP",title:"Lifecycle guard",assetId:2,plannedDate:"2026-10-20",
+  owner:"Operator",purpose:"Verify lifecycle transition guard",actor:"operator-0",
+  createdAt:"2026-10-18T01:00:00.000Z"
+ });
+ assert.throws(()=>transitionExperiment(created,"completed","operator-1"),RangeError);
 });
 test("rejects inherited object property names as experiment lifecycle states",()=>{
  assert.throws(()=>transitionExperiment({status:"toString"},"completed","operator-1"),RangeError);
