@@ -1183,11 +1183,32 @@
                 const reference = JSON.stringify([String(row.assetId), String(row.organization || '').trim(), String(row.certificateNo || '').trim()]);
                 if (calibrationReferences.has(reference)) return true;
                 calibrationReferences.add(reference);
-                return !maintenanceIds.has(String(row.assetId)) ||
-                    typeof row.calibratedAt !== 'string' ||
-                    !/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/.test(row.calibratedAt) ||
-                    !Number.isFinite(Date.parse(row.calibratedAt)) ||
+                const match = typeof row.calibratedAt === 'string'
+                    ? /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.(\d{1,3}))?(Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/.exec(row.calibratedAt)
+                    : null;
+                let validTimestamp = Boolean(match);
+                let timestamp = NaN;
+                if (match) {
+                    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+                    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+                    const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                    const calendar = new Date(0);
+                    calendar.setUTCFullYear(year, month - 1, day);
+                    calendar.setUTCHours(0, 0, 0, 0);
+                    const zone = match[8];
+                    const invalidOffset = zone !== 'Z' &&
+                        (Number(match[9]) > 14 || (Number(match[9]) === 14 && Number(match[10]) !== 0));
+                    timestamp = Date.parse(row.calibratedAt);
+                    const utcYear = Number.isFinite(timestamp) ? new Date(timestamp).getUTCFullYear() : -1;
+                    validTimestamp = month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] &&
+                        calendar.getUTCFullYear() === year && calendar.getUTCMonth() === month - 1 &&
+                        calendar.getUTCDate() === day && !invalidOffset && Number.isFinite(timestamp) &&
+                        utcYear >= 0 && utcYear <= 9999;
+                }
+                const expiry = timestamp + Number(row.validForDays) * 86400000;
+                return !maintenanceIds.has(String(row.assetId)) || !validTimestamp ||
                     !Number.isSafeInteger(row.validForDays) || row.validForDays < 1 ||
+                    !Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15 ||
                     typeof row.certificateNo !== 'string' || !row.certificateNo.trim() ||
                     typeof row.organization !== 'string' || !row.organization.trim() ||
                     typeof row.operator !== 'string' || !row.operator.trim() ||
