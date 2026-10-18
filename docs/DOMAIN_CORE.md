@@ -56,3 +56,9 @@ The current browser application calls `validateMaintenanceAsset` from the mainte
 ## Verification boundary
 
 `test/domain.test.js` covers lifecycle transitions, immutable audit history, calibration dates and expiry, diary ordering/duration, and maintenance data. The application validators cover persistence rollback, local-cache recovery, maintenance scheduling, inventory rollback, calibration UI and backup compatibility. These checks do not replace access control or a durable transactional database.
+
+## Open-source laboratory-system references
+
+- [eLabFTW](https://github.com/elabftw/elabftw) is a reference for electronic laboratory notebooks, experiment records, templates, and traceable research workflows.
+- [SENAITE](https://github.com/senaite/senaite.core) is a reference for analytical-laboratory sample workflows, review states, quality control, and auditable LIMS operations.
+- The local experiment lifecycle now requires a complete creation record and validates every transition against the existing immutable audit chain. These references inform future sample/result review and attachment workflows; the current browser cache is not a multi-user regulated LIMS or a substitute for controlled records.
