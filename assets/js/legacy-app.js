@@ -626,7 +626,7 @@
                     status === '有效' ? 'badge-success' : 'badge-warning';
                 tbody.innerHTML += `<tr>
                     <td><strong>${esc(asset ? asset.name : '已退役/未知设备')}</strong></td>
-                    <td>${esc(record.calibratedAt)}</td>
+                    <td>${esc(String(record.calibratedAt).slice(0, 10))}</td>
                     <td>${esc(record.certificateNo)}</td>
                     <td>${esc(record.organization)}</td>
                     <td>${esc(record.operator)}</td>
