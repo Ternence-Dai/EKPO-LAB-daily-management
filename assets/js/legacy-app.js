@@ -579,7 +579,106 @@
             renderMaintLogs();
         }
 
-        // ==================== 8. 备件管理 ====================
+                function calibrationDateToIso(value) {
+            if (!isValidDateOnly(value)) throw new TypeError('校准日期无效');
+            const [year, month, day] = value.split('-').map(Number);
+            const local = new Date(year, month - 1, day, 0, 0, 0, 0);
+            if (local.getFullYear() !== year || local.getMonth() !== month - 1 ||
+                local.getDate() !== day || local.getHours() !== 0) {
+                throw new TypeError('校准日期在当前本地时区不可用');
+            }
+            return local.toISOString();
+        }
+
+        async function renderCalibrationLogs() {
+            const select = document.getElementById('cal-asset');
+            const tbody = document.querySelector('#table-calibration tbody');
+            if (!select || !tbody) return;
+            const selected = select.value;
+            select.innerHTML = '<option value="">请选择在册设备</option>' +
+                DB.maintenance.map(asset =>
+                    `<option value="${esc(asset.id)}">${esc(asset.name)} · ${esc(asset.category || '未分类')}</option>`
+                ).join('');
+            if (DB.maintenance.some(asset => String(asset.id) === selected)) select.value = selected;
+            tbody.innerHTML = '';
+            let domain;
+            try {
+                domain = await import('../../src/domain/index.js');
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="8">校准规则模块不可用，当前无法计算有效期状态。</td></tr>';
+                showToast('校准规则模块加载失败，请刷新页面后重试', 'error');
+                return;
+            }
+            const rows = [...(DB.calibrationLogs || [])].sort((a, b) =>
+                String(b.calibratedAt).localeCompare(String(a.calibratedAt)));
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="8">暂无校准记录。请仅录入有证书或报告支持的真实校准结果。</td></tr>';
+                return;
+            }
+            rows.forEach(record => {
+                const asset = DB.maintenance.find(item => String(item.id) === String(record.assetId));
+                let status = record.result === 'fail' ? '校准不合格' :
+                    domain.isCalibrationCurrent(record) ? '有效' : '已过期';
+                const badge = record.result === 'fail' ? 'badge-danger' :
+                    status === '有效' ? 'badge-success' : 'badge-warning';
+                tbody.innerHTML += `<tr>
+                    <td><strong>${esc(asset ? asset.name : '已退役/未知设备')}</strong></td>
+                    <td>${esc(record.calibratedAt)}</td>
+                    <td>${esc(record.certificateNo)}</td>
+                    <td>${esc(record.organization)}</td>
+                    <td>${esc(record.operator)}</td>
+                    <td>${esc(record.validForDays)} 天</td>
+                    <td><span class="badge ${badge}">${status}</span></td>
+                    <td>${esc(record.notes || '')}</td>
+                </tr>`;
+            });
+        }
+
+        async function saveCalibration() {
+            if (storageRecoveryRequired) {
+                showToast('原始缓存尚未恢复，已阻止新增校准记录；请先恢复有效备份', 'error');
+                return;
+            }
+            const assetId = String(document.getElementById('cal-asset').value || '').trim();
+            const asset = DB.maintenance.find(item => String(item.id) === assetId);
+            if (!asset) { showToast('请选择有效的在册设备', 'error'); return; }
+            const validForDays = Number(document.getElementById('cal-valid-days').value);
+            const certificateNo = document.getElementById('cal-certificate').value.trim();
+            const organization = document.getElementById('cal-organization').value.trim();
+            const operator = document.getElementById('cal-operator').value.trim();
+            const result = document.getElementById('cal-result').value;
+            const notes = document.getElementById('cal-notes').value;
+            let calibratedAt;
+            try {
+                calibratedAt = calibrationDateToIso(document.getElementById('cal-date').value);
+                const domain = await import('../../src/domain/index.js');
+                const duplicate = DB.calibrationLogs.some(row =>
+                    String(row.assetId) === assetId &&
+                    row.certificateNo === certificateNo &&
+                    row.organization === organization);
+                if (duplicate) {
+                    showToast('该设备已存在相同机构与证书编号的校准记录', 'error');
+                    return;
+                }
+                let id = Date.now();
+                while (DB.calibrationLogs.some(row => String(row.id) === String(id))) id++;
+                const record = domain.createCalibrationRecord({
+                    id, assetId, calibratedAt, validForDays, certificateNo,
+                    organization, operator, result, notes
+                });
+                const previousDB = snapshotLabDB();
+                DB.calibrationLogs.unshift(record);
+                if (!await commitLabMutation(previousDB, '校准记录保存失败，本次新增已撤销')) return;
+                document.getElementById('cal-certificate').value = '';
+                document.getElementById('cal-notes').value = '';
+                showToast('校准记录已保存；历史记录保持不变');
+                renderCalibrationLogs();
+            } catch (error) {
+                showToast('校准记录未保存：' + (error && error.message ? error.message : '字段校验失败'), 'error');
+            }
+        }
+
+// ==================== 8. 备件管理 ====================
         function renderSpareParts() {
             let search = document.getElementById('search-spare').value.toLowerCase();
             let tbody = document.querySelector('#table-spareParts tbody'); tbody.innerHTML = '';
