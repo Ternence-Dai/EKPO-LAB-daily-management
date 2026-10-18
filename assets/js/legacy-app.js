@@ -1180,7 +1180,7 @@
                 !isValidDateOnly(row.date) || !Number.isFinite(Number(row.cost)) || Number(row.cost) < 0)) return false;
             const calibrationReferences = new Set();
             if ((value.calibrationLogs || []).some(row => {
-                const reference = [String(row.assetId), String(row.organization || ''), String(row.certificateNo || '')].join('|');
+                const reference = JSON.stringify([String(row.assetId), String(row.organization || '').trim(), String(row.certificateNo || '').trim()]);
                 if (calibrationReferences.has(reference)) return true;
                 calibrationReferences.add(reference);
                 return !maintenanceIds.has(String(row.assetId)) ||
