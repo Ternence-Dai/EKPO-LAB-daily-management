@@ -173,8 +173,8 @@ test("rejects untraceable or invalid calibration records",()=>{
  assert.throws(()=>createCalibrationRecord({...base,organization:"O".repeat(181)}),RangeError);
  assert.throws(()=>createCalibrationRecord({...base,operator:"A".repeat(121)}),RangeError);
  assert.throws(()=>createCalibrationRecord({...base,notes:"N".repeat(2001)}),RangeError);
- assert.throws(()=>createCalibrationRecord({...base,certificateNo:"CERT\\n001"}),TypeError);
- assert.throws(()=>createCalibrationRecord({...base,notes:"note\\u0000"}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,certificateNo:"CERT" + String.fromCharCode(10) + "001"}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,notes:"note" + String.fromCharCode(0)}),TypeError);
  assert.equal(createCalibrationRecord({...base,id:" CAL-1 "}).id,"CAL-1");
 });
 test("calibration expiry rejects unsafe durations and overflow",()=>{
