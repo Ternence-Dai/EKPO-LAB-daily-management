@@ -7,6 +7,44 @@ const html = fs.readFileSync('index.html', 'utf8');
 const app = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const combined = html + '\n' + app;
 
+assert.ok(html.includes('product-system.css?v=20261018-v3'),
+  'LabOS must load the V3 operations workspace stylesheet');
+assert.ok(html.includes('class="labos-demo-note"'),
+  'the source-data warning must retain a dedicated responsive style hook');
+assert.ok(html.includes('class="topbar-actions"'),
+  'backup and persistence actions must be grouped for small-screen layout');
+const mobileNavStart = html.indexOf('<nav class="mobile-nav"');
+const mobileNavEnd = html.indexOf('</nav>', mobileNavStart);
+assert.ok(mobileNavStart >= 0 && mobileNavEnd > mobileNavStart,
+  'LabOS must provide a mobile primary navigation');
+const mobileNavSource = html.slice(mobileNavStart, mobileNavEnd);
+const tabIds = ['dashboard', 'gases', 'maintenance', 'spareParts', 'testDiary', 'yearly', 'system'];
+for (const id of tabIds) {
+  assert.ok(mobileNavSource.includes('data-tab="' + id + '"') &&
+            mobileNavSource.includes("switchTab('" + id + "')"),
+    'mobile navigation must expose a working ' + id + ' route');
+}
+const switchStart = app.indexOf('function switchTab(tabId, element)');
+const switchEnd = app.indexOf('function switchSubTab(parent, sub)', switchStart);
+assert.ok(switchStart >= 0 && switchEnd > switchStart,
+  'shared route switching must exist for desktop and mobile navigation');
+const switchSource = app.slice(switchStart, switchEnd);
+assert.ok(switchSource.includes("document.querySelectorAll('.mobile-nav button')") &&
+          switchSource.includes("el.dataset.tab === tabId") &&
+          switchSource.includes("el.classList.toggle('active', active)"),
+  'route changes must keep the mobile active state synchronized with the selected page');
+assert.ok(switchSource.includes("document.querySelectorAll('.nav-item')"),
+  'the same route must keep desktop navigation synchronized');
+for (const selector of ['.mobile-nav{', '.topbar-actions{', '.metrics-grid{', '.charts-row{', '#maint-calibration-view']) {
+  assert.ok(productCss.includes(selector),
+    'LabOS V3 must style the major operations surface: ' + selector);
+}
+assert.ok(productCss.includes('@media(max-width:900px)') &&
+          productCss.includes('@media(max-width:520px)'),
+  'LabOS must provide tablet and phone layouts');
+assert.ok(productCss.includes('prefers-reduced-motion:reduce'),
+  'LabOS must respect reduced motion settings');
+
 for (const id of [
   'maint-calibration-view', 'tab-maint-calibration', 'cal-asset',
   'cal-date', 'cal-valid-days', 'cal-certificate', 'cal-organization',
