@@ -147,9 +147,17 @@
         function switchTab(tabId, element) {
             document.querySelectorAll('.content-body > section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`page-${tabId}`).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if (element) element.classList.add('active');
-            
+            document.querySelectorAll('.nav-item').forEach(el => {
+                const active = el.dataset.tab === tabId;
+                el.classList.toggle('active', active);
+            });
+            document.querySelectorAll('.mobile-nav button').forEach(el => {
+                const active = el.dataset.tab === tabId;
+                el.classList.toggle('active', active);
+                if (active) el.setAttribute('aria-current', 'page');
+                else el.removeAttribute('aria-current');
+            });
+
             const titles = { dashboard: "总览仪表盘", gases: "气体使用记录", maintenance: "设备维保管理", spareParts: "备件库存管理", testDiary: "测试台运行日志", yearly: "年度综合统计", system: "系统全量设置" };
             document.getElementById('pageTitle').innerText = titles[tabId];
             
