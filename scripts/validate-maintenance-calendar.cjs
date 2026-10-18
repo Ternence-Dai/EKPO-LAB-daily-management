@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const start = html.indexOf('function isValidDateOnly');
-const end = html.indexOf('function renderMaintenance', start);
+const end = html.indexOf('async function renderMaintenance', start);
 if (start < 0 || end < 0) throw new Error('Maintenance date helpers not found');
 const source = html.slice(start, end);
 const context = { DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
