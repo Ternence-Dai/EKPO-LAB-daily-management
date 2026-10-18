@@ -31,3 +31,8 @@ api.syncMaintenanceSchedule(1);
 assert.equal(context.DB.maintenance[0].last, '2026-04-30', 'latest log must win');
 assert.equal(context.DB.maintenance[0].next, '2026-07-30');
 console.log('Maintenance calendar interval regression checks passed.');
+
+assert.ok(html.includes('domain.validateMaintenanceAsset(data)'),
+  'maintenance asset edits must pass through the shared domain validator');
+assert.ok(html.includes('async function saveMaint()'),
+  'maintenance asset saves must await persistence before reporting success');
