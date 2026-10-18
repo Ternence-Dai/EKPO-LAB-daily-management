@@ -19,6 +19,10 @@ async function run(action, qty, stock, saveAllowed = true) {
     showToast:message=>messages.push(message),saveToLocal:async()=>saveAllowed,closeModal:()=>{},
     renderSpareParts:()=>{},renderSpareLogs:()=>{},console:{error(){}}};
   vm.runInNewContext(source,context);
+  context.showToast = message => messages.push(message);
+  context.closeModal = () => {};
+  context.renderSpareParts = () => {};
+  context.renderSpareLogs = () => {};
   await context.saveSpareLog();
   return {stock:context.DB.spareParts[0].qty,logs:context.DB.spareLogs,messages};
 }
