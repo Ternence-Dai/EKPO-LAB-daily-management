@@ -28,10 +28,16 @@ const renderStart = app.indexOf('async function renderCalibrationLogs()');
 const renderEnd = app.indexOf('async function saveCalibration()', renderStart);
 assert.ok(renderStart >= 0 && renderEnd > renderStart, 'calibration renderer must exist');
 const renderSource = app.slice(renderStart, renderEnd);
+assert.match(app, /return value \+ 'T00:00:00\\.000Z'/,
+  'date-only calibration input must be stored at UTC midnight as a calendar date, not converted from local midnight');
 assert.ok(renderSource.includes('domain.isCalibrationCurrent(record)'),
   'calibration UI must calculate current/expired status through the domain core');
 assert.ok(renderSource.includes("record.result === 'fail'"),
   'failed calibration must remain visibly failed regardless of validity duration');
+assert.ok(renderSource.includes('String(record.calibratedAt).slice(0, 10)'),
+  'calibration history must display the original calendar date without a timezone-day shift');
+assert.ok(renderSource.includes("dateInput.value = getToday()"),
+  'the calibration form should default to the current local calendar date');
 
 assert.ok(app.includes("if (!Array.isArray(DB.calibrationLogs)) DB.calibrationLogs = []"),
   'legacy cache migration must add an empty calibration table without inventing records');
