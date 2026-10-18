@@ -94,6 +94,5 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
     'successful maintenance update must replace validated record data');
   assert.equal(successful.closed,1);
   assert.equal(successful.renders,1);
-}
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
