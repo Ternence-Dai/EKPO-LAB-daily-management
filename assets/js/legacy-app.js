@@ -594,6 +594,10 @@
             const select = document.getElementById('cal-asset');
             const tbody = document.querySelector('#table-calibration tbody');
             if (!select || !tbody) return;
+            if (storageRecoveryRequired) {
+                tbody.innerHTML = '<tr><td colspan="8">原始缓存待恢复，校准记录暂不可读取或更改；请先导出恢复包并完成数据恢复。</td></tr>';
+                return;
+            }
             const selected = select.value;
             select.innerHTML = '<option value="">请选择在册设备</option>' +
                 DB.maintenance.map(asset =>
@@ -1234,7 +1238,30 @@
         }
 
         // ==================== 初始化 ====================
-        window.onload = () => {
+        window.onload = async () => {
+            if (!storageRecoveryRequired && Array.isArray(DB.calibrationLogs) && DB.calibrationLogs.length) {
+                try {
+                    const domain = await import('../../src/domain/index.js');
+                    const assetIds = new Set(DB.maintenance.map(asset => String(asset.id)));
+                    const validated = DB.calibrationLogs.map(row => domain.createCalibrationRecord(row));
+                    if (validated.some(row => !assetIds.has(String(row.assetId)))) {
+                        throw new Error('校准记录引用了不存在的设备台账');
+                    }
+                    DB.calibrationLogs = validated;
+                } catch (error) {
+                    if (cachedLabRaw !== null) {
+                        try {
+                            localStorage.setItem('lab_management_db_v9_recovery_' + Date.now(), cachedLabRaw);
+                        } catch (backupError) {
+                            console.error('无法另存损坏校准记录的原始缓存。', backupError);
+                        }
+                    }
+                    storageWarning = true;
+                    storageRecoveryRequired = true;
+                    showToast('校准台账校验失败，已锁定写入以保护原始数据', 'error');
+                    console.error('校准台账无法安全读取。', error);
+                }
+            }
             renderDashboard();
             if (storageWarning) showToast('本地缓存损坏或不可用，当前为演示数据；请勿覆盖原始备份', 'error');
         };
