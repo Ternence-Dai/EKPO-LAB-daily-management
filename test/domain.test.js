@@ -86,7 +86,7 @@ test("records authorized experiment lifecycle transition only from a complete tr
  const next=transitionExperiment(created,"in-progress","operator-1","2026-10-18T01:01:00.000Z");
  assert.equal(next.status,"in-progress"); assert.equal(next.audit.length,2);
  assert.equal(validateExperimentRecord(next).status,"in-progress");
- assert.throws(()=>transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1"),/title is required/);
+ assert.throws(()=>transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1"),/asset reference is required/);
 });
 test("rejects skipping experiment lifecycle states",()=>{
  const created=createExperimentRecord({
@@ -196,19 +196,24 @@ test("rejects unsafe experiment diary duration magnitudes",()=>{
 });
 
 test("freezes copied experiment audit history and rejects malformed entries",()=>{
- const prior={from:"planned",to:"in-progress",actor:"operator-1",at:"2026-10-17T09:00:00.000Z"};
- const source={status:"in-progress",audit:[prior]};
- const next=transitionExperiment(source,"completed","operator-2");
+ const created=createExperimentRecord({
+  id:"EXP-AUDIT",title:"Audit immutability",assetId:2,plannedDate:"2026-10-20",
+  owner:"Operator",purpose:"Verify immutable lifecycle audit",actor:"operator-0",
+  createdAt:"2026-10-17T08:00:00.000Z"
+ });
+ const prior={...created.audit[0]};
+ const source={...created,audit:[prior]};
+ const next=transitionExperiment(source,"in-progress","operator-1","2026-10-17T09:00:00.000Z");
  assert.ok(Object.isFrozen(next.audit));
  assert.ok(Object.isFrozen(next.audit[0]));
  assert.ok(Object.isFrozen(next.audit[1]));
  assert.notEqual(next.audit[0],prior);
  assert.throws(()=>{next.audit[0].actor="tampered";},TypeError);
  assert.throws(()=>{next.audit.push({});},TypeError);
- assert.equal(prior.actor,"operator-1");
- assert.throws(()=>transitionExperiment({status:"planned",audit:[null]},"in-progress","operator-1"),TypeError);
- assert.throws(()=>transitionExperiment({status:"planned",audit:["invalid"]},"in-progress","operator-1"),TypeError);
- assert.throws(()=>transitionExperiment({status:"planned",audit:[{from:"planned",to:"in-progress",actor:"operator-1",at:"2026-10-17T09:00:00.000Z",metadata:{note:"mutable"}}]},"in-progress","operator-1"),TypeError);
+ assert.equal(prior.actor,"operator-0");
+ assert.throws(()=>transitionExperiment({...created,audit:[null]},"in-progress","operator-1"),TypeError);
+ assert.throws(()=>transitionExperiment({...created,audit:["invalid"]},"in-progress","operator-1"),TypeError);
+ assert.throws(()=>transitionExperiment({...created,audit:[{...created.audit[0],metadata:{note:"mutable"}}]},"in-progress","operator-1"),TypeError);
 });
 
 test("validates equipment maintenance assets before saving",()=>{
