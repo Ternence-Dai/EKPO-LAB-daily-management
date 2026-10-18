@@ -62,3 +62,8 @@ The current browser application calls `validateMaintenanceAsset` from the mainte
 - [eLabFTW](https://github.com/elabftw/elabftw) is a reference for electronic laboratory notebooks, experiment records, templates, and traceable research workflows.
 - [SENAITE](https://github.com/senaite/senaite.core) is a reference for analytical-laboratory sample workflows, review states, quality control, and auditable LIMS operations.
 - The local experiment lifecycle now requires a complete creation record and validates every transition against the existing immutable audit chain. These references inform future sample/result review and attachment workflows; the current browser cache is not a multi-user regulated LIMS or a substitute for controlled records.
+
+
+## Calibration metadata integrity
+
+Calibration record identifiers are trimmed and limited to 80 characters. Certificate numbers are limited to 120 characters, organization names to 180, operator names to 120, and notes to 2,000. These text fields reject ASCII control characters so imported or manually entered records cannot carry hidden line breaks or terminal control bytes into audit and certificate views.
