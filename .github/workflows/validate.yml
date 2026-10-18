@@ -26,6 +26,8 @@ jobs:
         run: node scripts/validate-html-escaping.cjs
       - name: Validate cache recovery write protection
         run: node scripts/validate-storage-recovery.cjs
+      - name: Validate equipment calibration workflow and backups
+        run: node scripts/validate-calibration.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
