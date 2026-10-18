@@ -51,3 +51,14 @@ async function run({locked=false,failWrites=false}={}) {
   assert.equal(result.messages.length,1,'failed storage write must show a backup warning');
   console.log('Lab persistence recovery checks passed (locked, normal, quota failure).');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
+assert.match(html, /async function commitLabMutation\\(/,
+  'all transactional changes must use the shared persistence commit helper');
+assert.match(html, /async function saveMaintLog\\([\\s\\S]*?await commitLabMutation/,
+  'maintenance history changes must await persistence and roll back on failure');
+assert.match(html, /async function saveSpare\\([\\s\\S]*?await commitLabMutation/,
+  'spare-part master changes must validate and await persistence');
+assert.match(html, /async function saveTestDiary\\([\\s\\S]*?await commitLabMutation/,
+  'test diary changes must roll back when persistence fails');
+assert.match(html, /async function deleteItem\\([\\s\\S]*?await commitLabMutation/,
+  'deletes and stock-ledger reversal must roll back when persistence fails');
