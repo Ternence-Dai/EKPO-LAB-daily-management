@@ -168,6 +168,14 @@ test("rejects untraceable or invalid calibration records",()=>{
  assert.throws(()=>createCalibrationRecord({...base,validForDays:0}),RangeError);
  assert.throws(()=>createCalibrationRecord({...base,calibratedAt:"2026-02-30T00:00:00Z"}),TypeError);
  assert.throws(()=>createCalibrationRecord({...base,notes:{text:"bad"}}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,id:"C".repeat(81)}),RangeError);
+ assert.throws(()=>createCalibrationRecord({...base,certificateNo:"C".repeat(121)}),RangeError);
+ assert.throws(()=>createCalibrationRecord({...base,organization:"O".repeat(181)}),RangeError);
+ assert.throws(()=>createCalibrationRecord({...base,operator:"A".repeat(121)}),RangeError);
+ assert.throws(()=>createCalibrationRecord({...base,notes:"N".repeat(2001)}),RangeError);
+ assert.throws(()=>createCalibrationRecord({...base,certificateNo:"CERT\\n001"}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,notes:"note\\u0000"}),TypeError);
+ assert.equal(createCalibrationRecord({...base,id:" CAL-1 "}).id,"CAL-1");
 });
 test("calibration expiry rejects unsafe durations and overflow",()=>{
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:Number.MAX_SAFE_INTEGER},new Date()),RangeError);
