@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { transitionExperiment, isCalibrationCurrent, validateTestDiaryEntry } from "../src/domain/index.js";
+import { transitionExperiment, isCalibrationCurrent, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
 test("records authorized experiment lifecycle transition",()=>{
  const next=transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1");
  assert.equal(next.status,"in-progress"); assert.equal(next.audit.length,1);
@@ -83,4 +83,33 @@ test("freezes copied experiment audit history and rejects malformed entries",()=
  assert.throws(()=>transitionExperiment({status:"planned",audit:[null]},"in-progress","operator-1"),TypeError);
  assert.throws(()=>transitionExperiment({status:"planned",audit:["invalid"]},"in-progress","operator-1"),TypeError);
  assert.throws(()=>transitionExperiment({status:"planned",audit:[{from:"planned",to:"in-progress",actor:"operator-1",at:"2026-10-17T09:00:00.000Z",metadata:{note:"mutable"}}]},"in-progress","operator-1"),TypeError);
+});
+
+test("validates equipment maintenance assets before saving",()=>{
+ const valid=validateMaintenanceAsset({
+  name:"  Test bench  ",category:"Test equipment",location:"Lab",qty:2,
+  cycle:"二级保养",freq:"季度",last:"2026-01-31",next:"2026-04-30",
+  responsible:"Operator",record:"Inspection"
+ });
+ assert.equal(valid.name,"Test bench");
+ assert.equal(valid.qty,2);
+ assert.ok(Object.isFrozen(valid));
+ assert.throws(()=>{valid.name="tampered";},TypeError);
+});
+test("rejects incomplete or impossible maintenance asset quantities and cycles",()=>{
+ const base={name:"Bench",category:"Equipment",location:"Lab",qty:1,cycle:"一级保养",freq:"季度",last:"2026-01-01",next:"2026-04-01"};
+ assert.throws(()=>validateMaintenanceAsset({...base,name:" "}),/name is required/);
+ assert.throws(()=>validateMaintenanceAsset({...base,qty:0}),RangeError);
+ assert.throws(()=>validateMaintenanceAsset({...base,qty:1.5}),RangeError);
+ assert.throws(()=>validateMaintenanceAsset({...base,qty:Number.MAX_SAFE_INTEGER+1}),RangeError);
+ assert.throws(()=>validateMaintenanceAsset({...base,cycle:"未知等级"}),RangeError);
+ assert.throws(()=>validateMaintenanceAsset({...base,freq:" "}),/frequency is required/);
+});
+test("rejects invalid or reversed equipment maintenance dates while allowing unset dates",()=>{
+ const base={name:"Bench",qty:1,cycle:"一级保养",freq:"按需"};
+ assert.throws(()=>validateMaintenanceAsset({...base,last:"2026-02-30",next:""}),/calendar date/);
+ assert.throws(()=>validateMaintenanceAsset({...base,last:"2026-05-01",next:"2026-04-30"}),/cannot precede/);
+ const valid=validateMaintenanceAsset({...base,last:"",next:""});
+ assert.equal(valid.last,"");
+ assert.equal(valid.next,"");
 });
