@@ -168,10 +168,13 @@
             if (parent === 'maint') {
                 document.getElementById('maint-eq-view').classList.add('hidden');
                 document.getElementById('maint-log-view').classList.add('hidden');
+                document.getElementById('maint-calibration-view').classList.add('hidden');
                 document.getElementById('tab-maint-eq').classList.remove('active');
                 document.getElementById('tab-maint-log').classList.remove('active');
+                document.getElementById('tab-maint-calibration').classList.remove('active');
                 if (sub === 'eq') { document.getElementById('maint-eq-view').classList.remove('hidden'); document.getElementById('tab-maint-eq').classList.add('active'); renderMaintenance(); }
                 if (sub === 'log') { document.getElementById('maint-log-view').classList.remove('hidden'); document.getElementById('tab-maint-log').classList.add('active'); renderMaintLogs(); }
+                if (sub === 'calibration') { document.getElementById('maint-calibration-view').classList.remove('hidden'); document.getElementById('tab-maint-calibration').classList.add('active'); renderCalibrationLogs(); }
             }
             if (parent === 'spare') {
                 document.getElementById('spare-eq-view').classList.add('hidden');
