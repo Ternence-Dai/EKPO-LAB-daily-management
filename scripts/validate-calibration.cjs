@@ -39,6 +39,22 @@ assert.ok(renderSource.includes('String(record.calibratedAt).slice(0, 10)'),
 assert.ok(renderSource.includes("dateInput.value = getToday()"),
   'the calibration form should default to the current local calendar date');
 
+const maintenanceStart = app.indexOf('async function renderMaintenance()');
+const maintenanceEnd = app.indexOf('function renderMaintLogs()', maintenanceStart);
+assert.ok(maintenanceStart >= 0 && maintenanceEnd > maintenanceStart,
+  'equipment register renderer must remain available');
+const maintenanceSource = app.slice(maintenanceStart, maintenanceEnd);
+assert.ok(html.includes('<th>校准状态</th>'),
+  'equipment register must expose the latest calibration status column');
+for (const token of [
+  'latestCalibrationByAsset', 'DB.calibrationLogs', 'domain.isCalibrationCurrent(calibration)',
+  "'未记录'", "'校准不合格'", "'已过期'", "'有效'"
+]) assert.ok(maintenanceSource.includes(token),
+  'equipment register must distinguish calibration state: ' + token);
+assert.ok(maintenanceSource.includes("String(record.calibratedAt) > String(current.calibratedAt)"),
+  'equipment register must use the newest calibration record for each asset');
+
+
 assert.ok(app.includes("if (!Array.isArray(DB.calibrationLogs)) DB.calibrationLogs = []"),
   'legacy cache migration must add an empty calibration table without inventing records');
 assert.ok(app.includes('domain.createCalibrationRecord(row)'),
