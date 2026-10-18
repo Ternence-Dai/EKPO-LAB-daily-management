@@ -1109,6 +1109,13 @@
                 showToast('请先填写本次状态变更的操作人；系统不会代填身份。', 'error');
                 return;
             }
+            if ((nextStatus === 'completed' || nextStatus === 'cancelled') &&
+                !confirm(nextStatus === 'completed'
+                    ? '确认将实验标记为已完成？该操作会追加审计记录且不能回退；它不代表测量结果已经审核。'
+                    : '确认取消此实验？取消后将进入终态并保留完整审计记录。')) {
+                experimentMutationPending = false;
+                return;
+            }
             const index = DB.experiments.findIndex(record => record.id === id);
             if (index < 0) {
                 experimentMutationPending = false;
@@ -1275,7 +1282,7 @@
                 showToast('该设备仍有关联维保历史，请先处理历史记录后再删除', 'error'); return;
             }
             if (table === 'maintenance' && DB.experiments.some(item => String(item.assetId) === String(id))) {
-                showToast('该设备仍被实验计划引用；请先将相关实验取消或完成，再处理实验记录与设备台账', 'error'); return;
+                showToast('该设备仍被实验计划引用；当前没有安全归档/解除引用流程，不能删除设备台账', 'error'); return;
             }
             if (table === 'spareParts' && DB.spareLogs.some(item => String(item.partId) === String(id))) {
                 showToast('该备件仍有关联出入库流水，请先处理流水后再删除', 'error'); return;
