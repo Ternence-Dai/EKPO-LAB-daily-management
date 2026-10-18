@@ -151,8 +151,8 @@ test("normalizes optional test diary text and rejects unsafe operational values"
  assert.equal(valid.error,"E-01");
  assert.equal(valid.errorDesc,"seal check");
  for(const patch of [
-  {result:42},{cycle:[]},{error:"E-01\\nforged"},{errorDesc:"x".repeat(2001)},
-  {unit:"operator\\u0000name"},{operator:"x".repeat(121)}
+  {result:42},{cycle:[]},{error:"E-01\nforged"},{errorDesc:"x".repeat(2001)},
+  {unit:"operator\u0000name"},{operator:"x".repeat(121)}
  ]) assert.throws(()=>validateTestDiaryEntry({...base,...patch}));
 });
 test("calibration timestamps require an explicit timezone and real calendar date",()=>{
