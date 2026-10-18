@@ -7,7 +7,7 @@ const start = html.indexOf('function snapshotLabDB()');
 const end = html.indexOf('// ==================== 9. 测试台日志', start);
 if (start < 0 || end < 0) throw new Error('saveSpareLog source not found');
 const source = html.slice(start, end);
-function run(action, qty, stock) {
+async function run(action, qty, stock, saveAllowed = true) {
   const values = {'sl-part':'1','sl-action':action,'sl-qty':String(qty),'sl-date':'2026-10-17','sl-operator':'test','sl-note':''};
   const messages = [];
   const document = {getElementById(id) {
@@ -17,7 +17,7 @@ function run(action, qty, stock) {
   const context = {document,DB:{spareParts:[{id:1,qty:stock}],spareLogs:[]},
     isValidDateOnly:value=>/^\d{4}-\d{2}-\d{2}$/.test(value),
     showToast:message=>messages.push(message),saveToLocal:async()=>saveAllowed,closeModal:()=>{},
-    renderSpareParts:()=>{},renderSpareLogs:()=>{}};
+    renderSpareParts:()=>{},renderSpareLogs:()=>{},console:{error(){}}};
   vm.runInNewContext(source,context);
   await context.saveSpareLog();
   return {stock:context.DB.spareParts[0].qty,logs:context.DB.spareLogs,messages};
