@@ -1274,6 +1274,9 @@
             if (table === 'maintenance' && DB.maintLogs.some(item => String(item.eqId) === String(id))) {
                 showToast('该设备仍有关联维保历史，请先处理历史记录后再删除', 'error'); return;
             }
+            if (table === 'maintenance' && DB.experiments.some(item => String(item.assetId) === String(id))) {
+                showToast('该设备仍被实验计划引用；请先将相关实验取消或完成，再处理实验记录与设备台账', 'error'); return;
+            }
             if (table === 'spareParts' && DB.spareLogs.some(item => String(item.partId) === String(id))) {
                 showToast('该备件仍有关联出入库流水，请先处理流水后再删除', 'error'); return;
             }
