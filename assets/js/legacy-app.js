@@ -485,14 +485,13 @@
                     showToast('设备编号冲突，请重试保存', 'error');
                     return;
                 }
-                validated.id = newId;
-                DB.maintenance.push(validated);
+                DB.maintenance.push({ ...validated, id: newId });
             }
 
             const saved = await saveToLocal();
             if (!saved) {
                 if (existingIndex >= 0) DB.maintenance[existingIndex] = previous;
-                else DB.maintenance = DB.maintenance.filter(item => String(item.id) !== String(validated.id));
+                else DB.maintenance = DB.maintenance.filter(item => String(item.id) !== String(newRecordId));
                 showToast('设备台账保存失败，已撤销本次修改；请检查存储后重试', 'error');
                 return;
             }
