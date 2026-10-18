@@ -1035,7 +1035,7 @@
                     '<li><span>' + esc(auditLabel(event)) + '</span><b>' + esc(event.actor) + '</b><time>' + esc(event.at) + '</time></li>'
                 ).join('');
                 return '<tr>' +
-                    '<td><strong>' + esc(record.title) + '</strong><small>' + esc(record.id) + '</small></td>' +
+                    '<td><strong>' + esc(record.title) + '</strong><small>' + esc(record.id) + '</small><details class="experiment-purpose"><summary>查看目的与说明</summary><p>' + esc(record.purpose) + '</p></details></td>' +
                     '<td>' + esc(asset?.name || ('设备编号 ' + record.assetId)) + '</td>' +
                     '<td>' + esc(record.plannedDate) + '</td>' +
                     '<td>' + esc(record.owner) + '</td>' +
