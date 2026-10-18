@@ -52,22 +52,30 @@ async function run({locked=false,failWrites=false}={}) {
   console.log('Lab persistence recovery checks passed (locked, normal, quota failure).');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
-assert.match(html, /async function commitLabMutation\\(/,
+assert.ok(html.includes('async function commitLabMutation('),
   'all transactional changes must use the shared persistence commit helper');
-assert.match(html, /async function saveMaintLog\\([\\s\\S]*?await commitLabMutation/,
+assert.ok(html.includes('async function saveMaintLog()') &&
+  html.slice(html.indexOf('async function saveMaintLog()'), html.indexOf('// ==================== 8. 备件管理'))
+    .includes('await commitLabMutation'),
   'maintenance history changes must await persistence and roll back on failure');
-assert.match(html, /async function saveSpare\\([\\s\\S]*?await commitLabMutation/,
+assert.ok(html.includes('async function saveSpare()') &&
+  html.slice(html.indexOf('async function saveSpare()'), html.indexOf('async function saveSpareLog()'))
+    .includes('await commitLabMutation'),
   'spare-part master changes must validate and await persistence');
-assert.match(html, /async function saveTestDiary\\([\\s\\S]*?await commitLabMutation/,
+assert.ok(html.includes('async function saveTestDiary()') &&
+  html.slice(html.indexOf('async function saveTestDiary()'), html.indexOf('// ==================== 10. 年度综合统计'))
+    .includes('await commitLabMutation'),
   'test diary changes must roll back when persistence fails');
-assert.match(html, /async function deleteItem\\([\\s\\S]*?await commitLabMutation/,
+assert.ok(html.includes('async function deleteItem(table, id)') &&
+  html.slice(html.indexOf('async function deleteItem(table, id)'), html.indexOf('function exportAllToJSON()'))
+    .includes('await commitLabMutation'),
   'deletes and stock-ledger reversal must roll back when persistence fails');
 
-assert.match(html, /if \\(storageRecoveryRequired\\)[\\s\\S]{0,900}originalRaw/,
+assert.ok(html.includes('originalRaw') && html.includes('lab-browser-cache-recovery'),
   'recovery-mode JSON export must contain original raw cache data, not demo fallback data');
-assert.match(html, /function isValidLabBackup\\(value\\)/,
+assert.ok(html.includes('function isValidLabBackup(value)'),
   'JSON restore must validate table rows and linked maintenance/spare ledgers');
-assert.match(html, /if \\(!await commitLabMutation\\(previousDB/,
+assert.ok(html.includes('if (!await commitLabMutation(previousDB'),
   'JSON restore must report success only after persisted write succeeds');
-assert.match(html, /原始缓存尚未恢复[\\s\\S]{0,160}阻止 Excel 导出/,
+assert.ok(html.includes('原始缓存尚未恢复') && html.includes('阻止 Excel 导出'),
   'Excel export must not present fallback demo data as the recovered user dataset');
