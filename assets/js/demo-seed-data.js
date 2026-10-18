@@ -20,6 +20,8 @@ const defaultData = {
             spareLogs: [
                 { id: 1, partId: 1, date: "2026-01-15", action: "入库", qty: 1, operator: "戴煜", note: "新购备件入库" }
             ],
+            // No fabricated calibration certificates or results are seeded.
+            calibrationLogs: [],
             testDiary: [
                 { id: 1, start: "2026-01-11", end: "2026-01-12", duration: 2, unit: "NM12-245-359", operator: "Terrence", sap: "Ok", result: "Ok", cycle: "210923_PHT_V07.04", error: "DP Air inlet&outlet too low", errorDesc: "气动阀组故障" }
             ]
