@@ -68,6 +68,10 @@ test("rejects impossible, skipped, reordered or tampered experiment audit chains
  assert.throws(()=>validateExperimentRecord({...started,audit:[
   started.audit[0],{from:"planned",to:"in-progress",actor:" ",at:"2026-10-18T01:01:00.000Z"}
  ]}),/actor is required/);
+ assert.throws(()=>validateExperimentRecord({...started,unexpected:{mutable:true}}),/unsupported fields/);
+ assert.throws(()=>validateExperimentRecord({...started,audit:[
+  started.audit[0],{from:"planned",to:"in-progress",actor:"operator-2",at:"2026-10-18T01:01:00.000Z",metadata:"unreviewed"}
+ ]}),/immutable lifecycle schema/);
 });
 test("records authorized experiment lifecycle transition",()=>{
  const next=transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1");
