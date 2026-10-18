@@ -379,3 +379,86 @@ table tr:hover td{background:#f6fbfa}
   body,.main-content,.content-body{height:auto!important;min-height:0!important;overflow:visible!important;background:#fff!important}
   .card,table{box-shadow:none!important;break-inside:avoid}
 }
+
+
+/* EKPO experiment lifecycle vertical slice */
+.experiment-intro{
+  margin:0 0 17px;padding:21px clamp(18px,2.3vw,30px);
+  border:1px solid #d5e8e7;border-radius:16px;
+  background:radial-gradient(circle at 90% 0,rgba(46,166,157,.12),transparent 26%),linear-gradient(112deg,#fff,#eff8f7);
+  box-shadow:0 7px 20px rgba(22,73,82,.04);
+}
+.experiment-intro .eyebrow{font-size:9px;letter-spacing:1.65px;font-weight:850;color:#188189}
+.experiment-intro h2{font-size:clamp(19px,2vw,25px);margin:5px 0;color:#1a4352;font-weight:800}
+.experiment-intro p{max-width:850px;color:#5f7982;font-size:11px;line-height:1.8}
+.experiment-rules{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.experiment-rules span{
+  padding:5px 9px;border:1px solid #d7e9e7;border-radius:99px;
+  color:#3a7174;background:#fff;font-size:9px
+}
+.experiment-metrics>.card{min-height:92px}
+.experiment-metrics>.card:nth-child(1){border-top:3px solid #6396c2}
+.experiment-metrics>.card:nth-child(2){border-top:3px solid #2c9b91}
+.experiment-metrics>.card:nth-child(3){border-top:3px solid #328c68}
+.experiment-metrics>.card:nth-child(4){border-top:3px solid #b48c60}
+.experiment-form-card{border-color:#d4e7e5;background:linear-gradient(145deg,#fff,#f8fcfb)}
+.experiment-form-card .card-title{color:#1c5962;font-size:13px}
+#experiment-create-form .form-group{min-width:0}
+#experiment-create-form .form-group label{display:block;margin:0 0 6px;color:#5c7781;font-size:10.5px;font-weight:700}
+#experiment-create-form .form-control{
+  width:100%;min-height:39px;padding:9px 11px;
+  border:1px solid #d9e6e9;border-radius:9px;
+  color:#204454;background:#fff;font-size:11px;
+}
+#experiment-create-form textarea.form-control{min-height:86px;resize:vertical;line-height:1.65}
+#experiment-create-button{min-width:160px}
+#experiment-create-button:disabled{opacity:.55;cursor:wait}
+.experiment-toolbar{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  gap:16px;margin-bottom:12px
+}
+.experiment-toolbar .card-title{margin-bottom:4px}
+.experiment-toolbar p{font-size:10px;color:#718792;line-height:1.6}
+.experiment-actor-field{width:min(260px,40%);flex:0 0 auto}
+.experiment-actor-field label{display:block;color:#5d7881;font-size:10px;font-weight:700;margin-bottom:5px}
+.experiment-actor-field input{min-height:36px;padding:8px 10px;font-size:10.5px;border:1px solid #d9e6e9;border-radius:9px}
+.experiment-table{min-width:1000px}
+.experiment-table th{font-size:9.5px;padding:11px 10px}
+.experiment-table td{font-size:10.5px;padding:11px 10px;vertical-align:top}
+.experiment-table td strong{display:block;color:#214657;font-size:11.5px}
+.experiment-table td small{display:block;color:#82969e;font:9px ui-monospace,monospace;margin-top:4px}
+.experiment-status{
+  display:inline-flex;align-items:center;white-space:nowrap;
+  border-radius:99px;padding:4px 9px;font-size:9.5px;font-weight:750;
+  border:1px solid transparent
+}
+.experiment-status.status-planned{background:#eef4fa;color:#456d94;border-color:#d9e5f0}
+.experiment-status.status-in-progress{background:#eaf7f5;color:#197b78;border-color:#cce8e4}
+.experiment-status.status-completed{background:#edf8f0;color:#28764f;border-color:#d5eadb}
+.experiment-status.status-cancelled{background:#f6f1eb;color:#8a6b4e;border-color:#e9ded1}
+.experiment-audit summary{cursor:pointer;color:#267783;font-size:10px;font-weight:700;white-space:nowrap}
+.experiment-audit ol{padding:8px 0 0 17px;min-width:235px}
+.experiment-audit li{padding:5px 0;color:#56717d;font-size:9px;line-height:1.5}
+.experiment-audit li b{display:block;color:#315d68;font-weight:750;margin-top:2px}
+.experiment-audit li time{display:block;color:#84979e;font:8.5px ui-monospace,monospace;margin-top:2px}
+.experiment-actions{white-space:nowrap}
+.experiment-actions .btn{min-height:29px;padding:5px 8px;font-size:9px}
+.experiment-terminal{font-size:9px;color:#8a999e;white-space:nowrap}
+.experiment-empty{
+  display:flex;flex-direction:column;gap:7px;align-items:center;
+  padding:32px 15px;text-align:center;
+  color:#6d858f;border:1px dashed #d2e3e7;border-radius:12px;background:#fbfdfd
+}
+.experiment-empty strong{font-size:12px;color:#385e6c}
+.experiment-empty span{font-size:10px;line-height:1.7}
+@media(max-width:900px){
+  .experiment-toolbar{align-items:stretch;flex-direction:column;gap:9px}
+  .experiment-actor-field{width:100%}
+}
+@media(max-width:520px){
+  .experiment-intro{padding:16px}
+  .experiment-rules span{font-size:8px;padding:4px 7px}
+  .experiment-metrics>.card{min-height:83px}
+  .experiment-toolbar .card-title{font-size:12px}
+  #experiment-create-button{width:100%}
+}
