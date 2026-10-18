@@ -43,3 +43,17 @@ test("rejects impossible date-only diary calendar values",()=>{
  assert.throws(()=>validateTestDiaryEntry({...base,start:"2026-02-30"}),/calendar date/);
  assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-02-30"}),/calendar date/);
 });
+
+test("calibration timestamps require an explicit timezone and real calendar date",()=>{
+ const at=new Date("2026-01-15T00:00:00Z");
+ assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00",validForDays:30},at),TypeError);
+ assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-02-30T00:00:00Z",validForDays:30},at),TypeError);
+ assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00+14:30",validForDays:30},at),TypeError);
+});
+test("calibration expiry rejects unsafe durations and overflow",()=>{
+ assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:Number.MAX_SAFE_INTEGER},new Date()),RangeError);
+ assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:1e308},new Date()),RangeError);
+});
+test("calibration timestamp offsets normalize consistently",()=>{
+ assert.equal(isCalibrationCurrent({calibratedAt:"2026-01-01T08:00:00+08:00",validForDays:0},new Date("2026-01-01T00:00:00Z")),true);
+});
