@@ -657,7 +657,7 @@
             renderSpareParts();
         }
 
-        function saveSpareLog() {
+        async function saveSpareLog() {
             const partId = Number(document.getElementById('sl-part').value);
             const action = document.getElementById('sl-action').value;
             const qtyRaw = document.getElementById('sl-qty').value;
