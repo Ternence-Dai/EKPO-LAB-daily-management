@@ -1379,6 +1379,21 @@
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.spareParts), "备件库存台账");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.spareLogs), "备件出入库流水");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.testDiary), "测试台运行日志");
+            const experimentPlans = (DB.experiments || []).map(({ audit, ...record }) => record);
+            const experimentAudit = (DB.experiments || []).flatMap(record =>
+                (record.audit || []).map(event => ({
+                    experimentId: record.id,
+                    experimentTitle: record.title,
+                    assetId: record.assetId,
+                    status: record.status,
+                    from: event.from,
+                    to: event.to,
+                    actor: event.actor,
+                    at: event.at
+                }))
+            );
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(experimentPlans), "实验计划");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(experimentAudit), "实验状态审计");
             XLSX.writeFile(wb, `燃料电池实验室数据报表_${getToday()}.xlsx`);
             showToast('Excel报表已导出！');
         }
