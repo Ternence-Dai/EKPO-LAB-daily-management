@@ -1144,6 +1144,7 @@
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.gases), "气体使用记录");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.maintenance), "设备维保台账");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.maintLogs), "维保历史记录");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.calibrationLogs || []), "设备校准记录");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.spareParts), "备件库存台账");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.spareLogs), "备件出入库流水");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.testDiary), "测试台运行日志");
@@ -1156,7 +1157,8 @@
             if (!required.every(key => Array.isArray(value[key]))) return false;
             if (value.maintLogs !== undefined && !Array.isArray(value.maintLogs)) return false;
             if (value.spareLogs !== undefined && !Array.isArray(value.spareLogs)) return false;
-            const tables = [...required, 'maintLogs', 'spareLogs'];
+            if (value.calibrationLogs !== undefined && !Array.isArray(value.calibrationLogs)) return false;
+            const tables = [...required, 'maintLogs', 'spareLogs', 'calibrationLogs'];
             for (const key of tables) {
                 const rows = value[key] || [];
                 const ids = new Set();
@@ -1172,6 +1174,17 @@
             if ((value.maintLogs || []).some(row =>
                 !maintenanceIds.has(String(row.eqId)) ||
                 !isValidDateOnly(row.date) || !Number.isFinite(Number(row.cost)) || Number(row.cost) < 0)) return false;
+            if ((value.calibrationLogs || []).some(row =>
+                !maintenanceIds.has(String(row.assetId)) ||
+                typeof row.calibratedAt !== 'string' ||
+                !/^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,3})?(Z|[+-](?:0\\d|1[0-4]):[0-5]\\d)$/.test(row.calibratedAt) ||
+                !Number.isFinite(Date.parse(row.calibratedAt)) ||
+                !Number.isSafeInteger(row.validForDays) || row.validForDays < 1 ||
+                typeof row.certificateNo !== 'string' || !row.certificateNo.trim() ||
+                typeof row.organization !== 'string' || !row.organization.trim() ||
+                typeof row.operator !== 'string' || !row.operator.trim() ||
+                !['pass', 'fail'].includes(row.result) ||
+                (row.notes !== undefined && typeof row.notes !== 'string'))) return false;
             const sparePartIds = new Set(value.spareParts.map(row => String(row.id)));
             if (value.spareParts.some(row =>
                 typeof row.desc !== 'string' || !row.desc.trim() ||
@@ -1199,6 +1212,9 @@
                     }
                     if (!imported.maintLogs) imported.maintLogs = [];
                     if (!imported.spareLogs) imported.spareLogs = [];
+                    if (!imported.calibrationLogs) imported.calibrationLogs = [];
+                    const domain = await import('../../src/domain/index.js');
+                    imported.calibrationLogs = imported.calibrationLogs.map(row => domain.createCalibrationRecord(row));
                     DB = imported;
                     storageRecoveryRequired = false;
                     if (!await commitLabMutation(previousDB, '备份写入失败；已恢复导入前的数据状态')) {
