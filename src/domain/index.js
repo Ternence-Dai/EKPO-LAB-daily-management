@@ -117,7 +117,12 @@ function normalizeDiaryDate(value, label) {
   } catch {
     throw new TypeError(`test ${label} must be an ISO timestamp with an explicit timezone and millisecond precision or less`);
   }
-  return new Date(timestamp).toISOString();
+  const normalized = new Date(timestamp);
+  const normalizedYear = normalized.getUTCFullYear();
+  if (normalizedYear < 0 || normalizedYear > 9999) {
+    throw new TypeError(`test ${label} normalizes outside the supported four-digit UTC year range`);
+  }
+  return normalized.toISOString();
 }
 export function validateTestDiaryEntry(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError("test diary entry is required");
