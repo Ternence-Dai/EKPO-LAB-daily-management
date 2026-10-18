@@ -25,9 +25,13 @@ Date-only values remain calendar dates; they are not converted to UTC instants.
 
 Every transition requires a non-empty actor and appends an ISO timestamped audit entry. Existing audit rows are copied and frozen. Non-string values in audit rows are rejected so nested mutable payloads cannot be smuggled into the returned history. The returned experiment record is frozen at the top level, and its audit array/rows are copied and frozen. Other nested experiment properties are retained by reference; callers must not mutate them through the returned value and should clone nested state at the application boundary when required.
 
-## Calibration validity
+## Calibration records and validity
+
+`createCalibrationRecord(entry)` creates an immutable, normalized calibration record. It requires a unique record ID, a reference to an existing maintenance asset, a timezone-qualified calibration timestamp, a positive safe-integer validity period, certificate/report number, calibration organization, operator, and a `pass` or `fail` result. Optional notes must be text. The domain function validates the record shape; the application verifies that the referenced asset exists and that certificate references are not duplicated.
 
 `isCalibrationCurrent({ calibratedAt, validForDays }, at)` requires an ISO timestamp with an explicit timezone, a non-negative safe-integer validity period, and a valid `Date` comparison instant. It returns true through the expiry instant itself; after that instant it returns false. Invalid calendar dates, invalid timezone offsets and unsupported fractional-second precision are rejected.
+
+The browser UI appends calibration history; it does not offer in-place edits or deletion. It displays failed results distinctly from expired results. Legacy caches and backups without a `calibrationLogs` table are migrated to an empty array without fabricating certificates or outcomes. Calibration rows in JSON imports are validated before the active database is replaced; the Excel export includes a separate calibration-history sheet.
 
 ## Test diary entries
 
@@ -41,8 +45,8 @@ The module validates the declared duration value but does not infer its unit or 
 
 ## Current application wiring
 
-The current browser application calls `validateMaintenanceAsset` from the maintenance save flow and `validateTestDiaryEntry` from the test-diary save flow. The experiment lifecycle and calibration functions are currently domain-core capabilities; the legacy UI does not yet expose complete experiment-status or calibration workflows. They must not be counted as delivered user-facing modules until those workflows, persistence, audit display and regression tests are integrated.
+The current browser application calls `validateMaintenanceAsset` from the maintenance save flow, `validateTestDiaryEntry` from the test-diary save flow, and `createCalibrationRecord`/`isCalibrationCurrent` from the equipment calibration workflow. Calibration entry, append-only history, status display, legacy-cache migration, backup validation and Excel export are wired. The experiment lifecycle function remains a domain-core capability; a complete experiment-status workflow with persistence and audit display is not yet delivered.
 
 ## Verification boundary
 
-`test/domain.test.js` covers lifecycle transitions, immutable audit history, calibration dates and expiry, diary ordering/duration, and maintenance data. The application validators cover persistence rollback, local-cache recovery, maintenance scheduling, inventory rollback and user-interface integration. These checks do not replace access control or a durable transactional database.
+`test/domain.test.js` covers lifecycle transitions, immutable audit history, calibration dates and expiry, diary ordering/duration, and maintenance data. The application validators cover persistence rollback, local-cache recovery, maintenance scheduling, inventory rollback, calibration UI and backup compatibility. These checks do not replace access control or a durable transactional database.
