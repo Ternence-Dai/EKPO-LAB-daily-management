@@ -319,7 +319,7 @@ export function validateTestDiaryEntry(entry) {
     if (typeof value !== "string" || !value.trim()) throw new TypeError(`test ${field} is required`);
     const normalized = value.trim();
     if (normalized.length > maxLength) throw new RangeError(`test ${field} exceeds ${maxLength} characters`);
-    if (/[\\x00-\\x1F\\x7F]/.test(normalized)) throw new TypeError(`test ${field} must not contain control characters`);
+    if (/[\x00-\x1F\x7F]/.test(normalized)) throw new TypeError(`test ${field} must not contain control characters`);
     return normalized;
   };
   const optionalText = (value, field, maxLength) => {
@@ -327,7 +327,7 @@ export function validateTestDiaryEntry(entry) {
     if (typeof value !== "string") throw new TypeError(`test ${field} must be text`);
     const normalized = value.trim();
     if (normalized.length > maxLength) throw new RangeError(`test ${field} exceeds ${maxLength} characters`);
-    if (/[\\x00-\\x1F\\x7F]/.test(normalized)) throw new TypeError(`test ${field} must not contain control characters`);
+    if (/[\x00-\x1F\x7F]/.test(normalized)) throw new TypeError(`test ${field} must not contain control characters`);
     return normalized;
   };
   return Object.freeze({
