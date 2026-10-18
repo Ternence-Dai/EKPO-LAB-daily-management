@@ -1,6 +1,74 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { transitionExperiment, isCalibrationCurrent, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
+import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
+test("creates a traceable planned experiment record with immutable creation audit",()=>{
+ const record=createExperimentRecord({
+  id:"EXP-20261018-001",title:"Fuel-cell polarization sweep",assetId:2,
+  plannedDate:"2026-10-20",owner:"Lab operator",purpose:"Measure polarization response using the approved test procedure.",
+  actor:"operator-1",createdAt:"2026-10-18T09:00:00+08:00"
+ });
+ assert.equal(record.status,"planned");
+ assert.equal(record.assetId,"2");
+ assert.equal(record.plannedDate,"2026-10-20");
+ assert.equal(record.createdAt,"2026-10-18T01:00:00.000Z");
+ assert.equal(record.audit.length,1);
+ assert.equal(record.audit[0].from,"new");
+ assert.equal(record.audit[0].to,"planned");
+ assert.equal(record.audit[0].actor,"operator-1");
+ assert.ok(Object.isFrozen(record));
+ assert.ok(Object.isFrozen(record.audit));
+ assert.ok(Object.isFrozen(record.audit[0]));
+});
+test("validates a full experiment lifecycle and its chronological audit chain",()=>{
+ const created=createExperimentRecord({
+  id:"EXP-1",title:"Durability run",assetId:"2",plannedDate:"2026-10-20",
+  owner:"Operator A",purpose:"Verify planned operation",actor:"operator-1",
+  createdAt:"2026-10-18T01:00:00.000Z"
+ });
+ const started=transitionExperiment(created,"in-progress","operator-2");
+ const completed=transitionExperiment(started,"completed","reviewer-1");
+ const imported=validateExperimentRecord(completed);
+ assert.equal(imported.status,"completed");
+ assert.equal(imported.audit.length,3);
+ assert.equal(imported.audit[1].from,"planned");
+ assert.equal(imported.audit[1].to,"in-progress");
+ assert.equal(imported.audit[2].from,"in-progress");
+ assert.equal(imported.audit[2].to,"completed");
+ assert.ok(Object.isFrozen(imported.audit));
+ assert.ok(imported.audit.every(Object.isFrozen));
+});
+test("rejects experiment records with missing traceability, invalid plans or status mismatch",()=>{
+ const base={
+  id:"EXP-2",title:"Bench validation",assetId:2,plannedDate:"2026-10-20",
+  owner:"Operator",purpose:"Validate operation",actor:"operator-1",
+  createdAt:"2026-10-18T01:00:00.000Z"
+ };
+ assert.throws(()=>createExperimentRecord({...base,actor:" "}),/actor is required/);
+ assert.throws(()=>createExperimentRecord({...base,title:" "}),/title is required/);
+ assert.throws(()=>createExperimentRecord({...base,assetId:" "}),/asset reference is required/);
+ assert.throws(()=>createExperimentRecord({...base,plannedDate:"2026-02-30"}),/calendar date/);
+ assert.throws(()=>createExperimentRecord({...base,purpose:" "}),/purpose is required/);
+ const created=createExperimentRecord(base);
+ assert.throws(()=>validateExperimentRecord({...created,status:"completed"}),/does not match/);
+ assert.throws(()=>validateExperimentRecord({...created,audit:[]}),/include record creation/);
+});
+test("rejects impossible, skipped, reordered or tampered experiment audit chains",()=>{
+ const base=createExperimentRecord({
+  id:"EXP-3",title:"Stack test",assetId:2,plannedDate:"2026-10-20",
+  owner:"Operator",purpose:"Traceable test plan",actor:"operator-1",
+  createdAt:"2026-10-18T01:00:00.000Z"
+ });
+ const started=transitionExperiment(base,"in-progress","operator-2");
+ assert.throws(()=>validateExperimentRecord({...started,audit:[
+  started.audit[0],{from:"planned",to:"completed",actor:"operator-2",at:"2026-10-18T01:01:00.000Z"}
+ ]}),/invalid lifecycle transition/);
+ assert.throws(()=>validateExperimentRecord({...started,audit:[
+  started.audit[0],{from:"planned",to:"in-progress",actor:"operator-2",at:"2026-10-18T00:59:00.000Z"}
+ ]}),/chronological/);
+ assert.throws(()=>validateExperimentRecord({...started,audit:[
+  started.audit[0],{from:"planned",to:"in-progress",actor:" ",at:"2026-10-18T01:01:00.000Z"}
+ ]}),/actor is required/);
+});
 test("records authorized experiment lifecycle transition",()=>{
  const next=transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1");
  assert.equal(next.status,"in-progress"); assert.equal(next.audit.length,1);
