@@ -8,7 +8,7 @@ const domain = fs.readFileSync('src/domain/index.js', 'utf8');
 const css = fs.readFileSync('assets/css/product-system.css', 'utf8');
 const seed = fs.readFileSync('assets/js/demo-seed-data.js', 'utf8');
 
-assert.ok(html.includes('product-system.css?v=20261018-v3.1'),
+assert.ok(html.includes('product-system.css?v=20261018-v3.2'),
   'LabOS must load the experiment lifecycle stylesheet revision');
 for (const id of [
   'page-experiments', 'experiment-create-form', 'experiment-title',
