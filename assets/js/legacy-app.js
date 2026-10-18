@@ -317,7 +317,7 @@
             }
         }
         function editGas(id) { let g = DB.gases.find(x => x.id === id); document.getElementById('g-id').value=g.id; document.getElementById('g-item').value=g.item||'Hydrogen'; document.getElementById('g-spec').value=g.spec||''; document.getElementById('g-supplier').value=g.supplier||''; document.getElementById('g-batch').value=g.batch||''; document.getElementById('g-year').value=g.year||new Date().getFullYear(); document.getElementById('g-month').value=g.monthNum||(new Date().getMonth()+1); document.getElementById('g-delivery').value=g.delivery||0; document.getElementById('g-return').value=g.return||0; document.getElementById('g-consumption').value=g.consumption||0; document.getElementById('g-cost').value=g.cost||0; document.getElementById('g-rent').value=g.rent||0; document.getElementById('g-freight').value=g.freight||0; openModal('modal-gas'); }
-        function saveGas() {
+        async function saveGas() {
             const id = document.getElementById('g-id').value;
             const year = Number(document.getElementById('g-year').value);
             const monthNum = Number(document.getElementById('g-month').value);
@@ -336,15 +336,23 @@
             const data = { item, spec:document.getElementById('g-spec').value, supplier:document.getElementById('g-supplier').value,
                 batch:document.getElementById('g-batch').value, year, monthNum,
                 month:year + '-' + String(monthNum).padStart(2, '0'), ...values };
+            const previousDB = snapshotLabDB();
             if (id) {
                 const i = DB.gases.findIndex(x => String(x.id) === String(id));
                 if (i < 0) { showToast('原气体记录已不存在，请刷新后重试', 'error'); return; }
-                DB.gases[i] = { ...DB.gases[i], ...data }; showToast('已更新');
-            } else { data.id = Date.now(); DB.gases.push(data); showToast('已新增'); }
-            saveToLocal(); closeModal('modal-gas'); renderGases();
+                DB.gases[i] = { ...DB.gases[i], ...data };
+            } else {
+                data.id = Date.now();
+                if (DB.gases.some(x => String(x.id) === String(data.id))) {
+                    showToast('记录编号冲突，请重试保存', 'error'); return;
+                }
+                DB.gases.push(data);
+            }
+            if (!await commitLabMutation(previousDB, '气体记录保存失败，本次修改已撤销')) return;
+            closeModal('modal-gas');
+            renderGases();
         }
 
-        // ==================== 7. 维保管理 ====================
         function isValidDateOnly(value) {
             if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
             const [year, month, day] = value.split('-').map(Number);
@@ -528,7 +536,7 @@
             document.getElementById('ml-record').value = l.record;
             openModal('modal-maint-log');
         }
-        function saveMaintLog() {
+        async function saveMaintLog() {
             const id = document.getElementById('ml-id').value;
             const eqId = Number(document.getElementById('ml-eq').value);
             const date = document.getElementById('ml-date').value;
@@ -542,19 +550,26 @@
             const data = { eqId, date, checker: document.getElementById('ml-checker').value,
                 operator: document.getElementById('ml-operator').value, cost,
                 record: document.getElementById('ml-record').value };
+            const previousDB = snapshotLabDB();
             let previousEqId = null;
             if (id) {
                 const i = DB.maintLogs.findIndex(x => String(x.id) === String(id));
                 if (i < 0) { showToast('原维保记录已不存在，请刷新后重试', 'error'); return; }
                 previousEqId = DB.maintLogs[i].eqId;
                 DB.maintLogs[i] = { ...DB.maintLogs[i], ...data };
-                showToast('维保记录已更新');
             } else {
-                data.id = Date.now(); DB.maintLogs.push(data); showToast('维保记录已新增');
+                data.id = Date.now();
+                if (DB.maintLogs.some(x => String(x.id) === String(data.id))) {
+                    showToast('维保记录编号冲突，请重试保存', 'error'); return;
+                }
+                DB.maintLogs.push(data);
             }
             if (previousEqId !== null && previousEqId !== eqId) syncMaintenanceSchedule(previousEqId);
             syncMaintenanceSchedule(eqId);
-            saveToLocal(); closeModal('modal-maint-log'); renderMaintenance(); renderMaintLogs();
+            if (!await commitLabMutation(previousDB, '维保记录保存失败，本次修改已撤销')) return;
+            closeModal('modal-maint-log');
+            renderMaintenance();
+            renderMaintLogs();
         }
 
         // ==================== 8. 备件管理 ====================
@@ -606,9 +621,43 @@
         }
 
         function editSpare(id) { let s = DB.spareParts.find(x => x.id === id); document.getElementById('s-id').value=s.id; document.getElementById('s-category').value=s.category||''; document.getElementById('s-desc').value=s.desc||''; document.getElementById('s-catalog').value=s.catalog||''; document.getElementById('s-purpose').value=s.purpose||''; document.getElementById('s-qty').value=s.qty||0; document.getElementById('s-brand').value=s.brand||''; document.getElementById('s-price').value=s.price||0; document.getElementById('s-location').value=s.location||''; document.getElementById('s-update').value=s.update||''; openModal('modal-spare'); }
-        function saveSpare() { let id=document.getElementById('s-id').value; let update=document.getElementById('s-update').value || getToday(); let data={category:document.getElementById('s-category').value, desc:document.getElementById('s-desc').value, catalog:document.getElementById('s-catalog').value, purpose:document.getElementById('s-purpose').value, qty:+document.getElementById('s-qty').value, brand:document.getElementById('s-brand').value, price:+document.getElementById('s-price').value, location:document.getElementById('s-location').value, update:update}; if(id){let i=DB.spareParts.findIndex(x=>x.id==id); DB.spareParts[i]={...DB.spareParts[i],...data}; showToast('已更新');}else{data.id=Date.now(); DB.spareParts.push(data); showToast('已新增');} saveToLocal(); closeModal('modal-spare'); renderSpareParts(); }
+        async function saveSpare() {
+            const id = document.getElementById('s-id').value;
+            const update = document.getElementById('s-update').value || getToday();
+            const data = {
+                category: document.getElementById('s-category').value.trim(),
+                desc: document.getElementById('s-desc').value.trim(),
+                catalog: document.getElementById('s-catalog').value.trim(),
+                purpose: document.getElementById('s-purpose').value.trim(),
+                qty: Number(document.getElementById('s-qty').value),
+                brand: document.getElementById('s-brand').value.trim(),
+                price: Number(document.getElementById('s-price').value),
+                location: document.getElementById('s-location').value.trim(),
+                update
+            };
+            if (!data.desc || !data.catalog) { showToast('备件名称和物料编码为必填项', 'error'); return; }
+            if (!Number.isFinite(data.qty) || data.qty < 0 || !Number.isFinite(data.price) || data.price < 0) {
+                showToast('备件库存和单价必须是大于或等于 0 的有效数字', 'error'); return;
+            }
+            if (!isValidDateOnly(update)) { showToast('备件日期无效', 'error'); return; }
+            const previousDB = snapshotLabDB();
+            if (id) {
+                const i = DB.spareParts.findIndex(x => String(x.id) === String(id));
+                if (i < 0) { showToast('原备件记录已不存在，请刷新后重试', 'error'); return; }
+                DB.spareParts[i] = { ...DB.spareParts[i], ...data };
+            } else {
+                data.id = Date.now();
+                if (DB.spareParts.some(x => String(x.id) === String(data.id))) {
+                    showToast('备件记录编号冲突，请重试保存', 'error'); return;
+                }
+                DB.spareParts.push(data);
+            }
+            if (!await commitLabMutation(previousDB, '备件台账保存失败，本次修改已撤销')) return;
+            closeModal('modal-spare');
+            renderSpareParts();
+        }
 
-        async function saveSpareLog() {
+        function saveSpareLog() {
             const partId = Number(document.getElementById('sl-part').value);
             const action = document.getElementById('sl-action').value;
             const qtyRaw = document.getElementById('sl-qty').value;
@@ -709,7 +758,43 @@
             }
         }
         function editTestDiary(id) { let t = DB.testDiary.find(x => x.id === id); if(!t){showToast('测试记录不存在，请刷新后重试','error');return;} document.getElementById('t-id').value=t.id; document.getElementById('t-start').value=t.start||''; document.getElementById('t-end').value=t.end||''; document.getElementById('t-duration').value=t.duration||0; document.getElementById('t-unit').value=t.unit||''; document.getElementById('t-operator').value=t.operator||''; document.getElementById('t-sap').value=t.sap||''; document.getElementById('t-result').value=t.result||''; document.getElementById('t-cycle').value=t.cycle||''; document.getElementById('t-error').value=t.error||''; document.getElementById('t-errorDesc').value=t.errorDesc||''; openModal('modal-testDiary'); }
-        async function saveTestDiary() { let id=document.getElementById('t-id').value; let data={start:document.getElementById('t-start').value, end:document.getElementById('t-end').value, duration:+document.getElementById('t-duration').value, unit:document.getElementById('t-unit').value, operator:document.getElementById('t-operator').value, sap:document.getElementById('t-sap').value, result:document.getElementById('t-result').value, cycle:document.getElementById('t-cycle').value, error:document.getElementById('t-error').value, errorDesc:document.getElementById('t-errorDesc').value}; try { const domain=await import('../../src/domain/index.js'); data=domain.validateTestDiaryEntry(data); } catch(error) { showToast('测试记录未保存：'+error.message,'error'); return; } if(id){let i=DB.testDiary.findIndex(x=>x.id==id); if(i<0){showToast('测试记录不存在，未保存','error');return;} DB.testDiary[i]={...DB.testDiary[i],...data}; showToast('已更新');}else{data.id=Date.now(); DB.testDiary.push(data); showToast('已新增');} await saveToLocal(); closeModal('modal-testDiary'); renderTestDiary(); }
+        async function saveTestDiary() {
+            const id = document.getElementById('t-id').value;
+            const data = {
+                start: document.getElementById('t-start').value,
+                end: document.getElementById('t-end').value,
+                duration: Number(document.getElementById('t-duration').value),
+                unit: document.getElementById('t-unit').value,
+                operator: document.getElementById('t-operator').value,
+                sap: document.getElementById('t-sap').value,
+                result: document.getElementById('t-result').value,
+                cycle: document.getElementById('t-cycle').value,
+                error: document.getElementById('t-error').value,
+                errorDesc: document.getElementById('t-errorDesc').value
+            };
+            try {
+                const domain = await import('../../src/domain/index.js');
+                Object.assign(data, domain.validateTestDiaryEntry(data));
+            } catch (error) {
+                showToast('测试记录未保存：' + error.message, 'error');
+                return;
+            }
+            const previousDB = snapshotLabDB();
+            if (id) {
+                const i = DB.testDiary.findIndex(x => String(x.id) === String(id));
+                if (i < 0) { showToast('测试记录不存在，未保存', 'error'); return; }
+                DB.testDiary[i] = { ...DB.testDiary[i], ...data };
+            } else {
+                data.id = Date.now();
+                if (DB.testDiary.some(x => String(x.id) === String(data.id))) {
+                    showToast('测试记录编号冲突，请重试保存', 'error'); return;
+                }
+                DB.testDiary.push(data);
+            }
+            if (!await commitLabMutation(previousDB, '测试记录保存失败，本次修改已撤销')) return;
+            closeModal('modal-testDiary');
+            renderTestDiary();
+        }
 
         // ==================== 10. 年度综合统计 ====================
         function renderYearlyFilter() {
@@ -830,6 +915,7 @@
         // ==================== 12. 导出与删除 ====================
         async function deleteItem(table, id) {
             if (!confirm('确认删除这条记录吗？')) return;
+            if (storageRecoveryRequired) { showToast('缓存待恢复，已阻止删除', 'error'); return; }
             const rows = DB[table];
             if (!Array.isArray(rows)) { showToast('数据表不存在，无法删除', 'error'); return; }
             const target = rows.find(item => String(item.id) === String(id));
@@ -852,13 +938,20 @@
                 if (!Number.isFinite(nextQty) || nextQty < 0) {
                     showToast('无法撤销该入库流水：当前库存不足，请先核对库存与后续流水', 'error'); return;
                 }
-                part.qty = nextQty;
+            }
+            const previousDB = snapshotLabDB();
+            if (table === 'spareLogs') {
+                const part = DB.spareParts.find(item => String(item.id) === String(target.partId));
+                const qty = Number(target.qty);
+                const currentQty = Number(part.qty);
+                part.qty = target.action === '入库' ? currentQty - qty : currentQty + qty;
+                part.update = target.date;
             }
             const affectedMaintenanceIds = table === 'maintLogs'
                 ? [...new Set(DB.maintLogs.filter(item => String(item.id) === String(id)).map(item => item.eqId))] : [];
             DB[table] = rows.filter(item => String(item.id) !== String(id));
             if (table === 'maintLogs') affectedMaintenanceIds.forEach(syncMaintenanceSchedule);
-            await saveToLocal();
+            if (!await commitLabMutation(previousDB, '删除未能保存，本次操作已撤销')) return;
             if (table === 'gases') renderGases();
             if (table === 'maintLogs') { renderMaintenance(); renderMaintLogs(); }
             if (table === 'maintenance') renderMaintenance();
@@ -867,6 +960,7 @@
             if (table === 'testDiary') renderTestDiary();
             showToast('删除成功');
         }
+
         function exportAllToJSON() {
             let dataStr = JSON.stringify(DB, null, 2);
             let blob = new Blob([dataStr], { type: 'application/json' });
