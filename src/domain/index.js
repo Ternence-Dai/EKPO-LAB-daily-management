@@ -62,7 +62,9 @@ export function validateTestDiaryEntry(entry) {
   const normalizedStart = normalizeDiaryDate(start, "start time");
   const normalizedEnd = normalizeDiaryDate(end, "end time");
   if (Date.parse(normalizedEnd) < Date.parse(normalizedStart)) throw new RangeError("test end time cannot precede start time");
-  if (!Number.isFinite(duration) || duration <= 0) throw new RangeError("test duration must be a positive finite number");
+  if (!Number.isFinite(duration) || duration <= 0 || duration > Number.MAX_SAFE_INTEGER) {
+    throw new RangeError("test duration must be a positive finite number within the safe numeric range");
+  }
   if (typeof unit !== "string" || !unit.trim()) throw new TypeError("test unit is required");
   if (typeof operator !== "string" || !operator.trim()) throw new TypeError("test operator is required");
   return Object.freeze({ ...entry, start:normalizedStart, end:normalizedEnd, unit:unit.trim(), operator:operator.trim() });
