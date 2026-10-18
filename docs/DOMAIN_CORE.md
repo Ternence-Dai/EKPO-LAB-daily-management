@@ -17,13 +17,19 @@ Date-only values remain calendar dates; they are not converted to UTC instants.
 
 ## Experiment lifecycle
 
-`transitionExperiment(experiment, nextStatus, actor)` permits only these transitions:
+`createExperimentRecord(entry)` creates an immutable planned experiment record. It requires a unique ID (uniqueness is enforced by the application), title, equipment reference, real `YYYY-MM-DD` planned date, owner, purpose, and a non-empty creator/recording actor. The first audit row records `new → planned` with the creation actor and timestamp. It does not create a measurement result, sample, certificate, or approval.
+
+`validateExperimentRecord(entry)` verifies the record identity, planned date, required descriptive fields, legal status, and complete audit chain. It replays the transitions from the creation event, rejects skipped or illegal transitions, requires a non-empty actor for each event, checks chronological timestamps, and requires the final audit status to match the record status. It returns an immutable record with a copied/frozen audit list.
+
+`transitionExperiment(experiment, nextStatus, actor, at?)` permits only these transitions:
 
 - `planned → in-progress` or `planned → cancelled`
 - `in-progress → completed` or `in-progress → cancelled`
 - `completed` and `cancelled` are terminal states
 
-Every transition requires a non-empty actor and appends an ISO timestamped audit entry. Existing audit rows are copied and frozen. Non-string values in audit rows are rejected so nested mutable payloads cannot be smuggled into the returned history. The returned experiment record is frozen at the top level, and its audit array/rows are copied and frozen. Other nested experiment properties are retained by reference; callers must not mutate them through the returned value and should clone nested state at the application boundary when required.
+Every transition requires a non-empty actor and appends an ISO timestamped audit entry. The optional `at` argument supports deterministic tests and callers with an authoritative timestamp; timestamps earlier than the previous audit event are rejected. Existing audit rows are copied and frozen. Non-string values in audit rows are rejected so nested mutable payloads cannot be smuggled into the returned history. The returned experiment record is frozen at the top level, and its audit array/rows are copied and frozen. Other nested experiment properties are retained by reference; callers must not mutate them through the returned value and should clone nested state at the application boundary when required.
+
+The browser UI exposes experiment planning, equipment association, responsible owner, creator attribution, status transitions, and expandable audit history. Status changes and plan creation use the same persistence rollback path as other lab mutations. Legacy caches and JSON backups without an `experiments` table migrate to an empty list; no plans or runs are fabricated. Existing experiment rows are validated at startup and during backup import, including equipment references and audit chronology. The operator name is user-entered attribution, not authenticated identity; a completed lifecycle state is not equivalent to reviewed/approved scientific results.
 
 ## Calibration records and validity
 
@@ -45,7 +51,7 @@ The module validates the declared duration value but does not infer its unit or 
 
 ## Current application wiring
 
-The current browser application calls `validateMaintenanceAsset` from the maintenance save flow, `validateTestDiaryEntry` from the test-diary save flow, and `createCalibrationRecord`/`isCalibrationCurrent` from the equipment calibration workflow. Calibration entry, append-only history, status display, legacy-cache migration, backup validation and Excel export are wired. The experiment lifecycle function remains a domain-core capability; a complete experiment-status workflow with persistence and audit display is not yet delivered.
+The current browser application calls `validateMaintenanceAsset` from the maintenance save flow, `validateTestDiaryEntry` from the test-diary save flow, `createCalibrationRecord`/`isCalibrationCurrent` from the equipment calibration workflow, and `createExperimentRecord`/`validateExperimentRecord`/`transitionExperiment` from the experiment page. Experiment plans can be created against an in-register asset, moved through permitted states, and inspected with immutable, chronological audit history. Creation and transition writes use snapshot/commit rollback; startup and import validate the audit chain and asset reference. The operator field is self-reported and does not enforce identity or permissions.
 
 ## Verification boundary
 
