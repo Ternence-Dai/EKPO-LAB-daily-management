@@ -34,7 +34,7 @@ Every transition requires a non-empty actor and appends an ISO timestamped audit
 `validateTestDiaryEntry(entry)` requires valid start/end values, a positive finite duration within the safe numeric range, a non-empty unit, and a non-empty operator.
 
 - Date-only values use `YYYY-MM-DD` calendar semantics and remain date-only.
-- Timed values require an explicit timezone and are normalized to UTC.
+- Timed values require an explicit timezone and are normalized to UTC; the normalized UTC year must remain in the supported four-digit range so the saved value can be parsed again.
 - The end time cannot precede the start time.
 
 The module validates the declared duration value but does not infer its unit or recompute it from timestamps; the caller must keep duration and unit semantics consistent.
