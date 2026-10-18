@@ -581,13 +581,10 @@
 
                 function calibrationDateToIso(value) {
             if (!isValidDateOnly(value)) throw new TypeError('校准日期无效');
-            const [year, month, day] = value.split('-').map(Number);
-            const local = new Date(year, month - 1, day, 0, 0, 0, 0);
-            if (local.getFullYear() !== year || local.getMonth() !== month - 1 ||
-                local.getDate() !== day || local.getHours() !== 0) {
-                throw new TypeError('校准日期在当前本地时区不可用');
-            }
-            return local.toISOString();
+            // The date input is a calendar date, not a local-time instant.
+            // Anchor it at UTC midnight so users in every timezone keep the
+            // exact selected YYYY-MM-DD when the record is stored and shown.
+            return value + 'T00:00:00.000Z';
         }
 
         async function renderCalibrationLogs() {
@@ -599,6 +596,8 @@
                 return;
             }
             const selected = select.value;
+            const dateInput = document.getElementById('cal-date');
+            if (dateInput && !dateInput.value) dateInput.value = getToday();
             select.innerHTML = '<option value="">请选择在册设备</option>' +
                 DB.maintenance.map(asset =>
                     `<option value="${esc(asset.id)}">${esc(asset.name)} · ${esc(asset.category || '未分类')}</option>`
