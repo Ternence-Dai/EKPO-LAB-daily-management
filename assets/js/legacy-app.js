@@ -1369,7 +1369,8 @@
             if (value.maintLogs !== undefined && !Array.isArray(value.maintLogs)) return false;
             if (value.spareLogs !== undefined && !Array.isArray(value.spareLogs)) return false;
             if (value.calibrationLogs !== undefined && !Array.isArray(value.calibrationLogs)) return false;
-            const tables = [...required, 'maintLogs', 'spareLogs', 'calibrationLogs'];
+            if (value.experiments !== undefined && !Array.isArray(value.experiments)) return false;
+            const tables = [...required, 'maintLogs', 'spareLogs', 'calibrationLogs', 'experiments'];
             for (const key of tables) {
                 const rows = value[key] || [];
                 const ids = new Set();
@@ -1451,8 +1452,17 @@
                     if (!imported.maintLogs) imported.maintLogs = [];
                     if (!imported.spareLogs) imported.spareLogs = [];
                     if (!imported.calibrationLogs) imported.calibrationLogs = [];
+                    if (!imported.experiments) imported.experiments = [];
                     const domain = await import('../../src/domain/index.js');
                     imported.calibrationLogs = imported.calibrationLogs.map(row => domain.createCalibrationRecord(row));
+                    const importedAssetIds = new Set(imported.maintenance.map(asset => String(asset.id)));
+                    imported.experiments = imported.experiments.map(row => {
+                        const record = domain.validateExperimentRecord(row);
+                        if (!importedAssetIds.has(String(record.assetId))) {
+                            throw new Error('实验计划引用了不存在的设备台账: ' + record.id);
+                        }
+                        return record;
+                    });
                     DB = imported;
                     storageRecoveryRequired = false;
                     if (!await commitLabMutation(previousDB, '备份写入失败；已恢复导入前的数据状态')) {
@@ -1508,6 +1518,36 @@
                     storageRecoveryRequired = true;
                     showToast('校准台账校验失败，已锁定写入以保护原始数据', 'error');
                     console.error('校准台账无法安全读取。', error);
+                }
+            }
+            if (!storageRecoveryRequired && Array.isArray(DB.experiments) && DB.experiments.length) {
+                try {
+                    const domain = await import('../../src/domain/index.js');
+                    const assetIds = new Set(DB.maintenance.map(asset => String(asset.id)));
+                    const experimentIds = new Set();
+                    DB.experiments = DB.experiments.map(record => {
+                        const validated = domain.validateExperimentRecord(record);
+                        if (!assetIds.has(String(validated.assetId))) {
+                            throw new Error('实验计划引用了不存在的设备台账: ' + validated.id);
+                        }
+                        if (experimentIds.has(validated.id)) {
+                            throw new Error('实验台账包含重复实验编号: ' + validated.id);
+                        }
+                        experimentIds.add(validated.id);
+                        return validated;
+                    });
+                } catch (error) {
+                    if (cachedLabRaw !== null) {
+                        try {
+                            localStorage.setItem('lab_management_db_v9_recovery_' + Date.now(), cachedLabRaw);
+                        } catch (backupError) {
+                            console.error('无法另存损坏实验记录的原始缓存。', backupError);
+                        }
+                    }
+                    storageWarning = true;
+                    storageRecoveryRequired = true;
+                    showToast('实验生命周期或审计记录校验失败，已锁定写入以保护原始数据', 'error');
+                    console.error('实验台账无法安全读取。', error);
                 }
             }
             renderDashboard();
