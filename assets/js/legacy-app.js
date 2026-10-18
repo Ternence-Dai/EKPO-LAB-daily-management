@@ -1310,6 +1310,16 @@
                     if (validated.some(row => !assetIds.has(String(row.assetId)))) {
                         throw new Error('校准记录引用了不存在的设备台账');
                     }
+                    const certificateReferences = new Set();
+                    for (const record of validated) {
+                        const reference = JSON.stringify([
+                            String(record.assetId), record.organization, record.certificateNo
+                        ]);
+                        if (certificateReferences.has(reference)) {
+                            throw new Error('校准台账包含重复的设备/机构/证书编号组合');
+                        }
+                        certificateReferences.add(reference);
+                    }
                     DB.calibrationLogs = validated;
                 } catch (error) {
                     if (cachedLabRaw !== null) {
