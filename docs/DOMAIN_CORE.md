@@ -51,7 +51,7 @@ The module validates the declared duration value but does not infer its unit or 
 
 ## Current application wiring
 
-The current browser application calls `validateMaintenanceAsset` from the maintenance save flow, `validateTestDiaryEntry` from the test-diary save flow, `createCalibrationRecord`/`isCalibrationCurrent` from the equipment calibration workflow, and `createExperimentRecord`/`validateExperimentRecord`/`transitionExperiment` from the experiment page. Experiment plans can be created against an in-register asset, moved through permitted states, and inspected with immutable, chronological audit history. Creation and transition writes use snapshot/commit rollback; startup and import validate the audit chain and asset reference. The operator field is self-reported and does not enforce identity or permissions.
+The current browser application calls `validateMaintenanceAsset` from the maintenance save flow, `validateTestDiaryEntry` from the test-diary save flow, `createCalibrationRecord`/`isCalibrationCurrent` from the equipment calibration workflow, and `createExperimentRecord`/`validateExperimentRecord`/`transitionExperiment` from the experiment page. Experiment plans can be created against an in-register asset, moved through permitted states, and inspected with immutable, chronological audit history. Creation and transition writes use snapshot/commit rollback; startup and import validate the audit chain and asset reference. The operator field is self-reported and does not enforce identity or permissions. The Excel workbook exports experiment-plan metadata and a separate flattened status-audit sheet.
 
 ## Verification boundary
 
