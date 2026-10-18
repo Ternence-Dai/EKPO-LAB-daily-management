@@ -47,7 +47,7 @@ const maintenanceSource = app.slice(maintenanceStart, maintenanceEnd);
 assert.ok(html.includes('<th>校准状态</th>'),
   'equipment register must expose the latest calibration status column');
 for (const token of [
-  'latestCalibrationByAsset', 'DB.calibrationLogs', 'domain.isCalibrationCurrent(calibration)',
+  'latestCalibrationByAsset', 'DB.calibrationLogs', 'calibrationDomain.isCalibrationCurrent(calibration)',
   "'未记录'", "'校准不合格'", "'已过期'", "'有效'"
 ]) assert.ok(maintenanceSource.includes(token),
   'equipment register must distinguish calibration state: ' + token);
