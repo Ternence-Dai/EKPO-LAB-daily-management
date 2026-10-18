@@ -45,8 +45,8 @@ async function runMasterSave({id='1',qty=5,catalog='SKU-1',price=10,history=true
     document:{getElementById:key=>({value:values[key]??''})},
     getToday:()=> '2026-10-18',
     isValidDateOnly:value=>value === '2026-10-18' || value === '2026-10-17',
-    snapshotLabDB(){return JSON.parse(JSON.stringify(this.DB));},
-    async commitLabMutation(previousDB){if(saveAllowed)return true;this.DB=previousDB;return false;},
+    snapshotLabDB:()=>JSON.parse(JSON.stringify(context.DB)),
+    commitLabMutation:async previousDB=>{if(saveAllowed)return true;context.DB=previousDB;return false;},
     showToast:message=>messages.push(message),
     closeModal:()=>{},renderSpareParts:()=>{},
     console:{error(){}}
