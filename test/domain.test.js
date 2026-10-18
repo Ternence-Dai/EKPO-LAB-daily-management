@@ -49,6 +49,7 @@ test("calibration timestamps require an explicit timezone and real calendar date
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00",validForDays:30},at),TypeError);
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-02-30T00:00:00Z",validForDays:30},at),TypeError);
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00+14:30",validForDays:30},at),TypeError);
+ assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00.1234Z",validForDays:30},at),TypeError);
 });
 test("calibration expiry rejects unsafe durations and overflow",()=>{
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:Number.MAX_SAFE_INTEGER},new Date()),RangeError);
