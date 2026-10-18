@@ -49,6 +49,123 @@ export function validateMaintenanceAsset(entry) {
 }
 
 const transitions = { planned:["in-progress","cancelled"], "in-progress":["completed","cancelled"], completed:[], cancelled:[] };
+const experimentStatuses = new Set(["planned", "in-progress", "completed", "cancelled"]);
+function parseExperimentDate(value) {
+  if (typeof value !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+    throw new TypeError("experiment plannedDate must be a valid calendar date");
+  }
+  const date = new Date(value + "T00:00:00.000Z");
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw new TypeError("experiment plannedDate must be a valid calendar date");
+  }
+  return value;
+}
+function normalizeExperimentInstant(value, field) {
+  const timestamp = parseCalibrationInstant(value);
+  const date = new Date(timestamp);
+  const year = date.getUTCFullYear();
+  if (year < 0 || year > 9999) throw new TypeError(`experiment ${field} normalizes outside the supported UTC year range`);
+  return date.toISOString();
+}
+function requiredExperimentText(entry, field, maxLength) {
+  if (typeof entry[field] !== "string" || !entry[field].trim()) {
+    throw new TypeError(`experiment ${field} is required`);
+  }
+  const value = entry[field].trim();
+  if (value.length > maxLength) throw new RangeError(`experiment ${field} exceeds ${maxLength} characters`);
+  return value;
+}
+export function createExperimentRecord(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    throw new TypeError("experiment record must be an object");
+  }
+  if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80) {
+    throw new TypeError("experiment id is required");
+  }
+  if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
+      String(entry.assetId).trim() === "") {
+    throw new TypeError("experiment asset reference is required");
+  }
+  const title = requiredExperimentText(entry, "title", 120);
+  const owner = requiredExperimentText(entry, "owner", 120);
+  const purpose = requiredExperimentText(entry, "purpose", 2000);
+  const actor = requiredExperimentText(entry, "actor", 120);
+  const plannedDate = parseExperimentDate(entry.plannedDate);
+  const createdAt = normalizeExperimentInstant(entry.createdAt || new Date().toISOString(), "createdAt");
+  return Object.freeze({
+    id: entry.id.trim(),
+    title,
+    assetId: String(entry.assetId).trim(),
+    plannedDate,
+    owner,
+    purpose,
+    status: "planned",
+    createdAt,
+    audit: Object.freeze([Object.freeze({ from: "new", to: "planned", actor, at: createdAt })])
+  });
+}
+export function validateExperimentRecord(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    throw new TypeError("experiment record must be an object");
+  }
+  if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80) {
+    throw new TypeError("experiment id is required");
+  }
+  if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
+      String(entry.assetId).trim() === "") {
+    throw new TypeError("experiment asset reference is required");
+  }
+  const title = requiredExperimentText(entry, "title", 120);
+  const owner = requiredExperimentText(entry, "owner", 120);
+  const purpose = requiredExperimentText(entry, "purpose", 2000);
+  const plannedDate = parseExperimentDate(entry.plannedDate);
+  const createdAt = normalizeExperimentInstant(entry.createdAt, "createdAt");
+  if (!experimentStatuses.has(entry.status)) throw new RangeError("experiment status is invalid");
+  if (!Array.isArray(entry.audit) || entry.audit.length < 1) {
+    throw new TypeError("experiment audit history must include record creation");
+  }
+  let expectedStatus = "planned";
+  let previousTimestamp = -Infinity;
+  const audit = entry.audit.map((record, index) => {
+    if (!record || typeof record !== "object" || Array.isArray(record) ||
+        Object.values(record).some(value => typeof value !== "string")) {
+      throw new TypeError("experiment audit entries must contain only string fields");
+    }
+    if (typeof record.actor !== "string" || !record.actor.trim()) {
+      throw new TypeError("experiment audit actor is required");
+    }
+    const at = normalizeExperimentInstant(record.at, "audit timestamp");
+    const timestamp = Date.parse(at);
+    if (timestamp < previousTimestamp) throw new RangeError("experiment audit timestamps must be chronological");
+    previousTimestamp = timestamp;
+    if (index === 0) {
+      if (record.from !== "new" || record.to !== "planned" || timestamp !== Date.parse(createdAt)) {
+        throw new RangeError("experiment creation audit event is invalid");
+      }
+    } else {
+      if (record.from !== expectedStatus || !transitions[expectedStatus].includes(record.to)) {
+        throw new RangeError("experiment audit contains an invalid lifecycle transition");
+      }
+    }
+    expectedStatus = record.to;
+    return Object.freeze({ ...record, actor: record.actor.trim(), at });
+  });
+  if (expectedStatus !== entry.status) {
+    throw new RangeError("experiment status does not match its audit history");
+  }
+  return Object.freeze({
+    ...entry,
+    id: entry.id.trim(),
+    title,
+    assetId: String(entry.assetId).trim(),
+    plannedDate,
+    owner,
+    purpose,
+    status: entry.status,
+    createdAt,
+    audit: Object.freeze(audit)
+  });
+}
 export function transitionExperiment(experiment, nextStatus, actor) {
   if (!experiment || typeof experiment !== "object" || Array.isArray(experiment)) throw new TypeError("experiment is required");
   if (typeof actor !== "string" || !actor.trim()) throw new TypeError("actor is required for audit");
