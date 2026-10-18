@@ -232,6 +232,9 @@ export function createCalibrationRecord(entry) {
   if (!((typeof id === "string" && id.trim()) || Number.isSafeInteger(id))) {
     throw new TypeError("calibration record id is required");
   }
+  if (typeof id === "string" && id.trim().length > 80) {
+    throw new RangeError("calibration record id must not exceed 80 characters");
+  }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
       String(entry.assetId).trim() === "") {
     throw new TypeError("calibration asset reference is required");
@@ -245,11 +248,14 @@ export function createCalibrationRecord(entry) {
   if (!Number.isSafeInteger(entry.validForDays) || entry.validForDays < 1) {
     throw new RangeError("validForDays must be a positive safe integer");
   }
-  const requiredText = (field) => {
+  const requiredText = (field, maxLength) => {
     if (typeof entry[field] !== "string" || !entry[field].trim()) {
       throw new TypeError(`calibration ${field} is required`);
     }
-    return entry[field].trim();
+    const value = entry[field].trim();
+    if (value.length > maxLength) throw new RangeError(`calibration ${field} exceeds ${maxLength} characters`);
+    if (/[\\x00-\\x1F\\x7F]/.test(value)) throw new TypeError(`calibration ${field} must not contain control characters`);
+    return value;
   };
   if (!["pass", "fail"].includes(entry.result)) {
     throw new RangeError("calibration result must be pass or fail");
@@ -257,23 +263,25 @@ export function createCalibrationRecord(entry) {
   if (entry.notes !== undefined && entry.notes !== null && typeof entry.notes !== "string") {
     throw new TypeError("calibration notes must be text");
   }
+  const notes = typeof entry.notes === "string" ? entry.notes.trim() : "";
+  if (notes.length > 2000) throw new RangeError("calibration notes must not exceed 2000 characters");
+  if (/[\\x00-\\x1F\\x7F]/.test(notes)) throw new TypeError("calibration notes must not contain control characters");
   const expiry = calibratedTimestamp + entry.validForDays * 86400000;
   if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) {
     throw new RangeError("calibration expiry is outside the supported date range");
   }
   return Object.freeze({
-    id,
+    id: typeof id === "string" ? id.trim() : id,
     assetId: String(entry.assetId).trim(),
     calibratedAt: normalizedDate.toISOString(),
     validForDays: entry.validForDays,
-    certificateNo: requiredText("certificateNo"),
-    organization: requiredText("organization"),
-    operator: requiredText("operator"),
+    certificateNo: requiredText("certificateNo", 120),
+    organization: requiredText("organization", 180),
+    operator: requiredText("operator", 120),
     result: entry.result,
-    notes: typeof entry.notes === "string" ? entry.notes.trim() : ""
+    notes
   });
 }
-
 function normalizeDiaryDate(value, label) {
   if (typeof value !== "string" || !value.trim()) throw new TypeError(`test ${label} must be valid`);
   // Date-only form controls represent calendar days, not UTC instants. Keep
