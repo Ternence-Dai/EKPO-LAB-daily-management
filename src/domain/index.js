@@ -108,6 +108,10 @@ export function validateExperimentRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("experiment record must be an object");
   }
+  const allowedFields = new Set(["id", "title", "assetId", "plannedDate", "owner", "purpose", "status", "createdAt", "audit"]);
+  if (Object.keys(entry).some(field => !allowedFields.has(field))) {
+    throw new TypeError("experiment record contains unsupported fields");
+  }
   if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80) {
     throw new TypeError("experiment id is required");
   }
@@ -130,6 +134,11 @@ export function validateExperimentRecord(entry) {
     if (!record || typeof record !== "object" || Array.isArray(record) ||
         Object.values(record).some(value => typeof value !== "string")) {
       throw new TypeError("experiment audit entries must contain only string fields");
+    }
+    const auditFields = ["from", "to", "actor", "at"];
+    if (Object.keys(record).some(field => !auditFields.includes(field)) ||
+        auditFields.some(field => typeof record[field] !== "string")) {
+      throw new TypeError("experiment audit entries must use the immutable lifecycle schema");
     }
     if (typeof record.actor !== "string" || !record.actor.trim()) {
       throw new TypeError("experiment audit actor is required");
