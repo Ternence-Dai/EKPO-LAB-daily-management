@@ -48,8 +48,12 @@ function normalizeDiaryDate(value, label) {
     }
     return value;
   }
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) throw new TypeError(`test ${label} must be valid`);
+  let timestamp;
+  try {
+    timestamp = parseCalibrationInstant(value);
+  } catch {
+    throw new TypeError(`test ${label} must be an ISO timestamp with an explicit timezone and millisecond precision or less`);
+  }
   return new Date(timestamp).toISOString();
 }
 export function validateTestDiaryEntry(entry) {
