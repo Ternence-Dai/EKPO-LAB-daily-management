@@ -73,7 +73,7 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
       console:{error(){}}
     };
     vm.createContext(context);
-    vm.runInContext(saveSource+'\\nthis.run=saveMaint;',context);
+    vm.runInContext(saveSource+'\nthis.run=saveMaint;',context);
     return context.run().then(()=>({db:context.DB,messages,closed,renders,previous}));
   }
   const failedUpdate=await runSave({editing:true,saveAllowed:false});
