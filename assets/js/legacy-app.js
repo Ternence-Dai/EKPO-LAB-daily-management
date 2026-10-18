@@ -962,13 +962,61 @@
         }
 
         function exportAllToJSON() {
-            let dataStr = JSON.stringify(DB, null, 2);
-            let blob = new Blob([dataStr], { type: 'application/json' });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement('a'); a.href = url; a.download = `燃料电池实验室数据备份_${getToday()}.json`; a.click();
+            if (storageRecoveryRequired) {
+                try {
+                    const recoveryPrefix = 'lab_management_db_v9_recovery_';
+                    const originalRaw = cachedLabRaw !== null
+                        ? cachedLabRaw : localStorage.getItem('lab_management_db_v9');
+                    const recoveryCopies = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.indexOf(recoveryPrefix) === 0) {
+                            recoveryCopies.push({ key, raw: localStorage.getItem(key) });
+                        }
+                    }
+                    if (originalRaw === null && recoveryCopies.length === 0) {
+                        throw new Error('没有找到可导出的原始缓存或恢复副本');
+                    }
+                    const payload = {
+                        schemaVersion: 1,
+                        exportedAt: new Date().toISOString(),
+                        storage: 'lab-browser-cache-recovery',
+                        originalRaw,
+                        recoveryCopies
+                    };
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '实验室原始缓存恢复包_' + getToday() + '.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    showToast('已导出原始缓存恢复包；其中可能包含敏感实验室数据，请妥善保管。');
+                } catch (error) {
+                    showToast('原始缓存恢复包导出失败：' + error.message, 'error');
+                }
+                return;
+            }
+            const dataStr = JSON.stringify(DB, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '燃料电池实验室数据备份_' + getToday() + '.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
             showToast('数据已保存到本地磁盘！');
         }
+
         function exportAllToExcel() {
+            if (storageRecoveryRequired) {
+                showToast('原始缓存尚未恢复；为避免将演示数据误导出为备份，已阻止 Excel 导出。请先导出原始 JSON 恢复包。', 'error');
+                return;
+            }
             let wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.gases), "气体使用记录");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(DB.maintenance), "设备维保台账");
@@ -979,24 +1027,70 @@
             XLSX.writeFile(wb, `燃料电池实验室数据报表_${getToday()}.xlsx`);
             showToast('Excel报表已导出！');
         }
+        function isValidLabBackup(value) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+            const required = ['gases', 'maintenance', 'spareParts', 'testDiary'];
+            if (!required.every(key => Array.isArray(value[key]))) return false;
+            if (value.maintLogs !== undefined && !Array.isArray(value.maintLogs)) return false;
+            if (value.spareLogs !== undefined && !Array.isArray(value.spareLogs)) return false;
+            const tables = [...required, 'maintLogs', 'spareLogs'];
+            for (const key of tables) {
+                const rows = value[key] || [];
+                const ids = new Set();
+                for (const row of rows) {
+                    if (!row || typeof row !== 'object' || Array.isArray(row) ||
+                        !((typeof row.id === 'string' && row.id.trim()) || Number.isSafeInteger(row.id))) return false;
+                    const id = String(row.id);
+                    if (ids.has(id)) return false;
+                    ids.add(id);
+                }
+            }
+            const maintenanceIds = new Set(value.maintenance.map(row => String(row.id)));
+            if ((value.maintLogs || []).some(row =>
+                !maintenanceIds.has(String(row.eqId)) ||
+                !isValidDateOnly(row.date) || !Number.isFinite(Number(row.cost)) || Number(row.cost) < 0)) return false;
+            const sparePartIds = new Set(value.spareParts.map(row => String(row.id)));
+            if (value.spareParts.some(row =>
+                typeof row.desc !== 'string' || !row.desc.trim() ||
+                typeof row.catalog !== 'string' || !row.catalog.trim() ||
+                !Number.isFinite(Number(row.qty)) || Number(row.qty) < 0 ||
+                !Number.isFinite(Number(row.price)) || Number(row.price) < 0)) return false;
+            if ((value.spareLogs || []).some(row =>
+                !sparePartIds.has(String(row.partId)) ||
+                !['入库', '出库'].includes(row.action) ||
+                !Number.isFinite(Number(row.qty)) || Number(row.qty) <= 0 ||
+                !isValidDateOnly(row.date))) return false;
+            return true;
+        }
+
         function importFromLocal(event) {
-            let file = event.target.files[0]; if (!file) return;
-            let reader = new FileReader();
-            reader.onload = function(e) {
+            const file = event && event.target && event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const previousDB = snapshotLabDB();
                 try {
-                    let imported = JSON.parse(e.target.result);
-                    if (imported && Array.isArray(imported.gases) && Array.isArray(imported.maintenance) &&
-                        Array.isArray(imported.spareParts) && Array.isArray(imported.testDiary) &&
-                        (imported.maintLogs == null || Array.isArray(imported.maintLogs)) &&
-                        (imported.spareLogs == null || Array.isArray(imported.spareLogs))) {
-                        DB = imported;
-                        storageRecoveryRequired = false;
-                        if (!DB.maintLogs) DB.maintLogs = [];
-                        if (!DB.spareLogs) DB.spareLogs = [];
-                        saveToLocal(); showToast('数据导入成功！'); switchTab('dashboard', document.querySelector('.nav-item'));
-                    } else { showToast('文件格式不正确', 'error'); }
-                } catch (err) { showToast('读取文件失败', 'error'); }
+                    const imported = JSON.parse(e.target.result);
+                    if (!isValidLabBackup(imported)) {
+                        throw new Error('备份结构无效，或包含重复编号、孤立维保/备件流水、非法日期或库存数值');
+                    }
+                    if (!imported.maintLogs) imported.maintLogs = [];
+                    if (!imported.spareLogs) imported.spareLogs = [];
+                    DB = imported;
+                    storageRecoveryRequired = false;
+                    if (!await commitLabMutation(previousDB, '备份写入失败；已恢复导入前的数据状态')) {
+                        showToast('备份未完成恢复：浏览器存储仍不可用，原始缓存恢复保护已重新启用。', 'error');
+                        return;
+                    }
+                    switchTab('dashboard', document.querySelector('.nav-item'));
+                    showToast('备份数据已验证并成功保存');
+                } catch (err) {
+                    showToast('导入失败：' + err.message + '；原数据未更改', 'error');
+                } finally {
+                    event.target.value = '';
+                }
             };
+            reader.onerror = () => showToast('无法读取所选备份文件；原数据未更改', 'error');
             reader.readAsText(file);
         }
 
