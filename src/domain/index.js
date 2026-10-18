@@ -1,3 +1,53 @@
+
+function parseMaintenanceDate(value, field) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new TypeError(`maintenance ${field} must be a valid calendar date`);
+  }
+  const date = new Date(value + "T00:00:00.000Z");
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw new TypeError(`maintenance ${field} must be a valid calendar date`);
+  }
+  return value;
+}
+
+export function validateMaintenanceAsset(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    throw new TypeError("maintenance asset must be an object");
+  }
+  const name = typeof entry.name === "string" ? entry.name.trim() : "";
+  if (!name) throw new TypeError("maintenance asset name is required");
+  if (!Number.isSafeInteger(entry.qty) || entry.qty < 1) {
+    throw new RangeError("maintenance asset quantity must be a positive safe integer");
+  }
+  const allowedCycles = new Set(["一级保养", "二级保养", "三级保养"]);
+  if (!allowedCycles.has(entry.cycle)) throw new RangeError("maintenance cycle is invalid");
+  const freq = typeof entry.freq === "string" ? entry.freq.trim() : "";
+  if (!freq) throw new TypeError("maintenance frequency is required");
+  const last = parseMaintenanceDate(entry.last, "last date");
+  const next = parseMaintenanceDate(entry.next, "next date");
+  if (last && next && next < last) {
+    throw new RangeError("next maintenance date cannot precede last maintenance date");
+  }
+  const textField = (field) => {
+    if (entry[field] === undefined || entry[field] === null) return "";
+    if (typeof entry[field] !== "string") throw new TypeError(`maintenance ${field} must be text`);
+    return entry[field].trim();
+  };
+  return Object.freeze({
+    name,
+    category: textField("category"),
+    location: textField("location"),
+    qty: entry.qty,
+    cycle: entry.cycle,
+    freq,
+    last,
+    next,
+    responsible: textField("responsible"),
+    record: textField("record")
+  });
+}
+
 const transitions = { planned:["in-progress","cancelled"], "in-progress":["completed","cancelled"], completed:[], cancelled:[] };
 export function transitionExperiment(experiment, nextStatus, actor) {
   if (!experiment || typeof experiment !== "object" || Array.isArray(experiment)) throw new TypeError("experiment is required");
