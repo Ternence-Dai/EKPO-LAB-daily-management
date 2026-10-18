@@ -640,11 +640,28 @@
                 showToast('备件库存和单价必须是大于或等于 0 的有效数字', 'error'); return;
             }
             if (!isValidDateOnly(update)) { showToast('备件日期无效', 'error'); return; }
+            const duplicateCatalog = DB.spareParts.find(item =>
+                String(item.catalog || '').trim().toLowerCase() === data.catalog.toLowerCase() &&
+                String(item.id) !== String(id));
+            if (duplicateCatalog) {
+                showToast('物料编码已存在，请使用唯一编码', 'error');
+                return;
+            }
             const previousDB = snapshotLabDB();
             if (id) {
                 const i = DB.spareParts.findIndex(x => String(x.id) === String(id));
                 if (i < 0) { showToast('原备件记录已不存在，请刷新后重试', 'error'); return; }
-                DB.spareParts[i] = { ...DB.spareParts[i], ...data };
+                const previous = DB.spareParts[i];
+                const hasHistory = DB.spareLogs.some(item => String(item.partId) === String(id));
+                if (hasHistory && Number(previous.qty) !== data.qty) {
+                    showToast('该备件已有出入库流水，库存数量不可直接修改；请通过新增入库/出库流水调整', 'error');
+                    return;
+                }
+                if (hasHistory && String(previous.catalog || '').trim().toLowerCase() !== data.catalog.toLowerCase()) {
+                    showToast('该备件已有出入库流水，物料编码不可修改，以免历史流水失去关联', 'error');
+                    return;
+                }
+                DB.spareParts[i] = { ...previous, ...data };
             } else {
                 data.id = Date.now();
                 if (DB.spareParts.some(x => String(x.id) === String(data.id))) {
