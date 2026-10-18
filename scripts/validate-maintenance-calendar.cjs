@@ -36,3 +36,8 @@ assert.ok(html.includes('domain.validateMaintenanceAsset(data)'),
   'maintenance asset edits must pass through the shared domain validator');
 assert.ok(html.includes('async function saveMaint()'),
   'maintenance asset saves must await persistence before reporting success');
+
+assert.ok(!html.includes('validated.id = newId'),
+  'a frozen validated maintenance record must not be mutated when assigning its identifier');
+assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newId })'),
+  'new maintenance records must be created by copying validated domain data');
