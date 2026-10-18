@@ -5,7 +5,14 @@ export function transitionExperiment(experiment, nextStatus, actor) {
   if (!transitions[experiment.status]) throw new RangeError("unknown current status");
   if (!transitions[experiment.status].includes(nextStatus)) throw new RangeError(`transition ${experiment.status} -> ${nextStatus} is not allowed`);
   if (experiment.audit !== undefined && !Array.isArray(experiment.audit)) throw new TypeError("experiment audit must be an array");
-  return Object.freeze({ ...experiment, status:nextStatus, audit:[...(experiment.audit || []), Object.freeze({ from:experiment.status, to:nextStatus, actor:actor.trim(), at:new Date().toISOString() })] });
+  const audit = (experiment.audit || []).map((record) => {
+    if (!record || typeof record !== "object" || Array.isArray(record)) {
+      throw new TypeError("experiment audit entries must be objects");
+    }
+    return Object.freeze({ ...record });
+  });
+  audit.push(Object.freeze({ from:experiment.status, to:nextStatus, actor:actor.trim(), at:new Date().toISOString() }));
+  return Object.freeze({ ...experiment, status:nextStatus, audit:Object.freeze(audit) });
 }
 function parseCalibrationInstant(value) {
   if (typeof value !== "string") throw new TypeError("calibratedAt must be an ISO timestamp with an explicit timezone");
