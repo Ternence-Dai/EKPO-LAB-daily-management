@@ -54,6 +54,7 @@
                 return false;
             }
             let localSaved = false;
+            let fileSaved = false;
             try {
                 localStorage.setItem('lab_management_db_v9', JSON.stringify(DB));
                 storageWarning = false;
@@ -70,6 +71,7 @@
                     const writable = await fileHandle.createWritable();
                     await writable.write(JSON.stringify(DB, null, 2));
                     await writable.close();
+                    fileSaved = true;
                     document.getElementById('saveText').innerText = localSaved
                         ? '本地硬盘实时保存中...'
                         : '本地文件已保存 · 浏览器缓存仍失败';
@@ -82,7 +84,7 @@
             } else {
                 document.getElementById('saveText').innerText = '浏览器缓存保存失败 · 请导出备份';
             }
-            return localSaved;
+            return localSaved || fileSaved;
         }
 
         function getToday() {
@@ -444,8 +446,60 @@
         }
 
         function editMaint(id) { let m = DB.maintenance.find(x => x.id === id); document.getElementById('m-id').value=m.id; document.getElementById('m-name').value=m.name||''; document.getElementById('m-category').value=m.category||''; document.getElementById('m-location').value=m.location||''; document.getElementById('m-qty').value=m.qty||0; document.getElementById('m-cycle').value=m.cycle||'一级保养'; document.getElementById('m-freq').value=m.freq||''; document.getElementById('m-last').value=m.last||''; document.getElementById('m-next').value=m.next||''; document.getElementById('m-responsible').value=m.responsible||''; document.getElementById('m-record').value=m.record||''; openModal('modal-maint'); }
-        function saveMaint() { let id=document.getElementById('m-id').value; let data={name:document.getElementById('m-name').value, category:document.getElementById('m-category').value, location:document.getElementById('m-location').value, qty:+document.getElementById('m-qty').value, cycle:document.getElementById('m-cycle').value, freq:document.getElementById('m-freq').value, last:document.getElementById('m-last').value, next:document.getElementById('m-next').value, responsible:document.getElementById('m-responsible').value, record:document.getElementById('m-record').value}; if(id){let i=DB.maintenance.findIndex(x=>x.id==id); DB.maintenance[i]={...DB.maintenance[i],...data}; showToast('已更新');}else{data.id=Date.now(); DB.maintenance.push(data); showToast('已新增');} saveToLocal(); closeModal('modal-maint'); renderMaintenance(); }
+        async function saveMaint() {
+            const id = document.getElementById('m-id').value;
+            const data = {
+                name: document.getElementById('m-name').value,
+                category: document.getElementById('m-category').value,
+                location: document.getElementById('m-location').value,
+                qty: Number(document.getElementById('m-qty').value),
+                cycle: document.getElementById('m-cycle').value,
+                freq: document.getElementById('m-freq').value,
+                last: document.getElementById('m-last').value,
+                next: document.getElementById('m-next').value,
+                responsible: document.getElementById('m-responsible').value,
+                record: document.getElementById('m-record').value
+            };
+            let validated;
+            try {
+                const domain = await import('../../src/domain/index.js');
+                validated = domain.validateMaintenanceAsset(data);
+            } catch (error) {
+                showToast('设备台账未保存：' + (error && error.message ? error.message : '字段校验失败'), 'error');
+                return;
+            }
 
+            let existingIndex = -1;
+            let previous = null;
+            if (id) {
+                existingIndex = DB.maintenance.findIndex(item => String(item.id) === String(id));
+                if (existingIndex < 0) {
+                    showToast('原设备记录已不存在，请刷新后重试', 'error');
+                    return;
+                }
+                previous = DB.maintenance[existingIndex];
+                DB.maintenance[existingIndex] = { ...previous, ...validated };
+            } else {
+                const newId = Date.now();
+                if (DB.maintenance.some(item => String(item.id) === String(newId))) {
+                    showToast('设备编号冲突，请重试保存', 'error');
+                    return;
+                }
+                validated.id = newId;
+                DB.maintenance.push(validated);
+            }
+
+            const saved = await saveToLocal();
+            if (!saved) {
+                if (existingIndex >= 0) DB.maintenance[existingIndex] = previous;
+                else DB.maintenance = DB.maintenance.filter(item => String(item.id) !== String(validated.id));
+                showToast('设备台账保存失败，已撤销本次修改；请检查存储后重试', 'error');
+                return;
+            }
+            showToast(id ? '已更新' : '已新增');
+            closeModal('modal-maint');
+            renderMaintenance();
+        }
         function editMaintLog(id) {
             let l = DB.maintLogs.find(x => x.id === id);
             // 动态生成设备下拉框
