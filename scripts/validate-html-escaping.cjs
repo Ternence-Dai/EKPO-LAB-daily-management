@@ -30,10 +30,17 @@ console.log('Imported-data HTML escaping regression checks passed.');
   const source = html.slice(start, end);
   const sandbox = {
     DB: { spareParts: [{id: 1, qty: 10}], spareLogs: [{id: 7, partId: 1, action: '入库', qty: 4}] },
-    confirm: () => true, showToast: () => {}, saveToLocal: async () => {},
+    storageRecoveryRequired: false,
+    confirm: () => true, showToast: () => {}, saveToLocal: async () => true,
     renderSpareParts: () => {}, renderSpareLogs: () => {}, renderGases: () => {},
     renderMaintenance: () => {}, renderMaintLogs: () => {}, renderTestDiary: () => {},
     syncMaintenanceSchedule: () => {}
+  };
+  sandbox.snapshotLabDB = () => JSON.parse(JSON.stringify(sandbox.DB));
+  sandbox.commitLabMutation = async previousDB => {
+    if (await sandbox.saveToLocal()) return true;
+    sandbox.DB = previousDB;
+    return false;
   };
   const remove = vm.runInNewContext('(' + source.replace(/^        /gm, '') + ')', sandbox);
   await remove('spareLogs', 7);
