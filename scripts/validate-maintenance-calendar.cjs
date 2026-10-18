@@ -42,7 +42,6 @@ assert.ok(!html.includes('validated.id = newId'),
 assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'),
   'new maintenance records must be created by copying validated domain data');
 
-{
 (async()=>{
   const saveStart=html.indexOf('async function saveMaint()');
   const saveEnd=html.indexOf('function editMaintLog',saveStart);
