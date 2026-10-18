@@ -315,7 +315,31 @@ export function validateTestDiaryEntry(entry) {
   if (!Number.isFinite(duration) || duration <= 0 || duration > Number.MAX_SAFE_INTEGER) {
     throw new RangeError("test duration must be a positive finite number within the safe numeric range");
   }
-  if (typeof unit !== "string" || !unit.trim()) throw new TypeError("test unit is required");
-  if (typeof operator !== "string" || !operator.trim()) throw new TypeError("test operator is required");
-  return Object.freeze({ ...entry, start:normalizedStart, end:normalizedEnd, unit:unit.trim(), operator:operator.trim() });
+  const requiredText = (value, field, maxLength) => {
+    if (typeof value !== "string" || !value.trim()) throw new TypeError(`test ${field} is required`);
+    const normalized = value.trim();
+    if (normalized.length > maxLength) throw new RangeError(`test ${field} exceeds ${maxLength} characters`);
+    if (/[\\x00-\\x1F\\x7F]/.test(normalized)) throw new TypeError(`test ${field} must not contain control characters`);
+    return normalized;
+  };
+  const optionalText = (value, field, maxLength) => {
+    if (value === undefined || value === null || value === "") return "";
+    if (typeof value !== "string") throw new TypeError(`test ${field} must be text`);
+    const normalized = value.trim();
+    if (normalized.length > maxLength) throw new RangeError(`test ${field} exceeds ${maxLength} characters`);
+    if (/[\\x00-\\x1F\\x7F]/.test(normalized)) throw new TypeError(`test ${field} must not contain control characters`);
+    return normalized;
+  };
+  return Object.freeze({
+    ...entry,
+    start:normalizedStart,
+    end:normalizedEnd,
+    unit:requiredText(unit, "unit", 120),
+    operator:requiredText(operator, "operator", 120),
+    sap:optionalText(entry.sap, "air-tightness result", 120),
+    result:optionalText(entry.result, "result", 120),
+    cycle:optionalText(entry.cycle, "cycle count", 40),
+    error:optionalText(entry.error, "error code", 120),
+    errorDesc:optionalText(entry.errorDesc, "error description", 2000)
+  });
 }
