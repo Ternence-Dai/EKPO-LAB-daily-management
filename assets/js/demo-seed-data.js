@@ -22,6 +22,8 @@ const defaultData = {
             ],
             // No fabricated calibration certificates or results are seeded.
             calibrationLogs: [],
+            // No fabricated experiment plans or execution records are seeded.
+            experiments: [],
             testDiary: [
                 { id: 1, start: "2026-01-11", end: "2026-01-12", duration: 2, unit: "NM12-245-359", operator: "Terrence", sap: "Ok", result: "Ok", cycle: "210923_PHT_V07.04", error: "DP Air inlet&outlet too low", errorDesc: "气动阀组故障" }
             ]
