@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { transitionExperiment, isCalibrationCurrent, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
+import { transitionExperiment, isCalibrationCurrent, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
 test("records authorized experiment lifecycle transition",()=>{
  const next=transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1");
  assert.equal(next.status,"in-progress"); assert.equal(next.audit.length,1);
@@ -52,6 +52,29 @@ test("calibration timestamps require an explicit timezone and real calendar date
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-02-30T00:00:00Z",validForDays:30},at),TypeError);
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00+14:30",validForDays:30},at),TypeError);
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00.1234Z",validForDays:30},at),TypeError);
+});
+test("creates immutable, traceable equipment calibration records",()=>{
+ const record=createCalibrationRecord({
+  id:1001,assetId:2,calibratedAt:"2026-01-01T08:00:00+08:00",
+  validForDays:365,certificateNo:"CERT-2026-001",organization:"Metrology Lab",
+  operator:"Operator A",result:"pass",notes:"Annual calibration"
+ });
+ assert.equal(record.assetId,"2");
+ assert.equal(record.calibratedAt,"2026-01-01T00:00:00.000Z");
+ assert.ok(Object.isFrozen(record));
+ assert.equal(isCalibrationCurrent(record,new Date("2026-06-01T00:00:00Z")),true);
+ assert.equal(record.result,"pass");
+});
+test("rejects untraceable or invalid calibration records",()=>{
+ const base={id:1001,assetId:2,calibratedAt:"2026-01-01T00:00:00Z",validForDays:365,certificateNo:"CERT-1",organization:"Lab",operator:"A",result:"pass"};
+ assert.throws(()=>createCalibrationRecord({...base,assetId:" "}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,certificateNo:" "}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,organization:" "}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,operator:" "}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,result:"unknown"}),RangeError);
+ assert.throws(()=>createCalibrationRecord({...base,validForDays:0}),RangeError);
+ assert.throws(()=>createCalibrationRecord({...base,calibratedAt:"2026-02-30T00:00:00Z"}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,notes:{text:"bad"}}),TypeError);
 });
 test("calibration expiry rejects unsafe durations and overflow",()=>{
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:Number.MAX_SAFE_INTEGER},new Date()),RangeError);
