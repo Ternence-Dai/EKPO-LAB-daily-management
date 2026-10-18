@@ -52,7 +52,7 @@ const transitions = { planned:["in-progress","cancelled"], "in-progress":["compl
 export function transitionExperiment(experiment, nextStatus, actor) {
   if (!experiment || typeof experiment !== "object" || Array.isArray(experiment)) throw new TypeError("experiment is required");
   if (typeof actor !== "string" || !actor.trim()) throw new TypeError("actor is required for audit");
-  if (!transitions[experiment.status]) throw new RangeError("unknown current status");
+  if (!Object.hasOwn(transitions, experiment.status)) throw new RangeError("unknown current status");
   if (!transitions[experiment.status].includes(nextStatus)) throw new RangeError(`transition ${experiment.status} -> ${nextStatus} is not allowed`);
   if (experiment.audit !== undefined && !Array.isArray(experiment.audit)) throw new TypeError("experiment audit must be an array");
   const audit = (experiment.audit || []).map((record) => {
