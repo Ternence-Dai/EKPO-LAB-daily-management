@@ -254,7 +254,7 @@ export function createCalibrationRecord(entry) {
     }
     const value = entry[field].trim();
     if (value.length > maxLength) throw new RangeError(`calibration ${field} exceeds ${maxLength} characters`);
-    if (/[\\x00-\\x1F\\x7F]/.test(value)) throw new TypeError(`calibration ${field} must not contain control characters`);
+    if (/[\x00-\x1F\x7F]/.test(value)) throw new TypeError(`calibration ${field} must not contain control characters`);
     return value;
   };
   if (!["pass", "fail"].includes(entry.result)) {
@@ -265,7 +265,7 @@ export function createCalibrationRecord(entry) {
   }
   const notes = typeof entry.notes === "string" ? entry.notes.trim() : "";
   if (notes.length > 2000) throw new RangeError("calibration notes must not exceed 2000 characters");
-  if (/[\\x00-\\x1F\\x7F]/.test(notes)) throw new TypeError("calibration notes must not contain control characters");
+  if (/[\x00-\x1F\x7F]/.test(notes)) throw new TypeError("calibration notes must not contain control characters");
   const expiry = calibratedTimestamp + entry.validForDays * 86400000;
   if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) {
     throw new RangeError("calibration expiry is outside the supported date range");
