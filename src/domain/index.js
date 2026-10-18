@@ -166,7 +166,7 @@ export function validateExperimentRecord(entry) {
     audit: Object.freeze(audit)
   });
 }
-export function transitionExperiment(experiment, nextStatus, actor) {
+export function transitionExperiment(experiment, nextStatus, actor, at = new Date().toISOString()) {
   if (!experiment || typeof experiment !== "object" || Array.isArray(experiment)) throw new TypeError("experiment is required");
   if (typeof actor !== "string" || !actor.trim()) throw new TypeError("actor is required for audit");
   if (!Object.hasOwn(transitions, experiment.status)) throw new RangeError("unknown current status");
@@ -184,7 +184,14 @@ export function transitionExperiment(experiment, nextStatus, actor) {
     }
     return Object.freeze({ ...record });
   });
-  audit.push(Object.freeze({ from:experiment.status, to:nextStatus, actor:actor.trim(), at:new Date().toISOString() }));
+  const normalizedAt = normalizeExperimentInstant(at, "audit timestamp");
+  if (audit.length) {
+    const previousAt = Date.parse(normalizeExperimentInstant(audit[audit.length - 1].at, "previous audit timestamp"));
+    if (Date.parse(normalizedAt) < previousAt) {
+      throw new RangeError("experiment audit timestamps must be chronological");
+    }
+  }
+  audit.push(Object.freeze({ from:experiment.status, to:nextStatus, actor:actor.trim(), at:normalizedAt }));
   return Object.freeze({ ...experiment, status:nextStatus, audit:Object.freeze(audit) });
 }
 function parseCalibrationInstant(value) {
