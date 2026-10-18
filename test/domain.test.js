@@ -22,12 +22,12 @@ test("rejects timestamp numbers and invalid comparison dates",()=>{
 });
 
 test("validates test diary entries before accepting operational records",()=>{
- const valid=validateTestDiaryEntry({start:"2026-10-17T09:00:00",end:"2026-10-17T10:30:00",duration:1.5,unit:"Cell-A",operator:"operator-1",result:"pass"});
+ const valid=validateTestDiaryEntry({start:"2026-10-17T09:00:00+08:00",end:"2026-10-17T10:30:00+08:00",duration:1.5,unit:"Cell-A",operator:"operator-1",result:"pass"});
  assert.equal(valid.duration,1.5); assert.equal(valid.unit,"Cell-A");
 });
 test("rejects test diary records with reversed times, zero duration or missing traceability",()=>{
- const base={start:"2026-10-17T10:00:00",end:"2026-10-17T11:00:00",duration:1,unit:"Cell-A",operator:"operator-1"};
- assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-10-17T09:00:00"}),RangeError);
+ const base={start:"2026-10-17T10:00:00+08:00",end:"2026-10-17T11:00:00+08:00",duration:1,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-10-17T09:00:00+08:00"}),RangeError);
  assert.throws(()=>validateTestDiaryEntry({...base,duration:0}),RangeError);
  assert.throws(()=>validateTestDiaryEntry({...base,operator:" "}),TypeError);
  assert.throws(()=>validateTestDiaryEntry({...base,unit:""}),TypeError);
@@ -56,4 +56,11 @@ test("calibration expiry rejects unsafe durations and overflow",()=>{
 });
 test("calibration timestamp offsets normalize consistently",()=>{
  assert.equal(isCalibrationCurrent({calibratedAt:"2026-01-01T08:00:00+08:00",validForDays:0},new Date("2026-01-01T00:00:00Z")),true);
+});
+
+test("timed diary entries require timezone and reject invalid or lossy timestamps",()=>{
+ const base={start:"2026-10-17T09:00:00+08:00",end:"2026-10-17T10:00:00+08:00",duration:1,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry({...base,start:"2026-10-17T09:00:00"}),/explicit timezone/);
+ assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-02-30T10:00:00Z"}),/explicit timezone/);
+ assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-10-17T10:00:00.1234Z"}),/explicit timezone/);
 });
