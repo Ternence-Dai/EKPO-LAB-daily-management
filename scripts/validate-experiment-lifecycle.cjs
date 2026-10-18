@@ -55,7 +55,7 @@ assert.ok(create.includes('domain.createExperimentRecord') &&
           create.includes('commitLabMutation(') &&
           create.includes('form.checkValidity()'),
   'experiment creation must validate fields and use transactional persistence');
-assert.ok(transition.includes('domain.validateExperimentRecord(current)') &&
+assert.ok(transition.includes('domain.validateExperimentRecord(DB.experiments[index])') &&
           transition.includes('domain.transitionExperiment(') &&
           transition.includes('domain.validateExperimentRecord(updated)') &&
           transition.includes('snapshotLabDB()') &&
