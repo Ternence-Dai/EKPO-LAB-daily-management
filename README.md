@@ -6,7 +6,7 @@ A traceable laboratory operations system for equipment, experiments, samples, re
 
 ## Product modules
 
-- Equipment registry, calibration, and maintenance schedules
+- Equipment registry, append-only calibration certificates/results, calibration expiry status, and maintenance schedules
 - Experiment plans, runs, samples, and electronic lab records
 - Reagent and consumable inventory with lot/expiry tracking
 - SOPs, safety checks, incidents, and training records
@@ -27,6 +27,6 @@ Track who/when/source for every critical record. Separate planned, measured, imp
 
 The modernization work is being applied directly to `main`. The current baseline includes a domain-core module, automated domain tests, standalone-app validation, and a GitHub Pages deployment workflow. These checks passing confirms the current baseline is buildable; it does **not** mean the full product rebuild is complete.
 
-Remaining delivery work includes validating the existing application workflows and data, extracting maintainable modules from the legacy entry point, adding migration-safe persistence and import/export checks, and documenting verified domain rules. Existing user data and the legacy application must be preserved while these changes are introduced.
+The current delivered slice includes equipment calibration entry and history, certificate/reference validation, expiry status, legacy-cache migration, backup import/export checks, and domain regression tests. Remaining delivery work includes a complete experiment lifecycle UI with audit display, broader end-to-end browser coverage, data verification against real laboratory source records, and further extraction of maintainable modules from the legacy entry point. Existing user data and the legacy application must be preserved while these changes are introduced.
 
 See [the rebuild plan](docs/REBUILD_PLAN.md) and [domain rules, units and validation boundaries](docs/DOMAIN_CORE.md).
