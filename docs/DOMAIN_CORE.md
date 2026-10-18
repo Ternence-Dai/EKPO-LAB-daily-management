@@ -31,7 +31,7 @@ Every transition requires a non-empty actor and appends an ISO timestamped audit
 
 `isCalibrationCurrent({ calibratedAt, validForDays }, at)` requires an ISO timestamp with an explicit timezone, a non-negative safe-integer validity period, and a valid `Date` comparison instant. It returns true through the expiry instant itself; after that instant it returns false. Invalid calendar dates, invalid timezone offsets and unsupported fractional-second precision are rejected.
 
-The browser UI appends calibration history; it does not offer in-place edits or deletion. It displays failed results distinctly from expired results. Legacy caches and backups without a `calibrationLogs` table are migrated to an empty array without fabricating certificates or outcomes. Calibration rows in JSON imports are validated before the active database is replaced; the Excel export includes a separate calibration-history sheet.
+The browser UI treats the date-picker value as a calendar date and stores it at UTC midnight, preventing the selected day from shifting across timezones. It appends calibration history and does not offer in-place edits or deletion. It displays failed results distinctly from expired results. Legacy caches and backups without a `calibrationLogs` table are migrated to an empty array without fabricating certificates or outcomes. Calibration rows in JSON imports are validated before the active database is replaced; the Excel export includes a separate calibration-history sheet.
 
 ## Test diary entries
 
