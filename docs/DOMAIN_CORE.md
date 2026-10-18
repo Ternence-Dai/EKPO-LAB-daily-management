@@ -23,7 +23,7 @@ Date-only values remain calendar dates; they are not converted to UTC instants.
 - `in-progress → completed` or `in-progress → cancelled`
 - `completed` and `cancelled` are terminal states
 
-Every transition requires a non-empty actor and appends an ISO timestamped audit entry. Existing audit rows are copied and frozen. Non-string values in audit rows are rejected so nested mutable payloads cannot be smuggled into the returned history. The returned experiment and audit array are immutable snapshots; persistence remains the caller's responsibility.
+Every transition requires a non-empty actor and appends an ISO timestamped audit entry. Existing audit rows are copied and frozen. Non-string values in audit rows are rejected so nested mutable payloads cannot be smuggled into the returned history. The returned experiment record is frozen at the top level, and its audit array/rows are copied and frozen. Other nested experiment properties are retained by reference; callers must not mutate them through the returned value and should clone nested state at the application boundary when required.
 
 ## Calibration validity
 
@@ -38,6 +38,10 @@ Every transition requires a non-empty actor and appends an ISO timestamped audit
 - The end time cannot precede the start time.
 
 The module validates the declared duration value but does not infer its unit or recompute it from timestamps; the caller must keep duration and unit semantics consistent.
+
+## Current application wiring
+
+The current browser application calls `validateMaintenanceAsset` from the maintenance save flow and `validateTestDiaryEntry` from the test-diary save flow. The experiment lifecycle and calibration functions are currently domain-core capabilities; the legacy UI does not yet expose complete experiment-status or calibration workflows. They must not be counted as delivered user-facing modules until those workflows, persistence, audit display and regression tests are integrated.
 
 ## Verification boundary
 
