@@ -1178,17 +1178,22 @@
             if ((value.maintLogs || []).some(row =>
                 !maintenanceIds.has(String(row.eqId)) ||
                 !isValidDateOnly(row.date) || !Number.isFinite(Number(row.cost)) || Number(row.cost) < 0)) return false;
-            if ((value.calibrationLogs || []).some(row =>
-                !maintenanceIds.has(String(row.assetId)) ||
-                typeof row.calibratedAt !== 'string' ||
-                !/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/.test(row.calibratedAt) ||
-                !Number.isFinite(Date.parse(row.calibratedAt)) ||
-                !Number.isSafeInteger(row.validForDays) || row.validForDays < 1 ||
-                typeof row.certificateNo !== 'string' || !row.certificateNo.trim() ||
-                typeof row.organization !== 'string' || !row.organization.trim() ||
-                typeof row.operator !== 'string' || !row.operator.trim() ||
-                !['pass', 'fail'].includes(row.result) ||
-                (row.notes !== undefined && typeof row.notes !== 'string'))) return false;
+            const calibrationReferences = new Set();
+            if ((value.calibrationLogs || []).some(row => {
+                const reference = [String(row.assetId), String(row.organization || ''), String(row.certificateNo || '')].join('|');
+                if (calibrationReferences.has(reference)) return true;
+                calibrationReferences.add(reference);
+                return !maintenanceIds.has(String(row.assetId)) ||
+                    typeof row.calibratedAt !== 'string' ||
+                    !/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/.test(row.calibratedAt) ||
+                    !Number.isFinite(Date.parse(row.calibratedAt)) ||
+                    !Number.isSafeInteger(row.validForDays) || row.validForDays < 1 ||
+                    typeof row.certificateNo !== 'string' || !row.certificateNo.trim() ||
+                    typeof row.organization !== 'string' || !row.organization.trim() ||
+                    typeof row.operator !== 'string' || !row.operator.trim() ||
+                    !['pass', 'fail'].includes(row.result) ||
+                    (row.notes !== undefined && typeof row.notes !== 'string');
+            })) return false;
             const sparePartIds = new Set(value.spareParts.map(row => String(row.id)));
             if (value.spareParts.some(row =>
                 typeof row.desc !== 'string' || !row.desc.trim() ||
