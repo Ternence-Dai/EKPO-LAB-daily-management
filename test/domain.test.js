@@ -139,6 +139,22 @@ test("rejects impossible date-only diary calendar values",()=>{
  assert.throws(()=>validateTestDiaryEntry({...base,start:"2026-02-30"}),/calendar date/);
  assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-02-30"}),/calendar date/);
 });
+test("normalizes optional test diary text and rejects unsafe operational values",()=>{
+ const base={start:"2026-10-17",end:"2026-10-18",duration:2,unit:" Cell-A ",operator:" operator-1 ",
+  sap:" PASS ",result:" pass ",cycle:" 120 ",error:" E-01 ",errorDesc:" seal check "};
+ const valid=validateTestDiaryEntry(base);
+ assert.equal(valid.unit,"Cell-A");
+ assert.equal(valid.operator,"operator-1");
+ assert.equal(valid.sap,"PASS");
+ assert.equal(valid.result,"pass");
+ assert.equal(valid.cycle,"120");
+ assert.equal(valid.error,"E-01");
+ assert.equal(valid.errorDesc,"seal check");
+ for(const patch of [
+  {result:42},{cycle:[]},{error:"E-01\\nforged"},{errorDesc:"x".repeat(2001)},
+  {unit:"operator\\u0000name"},{operator:"x".repeat(121)}
+ ]) assert.throws(()=>validateTestDiaryEntry({...base,...patch}));
+});
 test("calibration timestamps require an explicit timezone and real calendar date",()=>{
  const at=new Date("2026-01-15T00:00:00Z");
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00",validForDays:30},at),TypeError);
