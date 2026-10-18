@@ -39,5 +39,5 @@ assert.ok(html.includes('async function saveMaint()'),
 
 assert.ok(!html.includes('validated.id = newId'),
   'a frozen validated maintenance record must not be mutated when assigning its identifier');
-assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newId })'),
+assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'),
   'new maintenance records must be created by copying validated domain data');
