@@ -13,7 +13,8 @@
             cachedLabRaw = localStorage.getItem('lab_management_db_v9');
             DB = cachedLabRaw ? JSON.parse(cachedLabRaw) : JSON.parse(JSON.stringify(defaultData));
             if (!DB || !Array.isArray(DB.gases) || !Array.isArray(DB.maintenance) ||
-                !Array.isArray(DB.spareParts) || !Array.isArray(DB.testDiary)) {
+                !Array.isArray(DB.spareParts) || !Array.isArray(DB.testDiary) ||
+                (DB.calibrationLogs !== undefined && !Array.isArray(DB.calibrationLogs))) {
                 throw new Error('缓存数据结构不完整');
             }
         } catch (storageError) {
@@ -35,6 +36,9 @@
         // 兼容旧版本数据升级
         if (!DB.maintLogs) DB.maintLogs = [];
         if (!DB.spareLogs) DB.spareLogs = [];
+        // Legacy caches predate the calibration ledger. Add an empty table;
+        // never synthesize certificates or calibration results.
+        if (!Array.isArray(DB.calibrationLogs)) DB.calibrationLogs = [];
         // 如果存在旧格式的 gases（没有 year），进行转换
         DB.gases.forEach(g => {
             if (!g.year && g.month) {
