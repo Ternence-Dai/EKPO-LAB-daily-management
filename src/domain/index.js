@@ -9,6 +9,12 @@ export function transitionExperiment(experiment, nextStatus, actor) {
     if (!record || typeof record !== "object" || Array.isArray(record)) {
       throw new TypeError("experiment audit entries must be objects");
     }
+    // Audit rows are an immutable primitive-value schema. Reject nested
+    // payloads rather than freezing only the outer row and leaving mutable
+    // objects reachable through the returned history.
+    if (Object.values(record).some(value => typeof value !== "string")) {
+      throw new TypeError("experiment audit fields must be strings");
+    }
     return Object.freeze({ ...record });
   });
   audit.push(Object.freeze({ from:experiment.status, to:nextStatus, actor:actor.trim(), at:new Date().toISOString() }));
