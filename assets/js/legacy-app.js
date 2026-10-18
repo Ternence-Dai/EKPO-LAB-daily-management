@@ -14,7 +14,8 @@
             DB = cachedLabRaw ? JSON.parse(cachedLabRaw) : JSON.parse(JSON.stringify(defaultData));
             if (!DB || !Array.isArray(DB.gases) || !Array.isArray(DB.maintenance) ||
                 !Array.isArray(DB.spareParts) || !Array.isArray(DB.testDiary) ||
-                (DB.calibrationLogs !== undefined && !Array.isArray(DB.calibrationLogs))) {
+                (DB.calibrationLogs !== undefined && !Array.isArray(DB.calibrationLogs)) ||
+                (DB.experiments !== undefined && !Array.isArray(DB.experiments))) {
                 throw new Error('缓存数据结构不完整');
             }
         } catch (storageError) {
@@ -39,6 +40,8 @@
         // Legacy caches predate the calibration ledger. Add an empty table;
         // never synthesize certificates or calibration results.
         if (!Array.isArray(DB.calibrationLogs)) DB.calibrationLogs = [];
+        // Legacy backups predate experiment lifecycle records; migrate to an empty ledger without inventing plans or runs.
+        if (!Array.isArray(DB.experiments)) DB.experiments = [];
         // 如果存在旧格式的 gases（没有 year），进行转换
         DB.gases.forEach(g => {
             if (!g.year && g.month) {
@@ -158,7 +161,7 @@
                 else el.removeAttribute('aria-current');
             });
 
-            const titles = { dashboard: "总览仪表盘", gases: "气体使用记录", maintenance: "设备维保管理", spareParts: "备件库存管理", testDiary: "测试台运行日志", yearly: "年度综合统计", system: "系统全量设置" };
+            const titles = { dashboard: "总览仪表盘", gases: "气体使用记录", maintenance: "设备维保管理", spareParts: "备件库存管理", testDiary: "测试台运行日志", experiments: "实验计划与生命周期", yearly: "年度综合统计", system: "系统全量设置" };
             document.getElementById('pageTitle').innerText = titles[tabId];
             
             setTimeout(() => {
@@ -167,6 +170,8 @@
                 if (tabId === 'maintenance') { generateYearOptions('ml-year'); renderMaintenance(); }
                 if (tabId === 'spareParts') { renderSpareParts(); }
                 if (tabId === 'testDiary') renderTestDiary();
+                if (tabId === 'experiments') renderExperiments();
+                if (tabId === 'experiments') bindExperimentActions();
                 if (tabId === 'yearly') { renderYearlyFilter(); renderYearly(); }
                 if (tabId === 'system') renderSystem();
             }, 50);
@@ -964,6 +969,168 @@
         }
 
         // ==================== 10. 年度综合统计 ====================
+        // ==================== 10. 实验计划与生命周期 ====================
+        const experimentStatusLabels = {
+            planned: '计划中',
+            'in-progress': '进行中',
+            completed: '已完成',
+            cancelled: '已取消'
+        };
+
+        function renderExperiments() {
+            if (!Array.isArray(DB.experiments)) DB.experiments = [];
+            const assetSelect = document.getElementById('experiment-asset');
+            if (assetSelect) {
+                const selected = assetSelect.value;
+                assetSelect.innerHTML = '<option value="">请选择在册设备</option>' +
+                    DB.maintenance.map(asset =>
+                        `<option value="${esc(asset.id)}">${esc(asset.name)}（${esc(asset.category || '未分类')} · ${esc(asset.location || '未填写位置')}）</option>`
+                    ).join('');
+                if (DB.maintenance.some(asset => String(asset.id) === selected)) assetSelect.value = selected;
+            }
+
+            const counts = { planned: 0, 'in-progress': 0, completed: 0, cancelled: 0 };
+            DB.experiments.forEach(record => { if (Object.hasOwn(counts, record.status)) counts[record.status] += 1; });
+            document.getElementById('experiment-count-planned').textContent = counts.planned;
+            document.getElementById('experiment-count-active').textContent = counts['in-progress'];
+            document.getElementById('experiment-count-completed').textContent = counts.completed;
+            document.getElementById('experiment-count-cancelled').textContent = counts.cancelled;
+
+            const search = (document.getElementById('search-experiments')?.value || '').trim().toLowerCase();
+            const records = DB.experiments.filter(record => {
+                const asset = DB.maintenance.find(item => String(item.id) === String(record.assetId));
+                const haystack = [record.id, record.title, record.owner, record.purpose, asset?.name || ''].join(' ').toLowerCase();
+                return !search || haystack.includes(search);
+            }).slice().sort((a, b) => {
+                const dateOrder = String(a.plannedDate || '').localeCompare(String(b.plannedDate || ''));
+                return dateOrder || String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+            });
+            const container = document.getElementById('experiments-table');
+            if (!records.length) {
+                container.innerHTML = '<div class="experiment-empty"><strong>当前没有匹配的实验计划</strong><span>创建计划后，开始、完成或取消操作都会留下不可直接编辑的审计记录。</span></div>';
+                return;
+            }
+
+            const auditLabel = event => {
+                if (event.from === 'new' && event.to === 'planned') return '创建计划';
+                return (experimentStatusLabels[event.from] || event.from) + ' → ' + (experimentStatusLabels[event.to] || event.to);
+            };
+            const rows = records.map(record => {
+                const asset = DB.maintenance.find(item => String(item.id) === String(record.assetId));
+                const status = experimentStatusLabels[record.status] || '状态异常';
+                let actions = '';
+                if (record.status === 'planned') {
+                    actions = '<button type="button" class="btn btn-primary btn-sm" data-experiment-action="start" data-experiment-id="' + esc(record.id) + '">开始实验</button> ' +
+                        '<button type="button" class="btn btn-outline btn-sm" data-experiment-action="cancel" data-experiment-id="' + esc(record.id) + '">取消计划</button>';
+                } else if (record.status === 'in-progress') {
+                    actions = '<button type="button" class="btn btn-primary btn-sm" data-experiment-action="complete" data-experiment-id="' + esc(record.id) + '">完成实验</button> ' +
+                        '<button type="button" class="btn btn-outline btn-sm" data-experiment-action="cancel" data-experiment-id="' + esc(record.id) + '">取消实验</button>';
+                } else {
+                    actions = '<span class="experiment-terminal">终态 · 不可继续变更</span>';
+                }
+                const audit = record.audit.map(event =>
+                    '<li><span>' + esc(auditLabel(event)) + '</span><b>' + esc(event.actor) + '</b><time>' + esc(event.at) + '</time></li>'
+                ).join('');
+                return '<tr>' +
+                    '<td><strong>' + esc(record.title) + '</strong><small>' + esc(record.id) + '</small></td>' +
+                    '<td>' + esc(asset?.name || ('设备编号 ' + record.assetId)) + '</td>' +
+                    '<td>' + esc(record.plannedDate) + '</td>' +
+                    '<td>' + esc(record.owner) + '</td>' +
+                    '<td><span class="experiment-status status-' + esc(record.status) + '">' + esc(status) + '</span></td>' +
+                    '<td><details class="experiment-audit"><summary>审计记录（' + record.audit.length + '）</summary><ol>' + audit + '</ol></details></td>' +
+                    '<td class="experiment-actions">' + actions + '</td>' +
+                    '</tr>';
+            }).join('');
+            container.innerHTML = '<div class="table-scroll"><table class="experiment-table"><thead><tr>' +
+                '<th>实验计划</th><th>关联设备</th><th>计划日期</th><th>负责人</th><th>当前状态</th><th>审计历史</th><th>允许操作</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        }
+
+        async function createLabExperiment() {
+            if (storageRecoveryRequired) {
+                showToast('恢复保护已启用：请先恢复有效备份，再创建实验计划。', 'error');
+                return;
+            }
+            const form = document.getElementById('experiment-create-form');
+            const button = document.getElementById('experiment-create-button');
+            if (button) button.disabled = true;
+            try {
+                const assetId = document.getElementById('experiment-asset').value;
+                if (!DB.maintenance.some(asset => String(asset.id) === String(assetId))) {
+                    throw new Error('请选择当前设备台账中的有效设备');
+                }
+                const domain = await import('../../src/domain/index.js');
+                const record = domain.createExperimentRecord({
+                    id: 'EXP-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                    title: document.getElementById('experiment-title').value,
+                    assetId,
+                    plannedDate: document.getElementById('experiment-planned-date').value,
+                    owner: document.getElementById('experiment-owner').value,
+                    purpose: document.getElementById('experiment-purpose').value,
+                    actor: document.getElementById('experiment-creator').value,
+                    createdAt: new Date().toISOString()
+                });
+                if (DB.experiments.some(item => item.id === record.id)) throw new Error('实验编号已存在，请重试');
+                const previousDB = snapshotLabDB();
+                DB.experiments.push(record);
+                if (!await commitLabMutation(previousDB, '实验计划保存失败；已撤销本次创建')) return;
+                form.reset();
+                document.getElementById('experiment-planned-date').value = getToday();
+                renderExperiments();
+                showToast('实验计划已保存；当前记录仅代表计划，不代表已完成测试。');
+            } catch (error) {
+                showToast('无法创建实验计划：' + error.message, 'error');
+            } finally {
+                if (button) button.disabled = false;
+            }
+        }
+
+        async function transitionLabExperiment(id, nextStatus) {
+            if (storageRecoveryRequired) {
+                showToast('恢复保护已启用：实验状态未变更。', 'error');
+                return;
+            }
+            const actor = document.getElementById('experiment-action-actor').value.trim();
+            if (!actor) {
+                showToast('请先填写本次状态变更的操作人；系统不会代填身份。', 'error');
+                return;
+            }
+            const index = DB.experiments.findIndex(record => record.id === id);
+            if (index < 0) {
+                showToast('找不到对应实验计划，数据未变更。', 'error');
+                renderExperiments();
+                return;
+            }
+            try {
+                const domain = await import('../../src/domain/index.js');
+                const current = domain.validateExperimentRecord(DB.experiments[index]);
+                const updated = domain.transitionExperiment(current, nextStatus, actor, new Date().toISOString());
+                domain.validateExperimentRecord(updated);
+                const previousDB = snapshotLabDB();
+                DB.experiments[index] = updated;
+                if (!await commitLabMutation(previousDB, '实验状态保存失败；已回滚状态和审计历史')) return;
+                renderExperiments();
+                showToast('实验状态已更新，操作人和时间已写入审计历史。');
+            } catch (error) {
+                showToast('状态变更未执行：' + error.message, 'error');
+            }
+        }
+
+        function bindExperimentActions() {
+            const container = document.getElementById('experiments-table');
+            if (!container || container.dataset.bound === 'true') return;
+            container.dataset.bound = 'true';
+            container.addEventListener('click', event => {
+                const button = event.target.closest('[data-experiment-action]');
+                if (!button) return;
+                const action = button.dataset.experimentAction;
+                const next = action === 'start' ? 'in-progress' :
+                    action === 'complete' ? 'completed' :
+                    action === 'cancel' ? 'cancelled' : '';
+                if (next) transitionLabExperiment(button.dataset.experimentId, next);
+            });
+        }
+
         function renderYearlyFilter() {
             let select = document.getElementById('filter-yearly-year');
             if (select.options.length <= 1) {
