@@ -82,4 +82,5 @@ test("freezes copied experiment audit history and rejects malformed entries",()=
  assert.equal(prior.actor,"operator-1");
  assert.throws(()=>transitionExperiment({status:"planned",audit:[null]},"in-progress","operator-1"),TypeError);
  assert.throws(()=>transitionExperiment({status:"planned",audit:["invalid"]},"in-progress","operator-1"),TypeError);
+ assert.throws(()=>transitionExperiment({status:"planned",audit:[{from:"planned",to:"in-progress",actor:"operator-1",at:"2026-10-17T09:00:00.000Z",metadata:{note:"mutable"}}]},"in-progress","operator-1"),TypeError);
 });
