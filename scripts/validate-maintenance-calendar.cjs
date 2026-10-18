@@ -41,3 +41,57 @@ assert.ok(!html.includes('validated.id = newId'),
   'a frozen validated maintenance record must not be mutated when assigning its identifier');
 assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'),
   'new maintenance records must be created by copying validated domain data');
+
+{
+  const saveStart=html.indexOf('async function saveMaint()');
+  const saveEnd=html.indexOf('function editMaintLog',saveStart);
+  assert.ok(saveStart>=0&&saveEnd>saveStart,'saveMaint implementation must be extractable for rollback testing');
+  const saveSource=html.slice(saveStart,saveEnd).replace(
+    "const domain = await import('../../src/domain/index.js');",
+    "const domain = {validateMaintenanceAsset: input => Object.freeze({...input})};"
+  );
+  function runSave({editing=true,saveAllowed=false}={}){
+    const values={
+      'm-id': editing ? '1' : '',
+      'm-name':'Test asset','m-category':'Equipment','m-location':'Lab',
+      'm-qty':'2','m-cycle':'一级保养','m-freq':'季度',
+      'm-last':'2026-10-18','m-next':'2027-01-18',
+      'm-responsible':'Operator','m-record':'updated'
+    };
+    const previous={id:1,name:'Old asset',category:'Equipment',location:'Lab',qty:1,
+      cycle:'一级保养',freq:'季度',last:'2026-07-18',next:'2026-10-18',
+      responsible:'Operator',record:'old'};
+    const db={maintenance:editing?[previous]:[]};
+    const messages=[];let closed=0,renders=0;
+    const context={
+      DB:db,
+      document:{getElementById:key=>({value:values[key]??''})},
+      saveToLocal:async()=>saveAllowed,
+      showToast:message=>messages.push(message),
+      closeModal:()=>{closed++;},
+      renderMaintenance:()=>{renders++},
+      console:{error(){}}
+    };
+    vm.createContext(context);
+    vm.runInContext(saveSource+'\\nthis.run=saveMaint;',context);
+    return context.run().then(()=>({db:context.DB,messages,closed,renders,previous}));
+  }
+  const failedUpdate=await runSave({editing:true,saveAllowed:false});
+  assert.deepEqual(failedUpdate.db.maintenance,[failedUpdate.previous],
+    'failed maintenance update must restore the entire previous record');
+  assert.equal(failedUpdate.closed,0,'failed maintenance update must not close the editor');
+  assert.equal(failedUpdate.renders,0,'failed maintenance update must not render uncommitted state');
+  assert.ok(failedUpdate.messages.some(message=>message.includes('已撤销')),
+    'failed maintenance update must explain rollback');
+
+  const failedNew=await runSave({editing:false,saveAllowed:false});
+  assert.equal(failedNew.db.maintenance.length,0,
+    'failed new maintenance record must not leave an in-memory record');
+
+  const successful=await runSave({editing:true,saveAllowed:true});
+  assert.equal(successful.db.maintenance[0].name,'Test asset',
+    'successful maintenance update must replace validated record data');
+  assert.equal(successful.closed,1);
+  assert.equal(successful.renders,1);
+}
+
