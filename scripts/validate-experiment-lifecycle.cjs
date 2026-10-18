@@ -47,7 +47,7 @@ const create = app.slice(createStart, transitionStart);
 const transition = app.slice(transitionStart, bindStart);
 const binding = app.slice(bindStart, yearlyStart);
 assert.ok(render.includes('record.audit.map') && render.includes('data-experiment-action') &&
-          render.includes('record.owner') && render.includes('record.plannedDate'),
+          render.includes('record.owner') && render.includes('record.plannedDate') && render.includes('record.purpose'),
   'experiment table must display owners, planned dates, permitted actions and audit history');
 assert.ok(create.includes('domain.createExperimentRecord') &&
           create.includes('DB.experiments.push(record)') &&
