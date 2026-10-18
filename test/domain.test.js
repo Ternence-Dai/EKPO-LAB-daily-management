@@ -32,7 +32,6 @@ test("rejects test diary records with reversed times, zero duration or missing t
  assert.throws(()=>validateTestDiaryEntry({...base,operator:" "}),TypeError);
  assert.throws(()=>validateTestDiaryEntry({...base,unit:""}),TypeError);
 });
-
 test("preserves date-only diary dates as local calendar values",()=>{
  const valid=validateTestDiaryEntry({start:"2026-10-17",end:"2026-10-18",duration:2,unit:"Cell-A",operator:"operator-1"});
  assert.equal(valid.start,"2026-10-17");
@@ -43,7 +42,6 @@ test("rejects impossible date-only diary calendar values",()=>{
  assert.throws(()=>validateTestDiaryEntry({...base,start:"2026-02-30"}),/calendar date/);
  assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-02-30"}),/calendar date/);
 });
-
 test("calibration timestamps require an explicit timezone and real calendar date",()=>{
  const at=new Date("2026-01-15T00:00:00Z");
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00",validForDays:30},at),TypeError);
@@ -58,10 +56,15 @@ test("calibration expiry rejects unsafe durations and overflow",()=>{
 test("calibration timestamp offsets normalize consistently",()=>{
  assert.equal(isCalibrationCurrent({calibratedAt:"2026-01-01T08:00:00+08:00",validForDays:0},new Date("2026-01-01T00:00:00Z")),true);
 });
-
 test("timed diary entries require timezone and reject invalid or lossy timestamps",()=>{
  const base={start:"2026-10-17T09:00:00+08:00",end:"2026-10-17T10:00:00+08:00",duration:1,unit:"Cell-A",operator:"operator-1"};
  assert.throws(()=>validateTestDiaryEntry({...base,start:"2026-10-17T09:00:00"}),/explicit timezone/);
  assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-02-30T10:00:00Z"}),/explicit timezone/);
  assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-10-17T10:00:00.1234Z"}),/explicit timezone/);
+});
+test("rejects unsafe experiment diary duration magnitudes",()=>{
+ const base={start:"2026-10-17",end:"2026-10-18",duration:1,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry({...base,duration:Number.MAX_SAFE_INTEGER+1}),RangeError);
+ assert.throws(()=>validateTestDiaryEntry({...base,duration:1e308}),RangeError);
+ assert.equal(validateTestDiaryEntry({...base,duration:0.25}).duration,0.25);
 });
