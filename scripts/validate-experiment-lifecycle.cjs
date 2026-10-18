@@ -67,6 +67,18 @@ assert.ok(transition.includes('experiment-action-actor') &&
 assert.ok(binding.includes("container.addEventListener('click'") &&
           binding.includes('button.dataset.experimentId'),
   'experiment actions must use delegated data attributes, not interpolate imported IDs into inline JavaScript');
+const deleteStart = app.indexOf('function deleteItem(table, id)');
+const deleteEnd = app.indexOf('function exportAllToJSON', deleteStart);
+const deleteSource = app.slice(deleteStart, deleteEnd);
+assert.ok(deleteSource.includes("table === 'maintenance' && DB.experiments.some(item => String(item.assetId) === String(id))"),
+  'equipment referenced by an experiment must not be deletable');
+const exportStart = app.indexOf('function exportAllToExcel()');
+const exportEnd = app.indexOf('function isValidLabBackup', exportStart);
+const exportSource = app.slice(exportStart, exportEnd);
+assert.ok(exportSource.includes('实验计划') && exportSource.includes('实验状态审计') &&
+          exportSource.includes('record.audit'),
+  'Excel export must include both experiment plans and a flattened audit ledger');
+
 
 const backupStart = app.indexOf('function isValidLabBackup(value)');
 const backupEnd = app.indexOf('function importFromLocal(event)', backupStart);
