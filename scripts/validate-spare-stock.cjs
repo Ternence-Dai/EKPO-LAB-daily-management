@@ -32,11 +32,11 @@ async function run(action, qty, stock, saveAllowed = true) {
   return {stock:context.DB.spareParts[0].qty,logs:context.DB.spareLogs,messages};
 }
 
-async function runMasterSave({id='1',qty=5,catalog='SKU-1',history=true,otherParts=[],saveAllowed=true}={}) {
+async function runMasterSave({id='1',qty=5,catalog='SKU-1',price=10,history=true,otherParts=[],saveAllowed=true}={}) {
   const values = {
     's-id':id,'s-update':'2026-10-18','s-category':'Test','s-desc':'Test part',
     's-catalog':catalog,'s-purpose':'Test','s-qty':String(qty),'s-brand':'Brand',
-    's-price':'10','s-location':'Shelf'
+    's-price':String(price),'s-location':'Shelf'
   };
   const messages=[];
   const context={
@@ -44,7 +44,7 @@ async function runMasterSave({id='1',qty=5,catalog='SKU-1',history=true,otherPar
         spareLogs:history?[{id:1,partId:1,date:'2026-10-17',action:'入库',qty:5}]:[]},
     document:{getElementById:key=>({value:values[key]??''})},
     getToday:()=> '2026-10-18',
-    isValidDateOnly:value=>/^\\d{4}-\\d{2}-\\d{2}$/.test(value),
+    isValidDateOnly:value=>value === '2026-10-18' || value === '2026-10-17',
     snapshotLabDB(){return JSON.parse(JSON.stringify(this.DB));},
     async commitLabMutation(previousDB){if(saveAllowed)return true;this.DB=previousDB;return false;},
     showToast:message=>messages.push(message),
@@ -94,8 +94,8 @@ assert.equal(master.db.spareParts.length,2,'duplicate catalog codes must not cre
 assert.ok(master.messages.some(message=>message.includes('物料编码已存在')),
   'duplicate SKU rejection must be explicit');
 
-master=await runMasterSave({qty:5,saveAllowed:true});
-assert.equal(master.db.spareParts[0].price,10,
+master=await runMasterSave({qty:5,price:12,saveAllowed:true});
+assert.equal(master.db.spareParts[0].price,12,
   'non-stock master fields may still be edited when movement history exists');
 
 console.log('Spare-part stock movement and persistence rollback checks passed.');
