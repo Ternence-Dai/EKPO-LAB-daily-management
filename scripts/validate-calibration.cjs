@@ -59,6 +59,19 @@ assert.ok(app.includes("if (!Array.isArray(DB.calibrationLogs)) DB.calibrationLo
   'legacy cache migration must add an empty calibration table without inventing records');
 assert.ok(app.includes('domain.createCalibrationRecord(row)'),
   'stored calibration records must be revalidated on startup and import');
+const startupStart = app.indexOf('window.onload = async () =>');
+const startupEnd = app.indexOf('renderDashboard();', startupStart);
+assert.ok(startupStart >= 0 && startupEnd > startupStart,
+  'stored calibration startup validation block must exist');
+const startupSource = app.slice(startupStart, startupEnd);
+assert.ok(startupSource.includes('const certificateReferences = new Set();') &&
+          startupSource.includes('certificateReferences.has(reference)') &&
+          startupSource.includes('校准台账包含重复的设备/机构/证书编号组合'),
+  'legacy local caches must be locked for recovery if duplicate certificate references are found');
+assert.ok(startupSource.indexOf('certificateReferences.has(reference)') <
+          startupSource.indexOf('DB.calibrationLogs = validated;'),
+  'duplicate certificate validation must run before trusted calibration records are accepted');
+
 assert.ok(app.includes("DB.calibrationLogs || []), \"设备校准记录\""),
   'Excel export must include the calibration history table');
 assert.ok(app.includes('DB.calibrationLogs.unshift(record)'),
@@ -114,7 +127,7 @@ for (const [label, patch] of [
 assert.equal(sandbox.validateBackup({
   ...legacyBackup,
   calibrationLogs: [validCalibration, { ...validCalibration, id: 102 }]
-}), false, 'duplicate asset/certificate references are rejected separately at save; duplicate row IDs are rejected in backup');
+}), false, 'backup validator must reject duplicate asset/organization/certificate references even when row IDs differ');
 assert.equal(sandbox.validateBackup({
   ...legacyBackup, calibrationLogs: [validCalibration, { ...validCalibration }]
 }), false, 'duplicate calibration row IDs must be rejected');
