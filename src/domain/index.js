@@ -7,11 +7,33 @@ export function transitionExperiment(experiment, nextStatus, actor) {
   if (experiment.audit !== undefined && !Array.isArray(experiment.audit)) throw new TypeError("experiment audit must be an array");
   return Object.freeze({ ...experiment, status:nextStatus, audit:[...(experiment.audit || []), Object.freeze({ from:experiment.status, to:nextStatus, actor:actor.trim(), at:new Date().toISOString() })] });
 }
+function parseCalibrationInstant(value) {
+  if (typeof value !== "string") throw new TypeError("calibratedAt must be an ISO timestamp with an explicit timezone");
+  const match = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d)(?:\.\d{1,9})?)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!match) throw new TypeError("calibratedAt must be an ISO timestamp with an explicit timezone");
+  const [, yearText, monthText, dayText, , , , zone, , offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText), month = Number(monthText), day = Number(dayText);
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]) {
+    throw new TypeError("calibratedAt contains an invalid calendar date");
+  }
+  if (zone !== "Z") {
+    const offsetHour = Number(offsetHourText), offsetMinute = Number(offsetMinuteText);
+    if (offsetMinute > 59 || offsetHour > 14 || (offsetHour === 14 && offsetMinute !== 0)) {
+      throw new TypeError("calibratedAt contains an invalid timezone offset");
+    }
+  }
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) throw new TypeError("calibratedAt must be a valid ISO timestamp");
+  return timestamp;
+}
 export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Date()) {
-  if (typeof calibratedAt !== "string" || !calibratedAt.trim() || !Number.isFinite(Date.parse(calibratedAt))) throw new TypeError("calibratedAt must be a valid date string");
-  if (!Number.isInteger(validForDays) || validForDays < 0) throw new RangeError("validForDays must be non-negative");
+  const calibratedTimestamp = parseCalibrationInstant(calibratedAt);
+  if (!Number.isSafeInteger(validForDays) || validForDays < 0) throw new RangeError("validForDays must be a non-negative safe integer");
   if (!(at instanceof Date) || !Number.isFinite(at.getTime())) throw new TypeError("at must be a valid Date");
-  const expiry = Date.parse(calibratedAt) + validForDays * 86400000;
+  const expiry = calibratedTimestamp + validForDays * 86400000;
+  if (!Number.isFinite(expiry)) throw new RangeError("calibration expiry is outside the supported date range");
   return at.getTime() <= expiry;
 }
 
