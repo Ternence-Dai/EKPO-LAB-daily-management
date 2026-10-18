@@ -27,6 +27,17 @@ Track who/when/source for every critical record. Separate planned, measured, imp
 6. Validate with reference datasets and document known limitations.
 7. Review deployment, backup, recovery, and release process before production use.
 
+## Delivered vertical slices
+
+- [x] Equipment maintenance and calibration records with backup validation
+- [x] Experiment planning and lifecycle states with immutable audit history
+- [x] Experiment JSON backup/import validation and separate Excel plan/audit sheets
+- [ ] Samples, measured results, attachments and scientific review/approval
+- [ ] Authenticated role-based authorization and durable multi-user transactions
+- [ ] Browser end-to-end acceptance against verified laboratory records
+
+The experiment workflow is a traceable planning/status slice, not a complete ELN: an operator label is self-reported, and the “completed” state does not certify that measurements have been independently reviewed.
+
 ## Open-source adoption policy
 
 For each dependency or reference project, record its repository URL, license, maintenance activity, security posture, exact component being reused or adapted, and attribution obligations. Prefer stable standards and small interoperable components over copying whole applications.
