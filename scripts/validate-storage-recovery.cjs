@@ -62,3 +62,12 @@ assert.match(html, /async function saveTestDiary\\([\\s\\S]*?await commitLabMuta
   'test diary changes must roll back when persistence fails');
 assert.match(html, /async function deleteItem\\([\\s\\S]*?await commitLabMutation/,
   'deletes and stock-ledger reversal must roll back when persistence fails');
+
+assert.match(html, /if \\(storageRecoveryRequired\\)[\\s\\S]{0,900}originalRaw/,
+  'recovery-mode JSON export must contain original raw cache data, not demo fallback data');
+assert.match(html, /function isValidLabBackup\\(value\\)/,
+  'JSON restore must validate table rows and linked maintenance/spare ledgers');
+assert.match(html, /if \\(!await commitLabMutation\\(previousDB/,
+  'JSON restore must report success only after persisted write succeeds');
+assert.match(html, /原始缓存尚未恢复[\\s\\S]{0,160}阻止 Excel 导出/,
+  'Excel export must not present fallback demo data as the recovered user dataset');
