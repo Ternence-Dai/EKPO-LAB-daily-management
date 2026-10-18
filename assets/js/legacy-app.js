@@ -87,6 +87,20 @@
             return localSaved || fileSaved;
         }
 
+        function snapshotLabDB() {
+            return JSON.parse(JSON.stringify(DB));
+        }
+
+        async function commitLabMutation(previousDB, failureMessage) {
+            let saved = false;
+            try { saved = await saveToLocal(); }
+            catch (error) { console.error('实验室数据保存失败', error); }
+            if (saved) return true;
+            DB = previousDB;
+            showToast(failureMessage || '数据保存失败，本次修改已撤销；请检查浏览器存储并重试', 'error');
+            return false;
+        }
+
         function getToday() {
             const now = new Date();
             const y = now.getFullYear();
@@ -594,7 +608,7 @@
         function editSpare(id) { let s = DB.spareParts.find(x => x.id === id); document.getElementById('s-id').value=s.id; document.getElementById('s-category').value=s.category||''; document.getElementById('s-desc').value=s.desc||''; document.getElementById('s-catalog').value=s.catalog||''; document.getElementById('s-purpose').value=s.purpose||''; document.getElementById('s-qty').value=s.qty||0; document.getElementById('s-brand').value=s.brand||''; document.getElementById('s-price').value=s.price||0; document.getElementById('s-location').value=s.location||''; document.getElementById('s-update').value=s.update||''; openModal('modal-spare'); }
         function saveSpare() { let id=document.getElementById('s-id').value; let update=document.getElementById('s-update').value || getToday(); let data={category:document.getElementById('s-category').value, desc:document.getElementById('s-desc').value, catalog:document.getElementById('s-catalog').value, purpose:document.getElementById('s-purpose').value, qty:+document.getElementById('s-qty').value, brand:document.getElementById('s-brand').value, price:+document.getElementById('s-price').value, location:document.getElementById('s-location').value, update:update}; if(id){let i=DB.spareParts.findIndex(x=>x.id==id); DB.spareParts[i]={...DB.spareParts[i],...data}; showToast('已更新');}else{data.id=Date.now(); DB.spareParts.push(data); showToast('已新增');} saveToLocal(); closeModal('modal-spare'); renderSpareParts(); }
 
-        function saveSpareLog() {
+        async function saveSpareLog() {
             const partId = Number(document.getElementById('sl-part').value);
             const action = document.getElementById('sl-action').value;
             const qtyRaw = document.getElementById('sl-qty').value;
@@ -610,14 +624,22 @@
             if (action === '出库' && qty > currentQty) {
                 showToast('出库数量超过当前库存，已阻止本次出库', 'error'); return;
             }
+            const nextQty = action === '入库' ? currentQty + qty : currentQty - qty;
+            if (!Number.isFinite(nextQty) || nextQty < 0) { showToast('出入库后库存无效', 'error'); return; }
             const data = { partId, date, action, qty, operator: document.getElementById('sl-operator').value,
                 note: document.getElementById('sl-note').value, id: Date.now() };
-            // Validate first, then atomically append the ledger entry and update stock.
-            part.qty = action === '入库' ? currentQty + qty : currentQty - qty;
+            if (DB.spareLogs.some(item => String(item.id) === String(data.id))) {
+                showToast('出入库流水编号冲突，请重试保存', 'error'); return;
+            }
+            const previousDB = snapshotLabDB();
+            part.qty = nextQty;
             part.update = date;
             DB.spareLogs.push(data);
-            saveToLocal(); closeModal('modal-spare-log'); renderSpareParts();
-            if (!document.getElementById('spare-log-view').classList.contains('hidden')) renderSpareLogs();
+            if (!await commitLabMutation(previousDB, '出入库流水保存失败；库存与流水已撤销')) return;
+            closeModal('modal-spare-log');
+            renderSpareParts();
+            const spareLogView = document.getElementById('spare-log-view');
+            if (spareLogView && !spareLogView.classList.contains('hidden')) renderSpareLogs();
             showToast('流水已保存，库存已更新');
         }
 
