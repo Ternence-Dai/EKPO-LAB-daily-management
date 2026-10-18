@@ -51,7 +51,7 @@ export function validateMaintenanceAsset(entry) {
 const transitions = { planned:["in-progress","cancelled"], "in-progress":["completed","cancelled"], completed:[], cancelled:[] };
 const experimentStatuses = new Set(["planned", "in-progress", "completed", "cancelled"]);
 function parseExperimentDate(value) {
-  if (typeof value !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new TypeError("experiment plannedDate must be a valid calendar date");
   }
   const date = new Date(value + "T00:00:00.000Z");
