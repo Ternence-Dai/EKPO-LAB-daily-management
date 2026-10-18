@@ -97,8 +97,13 @@ test("rejects skipping experiment lifecycle states",()=>{
  assert.throws(()=>transitionExperiment(created,"completed","operator-1"),RangeError);
 });
 test("rejects inherited object property names as experiment lifecycle states",()=>{
- assert.throws(()=>transitionExperiment({status:"toString"},"completed","operator-1"),RangeError);
- assert.throws(()=>transitionExperiment({status:"__proto__"},"completed","operator-1"),RangeError);
+ const created=createExperimentRecord({
+  id:"EXP-PROTOTYPE",title:"Prototype guard",assetId:2,plannedDate:"2026-10-20",
+  owner:"Operator",purpose:"Verify safe lifecycle state lookup",actor:"operator-0",
+  createdAt:"2026-10-18T01:00:00.000Z"
+ });
+ assert.throws(()=>transitionExperiment({...created,status:"toString"},"completed","operator-1"),RangeError);
+ assert.throws(()=>transitionExperiment({...created,status:"__proto__"},"completed","operator-1"),RangeError);
 });
 test("rejects malformed audit history and invalid experiment containers",()=>{
  assert.throws(()=>transitionExperiment({status:"planned",audit:{} },"in-progress","operator-1"),TypeError);
