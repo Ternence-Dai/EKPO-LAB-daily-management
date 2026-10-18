@@ -970,6 +970,7 @@
 
         // ==================== 10. 年度综合统计 ====================
         // ==================== 10. 实验计划与生命周期 ====================
+        let experimentMutationPending = false;
         const experimentStatusLabels = {
             planned: '计划中',
             'in-progress': '进行中',
@@ -979,6 +980,8 @@
 
         function renderExperiments() {
             if (!Array.isArray(DB.experiments)) DB.experiments = [];
+            const plannedDateInput = document.getElementById('experiment-planned-date');
+            if (plannedDateInput && !plannedDateInput.value) plannedDateInput.value = getToday();
             const assetSelect = document.getElementById('experiment-asset');
             if (assetSelect) {
                 const selected = assetSelect.value;
@@ -1047,6 +1050,7 @@
         }
 
         async function createLabExperiment() {
+            if (experimentMutationPending) return;
             if (storageRecoveryRequired) {
                 showToast('恢复保护已启用：请先恢复有效备份，再创建实验计划。', 'error');
                 return;
@@ -1054,6 +1058,12 @@
             const form = document.getElementById('experiment-create-form');
             const button = document.getElementById('experiment-create-button');
             if (button) button.disabled = true;
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                if (button) button.disabled = false;
+                return;
+            }
+            experimentMutationPending = true;
             try {
                 const assetId = document.getElementById('experiment-asset').value;
                 if (!DB.maintenance.some(asset => String(asset.id) === String(assetId))) {
@@ -1081,22 +1091,27 @@
             } catch (error) {
                 showToast('无法创建实验计划：' + error.message, 'error');
             } finally {
+                experimentMutationPending = false;
                 if (button) button.disabled = false;
             }
         }
 
         async function transitionLabExperiment(id, nextStatus) {
+            if (experimentMutationPending) return;
             if (storageRecoveryRequired) {
                 showToast('恢复保护已启用：实验状态未变更。', 'error');
                 return;
             }
+            experimentMutationPending = true;
             const actor = document.getElementById('experiment-action-actor').value.trim();
             if (!actor) {
+                experimentMutationPending = false;
                 showToast('请先填写本次状态变更的操作人；系统不会代填身份。', 'error');
                 return;
             }
             const index = DB.experiments.findIndex(record => record.id === id);
             if (index < 0) {
+                experimentMutationPending = false;
                 showToast('找不到对应实验计划，数据未变更。', 'error');
                 renderExperiments();
                 return;
@@ -1113,6 +1128,8 @@
                 showToast('实验状态已更新，操作人和时间已写入审计历史。');
             } catch (error) {
                 showToast('状态变更未执行：' + error.message, 'error');
+            } finally {
+                experimentMutationPending = false;
             }
         }
 
@@ -1546,6 +1563,7 @@
                     }
                     storageWarning = true;
                     storageRecoveryRequired = true;
+                    DB.experiments = [];
                     showToast('实验生命周期或审计记录校验失败，已锁定写入以保护原始数据', 'error');
                     console.error('实验台账无法安全读取。', error);
                 }
