@@ -471,6 +471,7 @@
 
             let existingIndex = -1;
             let previous = null;
+            let newRecordId = null;
             if (id) {
                 existingIndex = DB.maintenance.findIndex(item => String(item.id) === String(id));
                 if (existingIndex < 0) {
@@ -480,12 +481,12 @@
                 previous = DB.maintenance[existingIndex];
                 DB.maintenance[existingIndex] = { ...previous, ...validated };
             } else {
-                const newId = Date.now();
-                if (DB.maintenance.some(item => String(item.id) === String(newId))) {
+                newRecordId = Date.now();
+                if (DB.maintenance.some(item => String(item.id) === String(newRecordId))) {
                     showToast('设备编号冲突，请重试保存', 'error');
                     return;
                 }
-                DB.maintenance.push({ ...validated, id: newId });
+                DB.maintenance.push({ ...validated, id: newRecordId });
             }
 
             const saved = await saveToLocal();
