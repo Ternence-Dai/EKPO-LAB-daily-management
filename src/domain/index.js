@@ -176,32 +176,24 @@ export function validateExperimentRecord(entry) {
   });
 }
 export function transitionExperiment(experiment, nextStatus, actor, at = new Date().toISOString()) {
-  if (!experiment || typeof experiment !== "object" || Array.isArray(experiment)) throw new TypeError("experiment is required");
+  // A transition is only valid from a complete, traceable record. Do not let
+  // callers append an audit event to a status-only or otherwise corrupt object.
+  const current = validateExperimentRecord(experiment);
   if (typeof actor !== "string" || !actor.trim()) throw new TypeError("actor is required for audit");
-  if (!Object.hasOwn(transitions, experiment.status)) throw new RangeError("unknown current status");
-  if (!transitions[experiment.status].includes(nextStatus)) throw new RangeError(`transition ${experiment.status} -> ${nextStatus} is not allowed`);
-  if (experiment.audit !== undefined && !Array.isArray(experiment.audit)) throw new TypeError("experiment audit must be an array");
-  const audit = (experiment.audit || []).map((record) => {
-    if (!record || typeof record !== "object" || Array.isArray(record)) {
-      throw new TypeError("experiment audit entries must be objects");
-    }
-    // Audit rows are an immutable primitive-value schema. Reject nested
-    // payloads rather than freezing only the outer row and leaving mutable
-    // objects reachable through the returned history.
-    if (Object.values(record).some(value => typeof value !== "string")) {
-      throw new TypeError("experiment audit fields must be strings");
-    }
-    return Object.freeze({ ...record });
-  });
-  const normalizedAt = normalizeExperimentInstant(at, "audit timestamp");
-  if (audit.length) {
-    const previousAt = Date.parse(normalizeExperimentInstant(audit[audit.length - 1].at, "previous audit timestamp"));
-    if (Date.parse(normalizedAt) < previousAt) {
-      throw new RangeError("experiment audit timestamps must be chronological");
-    }
+  if (!Object.hasOwn(transitions, current.status)) throw new RangeError("unknown current status");
+  if (!transitions[current.status].includes(nextStatus)) {
+    throw new RangeError(`transition ${current.status} -> ${nextStatus} is not allowed`);
   }
-  audit.push(Object.freeze({ from:experiment.status, to:nextStatus, actor:actor.trim(), at:normalizedAt }));
-  return Object.freeze({ ...experiment, status:nextStatus, audit:Object.freeze(audit) });
+  const normalizedAt = normalizeExperimentInstant(at, "audit timestamp");
+  const previousAt = Date.parse(current.audit[current.audit.length - 1].at);
+  if (Date.parse(normalizedAt) < previousAt) {
+    throw new RangeError("experiment audit timestamps must be chronological");
+  }
+  const audit = [
+    ...current.audit,
+    Object.freeze({ from:current.status, to:nextStatus, actor:actor.trim(), at:normalizedAt })
+  ];
+  return validateExperimentRecord({ ...current, status:nextStatus, audit });
 }
 function parseCalibrationInstant(value) {
   if (typeof value !== "string") throw new TypeError("calibratedAt must be an ISO timestamp with an explicit timezone");
