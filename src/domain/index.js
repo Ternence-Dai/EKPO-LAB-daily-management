@@ -33,7 +33,7 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
   if (!Number.isSafeInteger(validForDays) || validForDays < 0) throw new RangeError("validForDays must be a non-negative safe integer");
   if (!(at instanceof Date) || !Number.isFinite(at.getTime())) throw new TypeError("at must be a valid Date");
   const expiry = calibratedTimestamp + validForDays * 86400000;
-  if (!Number.isFinite(expiry)) throw new RangeError("calibration expiry is outside the supported date range");
+  if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) throw new RangeError("calibration expiry is outside the supported date range");
   return at.getTime() <= expiry;
 }
 
