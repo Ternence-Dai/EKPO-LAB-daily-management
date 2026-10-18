@@ -28,6 +28,8 @@ jobs:
         run: node scripts/validate-storage-recovery.cjs
       - name: Validate equipment calibration workflow and backups
         run: node scripts/validate-calibration.cjs
+      - name: Validate experiment lifecycle and audit integration
+        run: node scripts/validate-experiment-lifecycle.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
