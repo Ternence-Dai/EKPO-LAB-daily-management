@@ -462,3 +462,8 @@ table tr:hover td{background:#f6fbfa}
   .experiment-toolbar .card-title{font-size:12px}
   #experiment-create-button{width:100%}
 }
+
+
+.experiment-purpose{margin-top:5px}
+.experiment-purpose summary{cursor:pointer;color:#39818a;font-size:8.5px}
+.experiment-purpose p{max-width:280px;margin-top:5px;color:#617b83;font-size:9px;line-height:1.6;white-space:normal}
