@@ -8,6 +8,10 @@ test("records authorized experiment lifecycle transition",()=>{
 test("rejects skipping experiment lifecycle states",()=>{
  assert.throws(()=>transitionExperiment({status:"planned"},"completed","operator-1"),RangeError);
 });
+test("rejects inherited object property names as experiment lifecycle states",()=>{
+ assert.throws(()=>transitionExperiment({status:"toString"},"completed","operator-1"),RangeError);
+ assert.throws(()=>transitionExperiment({status:"__proto__"},"completed","operator-1"),RangeError);
+});
 test("rejects malformed audit history and invalid experiment containers",()=>{
  assert.throws(()=>transitionExperiment({status:"planned",audit:{} },"in-progress","operator-1"),TypeError);
  assert.throws(()=>transitionExperiment([],"in-progress","operator-1"),TypeError);
