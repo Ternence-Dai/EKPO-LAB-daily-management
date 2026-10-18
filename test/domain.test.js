@@ -58,7 +58,11 @@ test("rejects impossible, skipped, reordered or tampered experiment audit chains
   owner:"Operator",purpose:"Traceable test plan",actor:"operator-1",
   createdAt:"2026-10-18T01:00:00.000Z"
  });
- const started=transitionExperiment(base,"in-progress","operator-2");
+ const started=transitionExperiment(base,"in-progress","operator-2","2026-10-18T01:01:00.000Z");
+ assert.throws(
+  ()=>transitionExperiment(started,"completed","operator-3","2026-10-18T00:59:00.000Z"),
+  /chronological/
+ );
  assert.throws(()=>validateExperimentRecord({...started,audit:[
   started.audit[0],{from:"planned",to:"completed",actor:"operator-2",at:"2026-10-18T01:01:00.000Z"}
  ]}),/invalid lifecycle transition/);
