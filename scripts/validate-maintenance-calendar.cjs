@@ -43,6 +43,7 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
   'new maintenance records must be created by copying validated domain data');
 
 {
+(async()=>{
   const saveStart=html.indexOf('async function saveMaint()');
   const saveEnd=html.indexOf('function editMaintLog',saveStart);
   assert.ok(saveStart>=0&&saveEnd>saveStart,'saveMaint implementation must be extractable for rollback testing');
@@ -94,4 +95,5 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
   assert.equal(successful.closed,1);
   assert.equal(successful.renders,1);
 }
+})().catch(error=>{console.error(error);process.exitCode=1;});
 
