@@ -22,6 +22,7 @@ async function run(action, qty, stock, saveAllowed = true) {
   await context.saveSpareLog();
   return {stock:context.DB.spareParts[0].qty,logs:context.DB.spareLogs,messages};
 }
+(async()=>{
 let result=await run('出库',6,5);
 assert.equal(result.stock,5,'oversubscribed outbound movement must not change stock');
 assert.equal(result.logs.length,0,'oversubscribed outbound movement must not be logged');
@@ -40,3 +41,4 @@ assert.equal(result.logs.length,0,'failed persistence must not leave an uncommit
 assert.ok(result.messages.some(message=>message.includes('库存与流水已撤销')),
   'failed persistence must explain that the stock change was rolled back');
 console.log('Spare-part stock movement and persistence rollback checks passed.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
