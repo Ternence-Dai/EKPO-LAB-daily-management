@@ -64,6 +64,9 @@ assert.ok(transition.includes('domain.validateExperimentRecord(current)') &&
 assert.ok(transition.includes('experiment-action-actor') &&
           transition.includes('storageRecoveryRequired'),
   'state changes must identify the operator and respect recovery lock');
+assert.ok(transition.includes('!confirm(') &&
+          transition.includes('it does not mean the measurement result has been reviewed'),
+  'terminal lifecycle states must require confirmation and disclose the review boundary');
 assert.ok(binding.includes("container.addEventListener('click'") &&
           binding.includes('button.dataset.experimentId'),
   'experiment actions must use delegated data attributes, not interpolate imported IDs into inline JavaScript');
