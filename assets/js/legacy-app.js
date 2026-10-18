@@ -404,12 +404,26 @@
             return true;
         }
 
-        function renderMaintenance() {
+        async function renderMaintenance() {
             let search = document.getElementById('search-maint').value.toLowerCase();
             let tbody = document.querySelector('#table-maintenance tbody'); tbody.innerHTML = '';
             let filtered = DB.maintenance.filter(m => (m.name||'').toLowerCase().includes(search) || (m.category||'').toLowerCase().includes(search));
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            let calibrationDomain = null;
+            try {
+                calibrationDomain = await import('../../src/domain/index.js');
+            } catch (error) {
+                console.error('设备校准状态模块不可用。', error);
+            }
+            const latestCalibrationByAsset = new Map();
+            (DB.calibrationLogs || []).forEach(record => {
+                const key = String(record.assetId);
+                const current = latestCalibrationByAsset.get(key);
+                if (!current || String(record.calibratedAt) > String(current.calibratedAt)) {
+                    latestCalibrationByAsset.set(key, record);
+                }
+            });
             filtered.forEach(m => {
                 let totalCost = DB.maintLogs.filter(l => l.eqId === m.id).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
                 const dueDate = m.next ? new Date(m.next + 'T00:00:00') : null;
@@ -419,9 +433,28 @@
                     : days < 0 ? '<span class="badge badge-danger">已逾期</span>'
                     : days <= 30 ? '<span class="badge badge-warning">即将到期</span>'
                     : '<span class="badge badge-success">正常</span>';
+                const calibration = latestCalibrationByAsset.get(String(m.id));
+                let calibrationLabel = '规则不可用';
+                let calibrationBadge = 'badge-normal';
+                if (calibrationDomain) {
+                    if (!calibration) {
+                        calibrationLabel = '未记录';
+                        calibrationBadge = 'badge-warning';
+                    } else if (calibration.result === 'fail') {
+                        calibrationLabel = '校准不合格';
+                        calibrationBadge = 'badge-danger';
+                    } else if (calibrationDomain.isCalibrationCurrent(calibration)) {
+                        calibrationLabel = '有效';
+                        calibrationBadge = 'badge-success';
+                    } else {
+                        calibrationLabel = '已过期';
+                        calibrationBadge = 'badge-warning';
+                    }
+                }
+                const calibrationBadgeHtml = `<span class="badge ${calibrationBadge}">${calibrationLabel}</span>`;
                 tbody.innerHTML += `<tr>
                     <td><strong>${esc(m.name||'')}</strong></td><td>${esc(m.category||'')}</td><td>${esc(m.location||'')}</td><td>${esc(m.qty||0)}</td><td>${esc(m.cycle||'')}</td><td>${esc(m.freq||'')}</td>
-                    <td>${esc(m.last || '-')}</td><td>${esc(m.next || '-')} ${badge}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${esc(m.responsible||'')}</td>
+                    <td>${esc(m.last || '-')}</td><td>${esc(m.next || '-')} ${badge}</td><td>${calibrationBadgeHtml}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${esc(m.responsible||'')}</td>
                     <td><button class="btn btn-outline btn-sm" onclick="editMaint(${Number(m.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${Number(m.id)})">删除</button></td>
                 </tr>`;
             });
