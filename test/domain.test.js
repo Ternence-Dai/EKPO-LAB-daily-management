@@ -66,6 +66,12 @@ test("timed diary entries require timezone and reject invalid or lossy timestamp
  assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-02-30T10:00:00Z"}),/explicit timezone/);
  assert.throws(()=>validateTestDiaryEntry({...base,end:"2026-10-17T10:00:00.1234Z"}),/explicit timezone/);
 });
+test("diary timestamps must remain round-trippable after UTC offset normalization",()=>{
+ const base={start:"0000-01-01T00:00:00+14:00",end:"0000-01-01T01:00:00+14:00",duration:1,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry(base),/four-digit UTC year range/);
+ const late={start:"9999-12-31T22:00:00-14:00",end:"9999-12-31T23:00:00-14:00",duration:1,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry(late),/four-digit UTC year range/);
+});
 test("rejects unsafe experiment diary duration magnitudes",()=>{
  const base={start:"2026-10-17",end:"2026-10-18",duration:1,unit:"Cell-A",operator:"operator-1"};
  assert.throws(()=>validateTestDiaryEntry({...base,duration:Number.MAX_SAFE_INTEGER+1}),RangeError);
