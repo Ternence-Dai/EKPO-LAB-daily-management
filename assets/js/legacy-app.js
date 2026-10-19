@@ -1513,6 +1513,12 @@
                     if (!imported.calibrationLogs) imported.calibrationLogs = [];
                     if (!imported.experiments) imported.experiments = [];
                     const domain = await import('../../src/domain/index.js');
+                    // Backup restoration is a write boundary too: normalize and
+                    // validate every equipment master before it can replace live data.
+                    imported.maintenance = imported.maintenance.map(asset => ({
+                        ...asset,
+                        ...domain.validateMaintenanceAsset(asset)
+                    }));
                     imported.calibrationLogs = imported.calibrationLogs.map(row => domain.createCalibrationRecord(row));
                     const importedAssetIds = new Set(imported.maintenance.map(asset => String(asset.id)));
                     imported.experiments = imported.experiments.map(row => {
