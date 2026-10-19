@@ -569,7 +569,9 @@
                 DB.maintenance[existingIndex] = { ...previous, ...validated };
             } else {
                 newRecordId = Date.now();
-                if (DB.maintenance.some(item => String(item.id) === String(newRecordId))) {
+                if (DB.maintenance.some(item => item &&
+                    (typeof item.id === 'string' || Number.isSafeInteger(item.id)) &&
+                    String(item.id).trim() === String(newRecordId).trim())) {
                     showToast('设备编号冲突，请重试保存', 'error');
                     return;
                 }
