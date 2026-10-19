@@ -539,3 +539,84 @@ table tr:hover td{background:#f6fbfa}
 @media(max-width:900px){.product-workflow__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.product-workflow{margin:12px 12px 18px;padding:16px;border-radius:17px}.product-workflow__head{display:block}.product-workflow__mode{display:inline-flex;margin-top:11px}.product-workflow__grid{gap:8px}.product-workflow__item{min-height:122px;padding:12px}.product-workflow__item b{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.product-workflow__item{transition:none}.product-workflow__item:hover{transform:none}}
+
+
+/* V4 · EKPO LabOS operations control room */
+.labos-intro{
+  position:relative;isolation:isolate;overflow:hidden;min-height:176px;
+  padding:27px clamp(21px,3vw,39px);border-radius:20px;
+  background:
+    radial-gradient(circle at 84% 14%,rgba(52,171,164,.2),transparent 26%),
+    radial-gradient(circle at 96% 100%,rgba(48,125,160,.12),transparent 32%),
+    linear-gradient(115deg,#fff 0%,#eff9f7 57%,#eaf5f5 100%);
+  box-shadow:0 12px 32px rgba(19,74,82,.07);
+}
+.labos-intro:after{
+  content:"LABOS";position:absolute;z-index:-1;right:4%;top:16%;
+  color:rgba(22,119,128,.055);font-size:clamp(62px,8vw,112px);
+  font-weight:900;letter-spacing:-5px;line-height:1;
+}
+.labos-intro h2{font-size:clamp(23px,2.6vw,33px);letter-spacing:-.7px}
+.labos-intro p{font-size:12.5px;max-width:780px}
+.labos-intro .labos-stamp{position:relative;width:96px;height:96px;flex-basis:96px;border-radius:27px;font-size:29px;box-shadow:0 14px 30px rgba(23,129,131,.18)}
+.product-workflow{
+  margin:0 0 18px;padding:21px 22px;border:1px solid #d9e7e9;border-radius:18px;
+  background:#fff;box-shadow:0 8px 24px rgba(20,69,82,.045);
+}
+.product-workflow__head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:15px}
+.product-workflow__head .eyebrow{font-size:9px;letter-spacing:1.8px;color:#167f86;font-weight:850}
+.product-workflow__head h3{font-size:17px;color:#20495a;margin:4px 0}
+.product-workflow__head p{font-size:11px;color:#758b96}
+.product-workflow__mode{white-space:nowrap;padding:6px 10px;border-radius:30px;background:#edf7f5;color:#3f7e75;font-size:9px;font-weight:800}
+.product-workflow__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.product-workflow__item{
+  min-height:114px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;
+  padding:14px;border:1px solid #e0eaec;border-radius:13px;
+  background:linear-gradient(145deg,#fff,#f7fbfb);text-align:left;
+  transition:transform .18s,border-color .18s,box-shadow .18s;
+}
+.product-workflow__item:hover{transform:translateY(-3px);border-color:#acd4d3;box-shadow:0 10px 22px rgba(23,111,113,.08)}
+.product-workflow__item i{width:27px;height:27px;display:grid;place-items:center;border-radius:8px;background:#eaf6f3;color:#167e83;font-size:10px;font-style:normal;font-weight:850}
+.product-workflow__item b{font-size:12px;color:#294e5b}
+.product-workflow__item small{font-size:10px;color:#7b9098}
+.product-workflow__item span{margin-top:auto;color:#167f86;font-size:10px;font-weight:750}
+.product-workflow__foot{margin-top:12px;padding-top:10px;border-top:1px solid #edf1f2;color:#899ca2;font-size:9.5px;line-height:1.6}
+.content-body .metrics-grid{gap:13px}
+.content-body .metrics-grid>.card{
+  position:relative;overflow:hidden;min-height:116px;padding:17px 18px;
+  border:1px solid #dce8eb;border-radius:15px;background:#fff;
+  box-shadow:0 6px 18px rgba(23,67,82,.045);
+}
+.content-body .metrics-grid>.card:after{content:"";position:absolute;right:-18px;top:-20px;width:76px;height:76px;border-radius:50%;background:rgba(30,135,137,.045)}
+.content-body .card-title{color:#718791;font-size:10.5px}
+.content-body .card-value{color:#1e4b5b;font-size:25px;font-weight:800;letter-spacing:-.6px}
+.content-body .labos-launchpad{gap:12px}
+.content-body .labos-launchpad .launch-card{
+  border:1px solid #dce8eb;border-radius:14px;background:#fff;
+  box-shadow:0 5px 17px rgba(23,67,82,.04);transition:transform .18s,border-color .18s,box-shadow .18s;
+}
+.content-body .labos-launchpad .launch-card:hover{transform:translateY(-3px);border-color:#afd5d4;box-shadow:0 10px 24px rgba(23,111,113,.08)}
+.content-body .data-table-wrap,.content-body .table-wrap{
+  border:1px solid #dce8eb;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(23,67,82,.04)
+}
+.content-body table thead th{background:#f1f7f8;color:#607b85;font-size:10px}
+.content-body table tbody tr:hover{background:#f4faf9}
+.content-body input,.content-body select,.content-body textarea{border-color:#d8e5e9;background:#fbfdfd}
+.content-body input:focus,.content-body select:focus,.content-body textarea:focus{border-color:#79b9b8;box-shadow:0 0 0 3px rgba(22,127,134,.1)}
+@media(max-width:900px){
+ .product-workflow__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .product-workflow__head{flex-direction:column}
+ .content-body .metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+ .labos-intro{padding:21px 17px;border-radius:15px}
+ .labos-intro:after{font-size:56px;right:0}
+ .labos-intro .labos-stamp{width:64px;height:64px;flex-basis:64px;border-radius:18px;font-size:21px}
+ .product-workflow{padding:15px 12px}
+ .product-workflow__grid{gap:7px}
+ .product-workflow__item{min-height:118px;padding:10px}
+ .product-workflow__item small{font-size:9px}
+ .content-body{padding:13px!important}
+ .topbar-actions{justify-content:flex-start}
+ .topbar-actions .btn{font-size:9px;padding:7px 8px}
+}
