@@ -78,6 +78,19 @@
                     <div class="card"><div class="card-title">备件库存总值</div><div class="card-value" id="dash-spare-cost">--</div></div>
                     <div class="card"><div class="card-title">测试台故障总次数</div><div class="card-value" id="dash-test">--</div></div>
                 </div>
+                <div class="labos-launchpad" aria-label="实验室运营快捷操作">
+                    <div class="labos-launch-copy">
+                        <span class="eyebrow">DAILY OPERATIONS</span>
+                        <strong>实验室日常操作</strong>
+                        <small>从资源记录、设备保障到测试日志，直接进入对应台账。</small>
+                    </div>
+                    <div class="labos-launch-actions">
+                        <button type="button" onclick="switchTab('gases', document.querySelector('[data-tab=gases]'))">＋ 登记气体</button>
+                        <button type="button" onclick="switchTab('maintenance', document.querySelector('[data-tab=maintenance]'))">设备维保</button>
+                        <button type="button" onclick="switchTab('spareParts', document.querySelector('[data-tab=spareParts]'))">备件库存</button>
+                        <button type="button" onclick="switchTab('testDiary', document.querySelector('[data-tab=testDiary]'))">测试日志</button>
+                    </div>
+                </div>
                 <div class="charts-row">
                     <div class="card"><div class="card-title">📊 历年费用构成（树状图）</div><div id="chart-dash-treemap" class="chart-box"></div></div>
                     <div class="card"><div class="card-title">📈 历年气体消耗趋势</div><div id="chart-dash-gas" class="chart-box"></div></div>
