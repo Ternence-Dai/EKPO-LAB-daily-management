@@ -358,6 +358,16 @@ test("experiment equipment readiness explains missing or invalid calibration bef
  assert.equal(current.assetExists,true);
  assert.ok(Object.isFrozen(current));
 
+ const duplicateAsset=getExperimentEquipmentReadiness({
+  assetId:7,equipment:[...equipment,{id:" 7 ",name:"Duplicate master-data row"}],
+  calibrationRecords:[record(9,7,"2026-10-01T00:00:00Z")],at
+ });
+ assert.equal(duplicateAsset.assetExists,true);
+ assert.equal(duplicateAsset.ready,false,
+  "duplicate equipment IDs must block readiness even when one calibration certificate is current");
+ assert.equal(duplicateAsset.status,"asset-ambiguous");
+ assert.equal(duplicateAsset.label,"设备编号冲突");
+
  const cases=[
   [[], "not-recorded", "设备尚无校准记录"],
   [[record(2,7,"2026-10-01T00:00:00Z","fail")],"failed","设备最近一次校准不合格"],
