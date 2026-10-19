@@ -1,0 +1,47 @@
+/* EKPO LabOS Workspace V5 — laboratory operations command center */
+:root{--l-bg:#eef4f1;--l-ink:#203e3c;--l-muted:#708985;--l-line:#d8e5e0;--l-deep:#173b3b;--l-teal:#258f87;--l-sage:#dcece4}
+body[data-workspace="ekpo"]{background:var(--l-bg)!important;color:var(--l-ink)!important;font-family:Inter,"Segoe UI","Microsoft YaHei",sans-serif}
+body[data-workspace="ekpo"] .sidebar{width:262px;padding:23px 16px 18px;background:linear-gradient(180deg,#194341,#122f32);border-right:1px solid #2b5b58;box-shadow:13px 0 34px #163c3512}
+body[data-workspace="ekpo"] .sidebar-header{padding:6px 9px 23px;border-bottom:1px solid #ffffff1c}
+body[data-workspace="ekpo"] .sidebar-header h1,body[data-workspace="ekpo"] .sidebar-header h2{color:#f0faf7;font-size:16px;font-weight:850}
+body[data-workspace="ekpo"] .sidebar-header p,body[data-workspace="ekpo"] .sidebar-header small{color:#91b8b0}
+body[data-workspace="ekpo"] .sidebar nav a,body[data-workspace="ekpo"] .sidebar nav button{border-radius:9px;color:#b0ccc5}
+body[data-workspace="ekpo"] .sidebar nav a:hover,body[data-workspace="ekpo"] .sidebar nav button:hover{background:#ffffff0d;color:#fff}
+body[data-workspace="ekpo"] .sidebar nav .active{background:#e3f4ef1d;color:#fff;border-left:3px solid #65cfc0}
+body[data-workspace="ekpo"] .sidebar-footer{border-top:1px solid #ffffff20;color:#91b3aa}
+body[data-workspace="ekpo"] .main-content{background:var(--l-bg)!important;min-width:0}
+body[data-workspace="ekpo"] .topbar{min-height:72px;padding:0 clamp(18px,2.7vw,38px);background:#fbfdfc;border-bottom:1px solid var(--l-line);box-shadow:0 4px 16px #1d4a4308}
+body[data-workspace="ekpo"] .page-title{color:#1c4541;font-size:18px;font-weight:850}
+body[data-workspace="ekpo"] .topbar-actions .btn{border-radius:8px}
+body[data-workspace="ekpo"] .content-body{padding:22px clamp(16px,2.6vw,36px) 38px;background:transparent!important}
+body[data-workspace="ekpo"] .labos-intro{position:relative;isolation:isolate;overflow:hidden;margin:0 0 19px;padding:28px clamp(22px,3vw,38px);border:1px solid #cfe1d9;border-radius:20px;background:radial-gradient(circle at 88% 20%,#5dbda62b,transparent 27%),linear-gradient(115deg,#fff,#edf7f1 65%,#e3f1e9);box-shadow:0 10px 27px #1f534508}
+body[data-workspace="ekpo"] .labos-intro:after{content:"LAB OPERATIONS";position:absolute;right:3%;bottom:-8px;z-index:-1;color:#1a66610c;font-size:clamp(40px,6vw,78px);font-weight:950;letter-spacing:-4px}
+body[data-workspace="ekpo"] .labos-intro .eyebrow{color:#278a7b;font-size:10px;letter-spacing:2px;font-weight:850}
+body[data-workspace="ekpo"] .labos-intro h2{color:#1c4540;font-size:clamp(24px,2.6vw,34px);letter-spacing:-.8px}
+body[data-workspace="ekpo"] .labos-intro p{color:#69827b;max-width:760px;font-size:12px;line-height:1.8}
+body[data-workspace="ekpo"] .labos-tags span{background:#fff;border:1px solid #d8e9e0;color:#46776a;border-radius:7px;padding:6px 9px;font-size:10px}
+body[data-workspace="ekpo"] .labos-stamp{background:linear-gradient(145deg,#1b7770,#3a9c89);border:1px solid #66b5a3;border-radius:21px;color:#effff9;box-shadow:0 12px 28px #2988792b}
+body[data-workspace="ekpo"] .product-workflow{margin:0 0 19px;padding:19px;border:1px solid var(--l-line);border-radius:17px;background:#fff;box-shadow:0 7px 20px #1e4e4309}
+body[data-workspace="ekpo"] .product-workflow__head h3{color:#1f4c47;font-size:16px}
+body[data-workspace="ekpo"] .product-workflow__head p,body[data-workspace="ekpo"] .product-workflow__foot{color:#81958f}
+body[data-workspace="ekpo"] .product-workflow__mode{background:#e8f4ee;border:1px solid #d0e7db;color:#3e8170}
+body[data-workspace="ekpo"] .product-workflow__item{min-height:112px;border:1px solid #dfeae5;border-radius:12px;background:linear-gradient(145deg,#fff,#f5faf7)}
+body[data-workspace="ekpo"] .product-workflow__item i{background:#e3f3ed;color:#268c7b}
+body[data-workspace="ekpo"] .product-workflow__item b{color:#284e48}
+body[data-workspace="ekpo"] .product-workflow__item small{color:#80968f}
+body[data-workspace="ekpo"] .product-workflow__item span{color:#25877b}
+body[data-workspace="ekpo"] .content-body :is(.card,.panel,.metric-card,.stat-card,.dashboard-card){background:#fff!important;border:1px solid #dbe7e1!important;border-radius:14px!important;box-shadow:0 6px 17px #1c493d09!important;color:#294943}
+body[data-workspace="ekpo"] .content-body h3,body[data-workspace="ekpo"] .content-body h4{color:#254d47}
+body[data-workspace="ekpo"] .content-body table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #dce8e2;border-radius:11px;overflow:hidden;background:#fff}
+body[data-workspace="ekpo"] .content-body th{background:#edf5f0;color:#54736a;font-size:11px;font-weight:800}
+body[data-workspace="ekpo"] .content-body td{border-bottom:1px solid #edf2ee;color:#405f57;font-size:12px}
+body[data-workspace="ekpo"] .content-body th,body[data-workspace="ekpo"] .content-body td{padding:10px 12px}
+body[data-workspace="ekpo"] .content-body input,body[data-workspace="ekpo"] .content-body select,body[data-workspace="ekpo"] .content-body textarea{background:#fbfdfb!important;border:1px solid #d2e1d9!important;border-radius:8px;color:#294b43!important}
+body[data-workspace="ekpo"] .btn-primary,body[data-workspace="ekpo"] .btn.primary{background:linear-gradient(110deg,#237a70,#32a28c);color:#fff;border-color:#237a70;box-shadow:0 7px 16px #208c7d22}
+body[data-workspace="ekpo"] .mobile-nav{background:#fbfdfc;border-top:1px solid #dce8e2;box-shadow:0 -8px 24px #1d4d430d}
+body[data-workspace="ekpo"] .mobile-nav button{color:#718b84}
+body[data-workspace="ekpo"] .mobile-nav button.active{color:#1b897b}
+body[data-workspace="ekpo"] :where(button,input,select,textarea,a,[tabindex]):focus-visible{outline:3px solid #55bda9!important;outline-offset:3px}
+@media(max-width:900px){body[data-workspace="ekpo"] .sidebar{display:none}body[data-workspace="ekpo"] .main-content{width:100%;min-width:0}body[data-workspace="ekpo"] .content-body{padding:14px 12px 86px}body[data-workspace="ekpo"] .labos-intro{padding:20px 17px;margin-bottom:14px}body[data-workspace="ekpo"] .product-workflow{padding:14px 12px}body[data-workspace="ekpo"] .product-workflow__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){body[data-workspace="ekpo"] .labos-stamp{display:none}body[data-workspace="ekpo"] .labos-intro h2{font-size:22px}body[data-workspace="ekpo"] .topbar{padding:0 12px;min-height:60px}body[data-workspace="ekpo"] .topbar-actions{gap:5px;flex-wrap:wrap}body[data-workspace="ekpo"] .product-workflow__item{min-height:108px;padding:10px}}
+@media(prefers-reduced-motion:reduce){body[data-workspace="ekpo"] *,body[data-workspace="ekpo"] *:before,body[data-workspace="ekpo"] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
