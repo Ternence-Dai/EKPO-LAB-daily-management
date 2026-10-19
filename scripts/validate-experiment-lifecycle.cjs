@@ -66,6 +66,12 @@ assert.ok(transition.includes('domain.validateExperimentRecord(DB.experiments[in
           transition.includes('snapshotLabDB()') &&
           transition.includes('commitLabMutation('),
   'each lifecycle transition must validate and atomically persist its audit trail');
+const saveMaintStart = app.indexOf('async function saveMaint()');
+const saveMaintEnd = app.indexOf('function editMaintLog(', saveMaintStart);
+const saveMaintSource = app.slice(saveMaintStart, saveMaintEnd);
+assert.ok(saveMaintSource.includes('String(item.id).trim() === String(newRecordId).trim()'),
+  'new equipment IDs must be checked using the same whitespace-normalized identity as readiness validation');
+
 assert.ok(domain.includes('export function getAssetCalibrationStatus(') &&
           domain.includes('export function getExperimentEquipmentReadiness(') &&
           transition.includes('domain.getExperimentEquipmentReadiness(') &&
