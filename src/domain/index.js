@@ -267,8 +267,12 @@ export function getAssetCalibrationStatus(records, assetId, at = new Date()) {
   if (!(at instanceof Date) || !Number.isFinite(at.getTime())) {
     throw new TypeError("at must be a valid Date");
   }
+  const normalizedAssetId = String(assetId).trim();
   const matching = records
-    .filter(record => record && String(record.assetId) === String(assetId))
+    // Match against the same canonical asset reference returned by
+    // createCalibrationRecord; legacy/imported whitespace must not hide a
+    // valid calibration from the equipment-readiness gate.
+    .filter(record => record && String(record.assetId).trim() === normalizedAssetId)
     .map(record => createCalibrationRecord(record))
     .sort((a, b) => Date.parse(b.calibratedAt) - Date.parse(a.calibratedAt));
   if (!matching.length) return "not-recorded";
