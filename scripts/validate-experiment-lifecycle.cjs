@@ -74,7 +74,7 @@ assert.ok(domain.includes('export function getAssetCalibrationStatus(') &&
           transition.indexOf('domain.getExperimentEquipmentReadiness(') < transition.indexOf('domain.transitionExperiment('),
   'experiment start must be blocked unless the centralized equipment-readiness gate confirms a current passing calibration');
 for (const status of ['not-recorded', 'future-dated', 'failed', 'expired', 'ambiguous', 'not-registered']) {
-  assert.ok(domain.includes("'" + status + "'"),
+  assert.ok(domain.includes(JSON.stringify(status)),
     'domain equipment-readiness gate must explain the calibration failure state: ' + status);
 }
 assert.ok(workspaceCss.includes('.experiment-calibration-ready') &&
