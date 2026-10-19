@@ -121,12 +121,12 @@ export function validateExperimentRecord(entry) {
     throw new TypeError("experiment record contains unsupported fields");
   }
   if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
-      /[\\x00-\\x1F\\x7F]/.test(entry.id)) {
+      [...entry.id].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
     throw new TypeError("experiment id is required and must not contain control characters");
   }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
       String(entry.assetId).trim() === "" || String(entry.assetId).length > 80 ||
-      /[\\x00-\\x1F\\x7F]/.test(String(entry.assetId))) {
+      [...String(entry.assetId)].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
     throw new TypeError("experiment asset reference is required and must be safe text");
   }
   const title = requiredExperimentText(entry, "title", 120);
