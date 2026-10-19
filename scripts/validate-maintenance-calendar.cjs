@@ -18,7 +18,7 @@ const start = html.indexOf('function isValidDateOnly');
 const end = html.indexOf('async function renderMaintenance', start);
 if (start < 0 || end < 0) throw new Error('Maintenance date helpers not found');
 const source = html.slice(start, end);
-const context = { DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
+const context = { sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);}, DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
   {id:1,eqId:1,date:'2026-01-31'},{id:2,eqId:1,date:'2026-04-30'}
 ]}};
 vm.runInNewContext(source + '\nthis.testApi={isValidDateOnly,isOverdueDateOnly,maintenanceIntervalMonths,addCalendarMonths,syncMaintenanceSchedule};', context);
@@ -75,7 +75,7 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
     /const domain = await import\(['"]\.\.\/\.\.\/src\/domain\/index\.js(?:\?v=[^'"]+)?['"]\);/,
     "const domain = {validateMaintenanceAsset: input => Object.freeze({...input})};"
   );
-  function runSave({editing=true,saveAllowed=false}={}){
+  function runSave({editing=true,saveAllowed=false,previousId=1,formId}={}){
     const values={
       'm-id': editing ? (formId === undefined ? String(previousId) : formId) : '',
       'm-name':'Test asset','m-category':'Equipment','m-location':'Lab',
