@@ -67,11 +67,11 @@ assert.ok(domain.includes('export function getAssetCalibrationStatus(') &&
           transition.includes("calibrationStatus !== 'current'") &&
           transition.indexOf('domain.getAssetCalibrationStatus(') < transition.indexOf('domain.transitionExperiment('),
   'experiment start must be blocked unless the latest linked equipment calibration is current and passing');
-for (const status of ['not-recorded', 'future-dated', 'ambiguous']) {
+for (const status of ['not-recorded', 'future-dated']) {
   assert.ok(transition.includes("'" + status + "'"),
     'experiment start must explain the calibration readiness failure: ' + status);
 }
-for (const status of ['failed', 'expired']) {
+for (const status of ['failed', 'expired', 'ambiguous']) {
   assert.ok(transition.includes(status + ':'),
     'experiment start must explain the calibration readiness failure: ' + status);
 }
