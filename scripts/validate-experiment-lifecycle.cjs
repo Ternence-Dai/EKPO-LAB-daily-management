@@ -8,7 +8,7 @@ const domain = fs.readFileSync('src/domain/index.js', 'utf8');
 const css = fs.readFileSync('assets/css/product-system.css', 'utf8');
 const seed = fs.readFileSync('assets/js/demo-seed-data.js', 'utf8');
 
-assert.ok(html.includes('product-system.css?v=20261019-v7'),
+assert.ok(html.includes('product-system.css?v=20261019-v8'),
   'LabOS must load the experiment lifecycle V6 workflow stylesheet revision');
 for (const id of [
   'page-experiments', 'experiment-create-form', 'experiment-title',
@@ -125,3 +125,14 @@ for (const selector of [
   'experiment lifecycle UI must have a dedicated product style: ' + selector);
 
 console.log('EKPO experiment lifecycle UI, persistence, backup migration and audit integration checks passed.');
+
+
+assert.ok(productCss.includes('V4 · EKPO LabOS operations control room') &&
+          productCss.includes('.labos-intro:after{') &&
+          productCss.includes('.product-workflow__grid{') &&
+          productCss.includes('.content-body .metrics-grid>.card:after{'),
+  'EKPO V4 must implement the lab operations masthead, workflow cards and KPI treatment');
+assert.ok(productCss.includes('@media(max-width:900px)') &&
+          productCss.includes('@media(max-width:520px)') &&
+          productCss.includes('.product-workflow__item:hover'),
+  'EKPO V4 must include responsive operations workflows and interactive states');
