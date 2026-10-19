@@ -272,7 +272,7 @@ test("rejects incomplete or impossible maintenance asset quantities and cycles",
  assert.throws(()=>validateMaintenanceAsset({...base,qty:1.5}),RangeError);
  assert.throws(()=>validateMaintenanceAsset({...base,qty:Number.MAX_SAFE_INTEGER+1}),RangeError);
  assert.throws(()=>validateMaintenanceAsset({...base,cycle:"未知等级"}),RangeError);
- assert.throws(()=>validateMaintenanceAsset({...base,freq:" "}),/frequency is required/);
+ assert.throws(()=>validateMaintenanceAsset({...base,freq:" "}),/freq is required/);
 });
 test("rejects invalid or reversed equipment maintenance dates while allowing unset dates",()=>{
  const base={name:"Bench",qty:1,cycle:"一级保养",freq:"按需"};
