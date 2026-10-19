@@ -990,18 +990,44 @@
             cancelled: '已取消'
         };
 
-        function renderExperiments() {
+        let experimentRenderSequence = 0;
+        async function renderExperiments() {
+            const renderSequence = ++experimentRenderSequence;
+            const container = document.getElementById('experiments-table');
+            let domain;
+            try {
+                domain = await import('../../src/domain/index.js');
+            } catch (error) {
+                if (container) container.innerHTML = '<div class="experiment-empty"><strong>校准状态模块不可用</strong><span>为避免在无法核验设备状态时错误安排实验，当前设备就绪情况暂不可用；请刷新页面后重试。</span></div>';
+                showToast('设备校准状态模块加载失败，请刷新页面后重试', 'error');
+                return;
+            }
+            if (renderSequence !== experimentRenderSequence) return;
             if (!Array.isArray(DB.experiments)) DB.experiments = [];
+            if (!Array.isArray(DB.calibrationLogs)) DB.calibrationLogs = [];
             const plannedDateInput = document.getElementById('experiment-planned-date');
             if (plannedDateInput && !plannedDateInput.value) plannedDateInput.value = getToday();
+            const now = new Date();
+            const assetReadiness = new Map();
             const assetSelect = document.getElementById('experiment-asset');
             if (assetSelect) {
                 const selected = assetSelect.value;
                 assetSelect.innerHTML = '<option value="">请选择在册设备</option>' +
-                    DB.maintenance.map(asset =>
-                        `<option value="${esc(asset.id)}">${esc(asset.name)}（${esc(asset.category || '未分类')} · ${esc(asset.location || '未填写位置')}）</option>`
-                    ).join('');
-                if (DB.maintenance.some(asset => String(asset.id) === selected)) assetSelect.value = selected;
+                    DB.maintenance.map(asset => {
+                        const readiness = domain.getExperimentEquipmentReadiness({
+                            assetId: asset.id,
+                            equipment: DB.maintenance,
+                            calibrationRecords: DB.calibrationLogs,
+                            at: now
+                        });
+                        assetReadiness.set(String(asset.id).trim(), readiness);
+                        return '<option value="' + esc(asset.id) + '">' +
+                            esc(asset.name) + '（' + esc(asset.category || '未分类') + ' · ' +
+                            esc(asset.location || '未填写位置') + ' · ' + esc(readiness.label) + '）</option>';
+                    }).join('');
+                if (DB.maintenance.some(asset => String(asset.id).trim() === String(selected).trim())) {
+                    assetSelect.value = selected;
+                }
             }
 
             const counts = { planned: 0, 'in-progress': 0, completed: 0, cancelled: 0 };
@@ -1013,16 +1039,16 @@
 
             const search = (document.getElementById('search-experiments')?.value || '').trim().toLowerCase();
             const records = DB.experiments.filter(record => {
-                const asset = DB.maintenance.find(item => String(item.id) === String(record.assetId));
+                const asset = DB.maintenance.find(item => String(item.id).trim() === String(record.assetId).trim());
                 const haystack = [record.id, record.title, record.owner, record.purpose, asset?.name || ''].join(' ').toLowerCase();
                 return !search || haystack.includes(search);
             }).slice().sort((a, b) => {
                 const dateOrder = String(a.plannedDate || '').localeCompare(String(b.plannedDate || ''));
                 return dateOrder || String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
             });
-            const container = document.getElementById('experiments-table');
+            if (!container) return;
             if (!records.length) {
-                container.innerHTML = '<div class="experiment-empty"><strong>当前没有匹配的实验计划</strong><span>创建计划后，开始、完成或取消操作都会留下不可直接编辑的审计记录。</span></div>';
+                container.innerHTML = '<div class="experiment-empty"><strong>当前没有匹配的实验计划</strong><span>创建计划后，开始、完成或取消操作都会留下不可直接编辑的审计记录。设备校准状态会在安排和启动前核验。</span></div>';
                 return;
             }
 
@@ -1031,11 +1057,20 @@
                 return (experimentStatusLabels[event.from] || event.from) + ' → ' + (experimentStatusLabels[event.to] || event.to);
             };
             const rows = records.map(record => {
-                const asset = DB.maintenance.find(item => String(item.id) === String(record.assetId));
+                const asset = DB.maintenance.find(item => String(item.id).trim() === String(record.assetId).trim());
+                const readiness = domain.getExperimentEquipmentReadiness({
+                    assetId: record.assetId,
+                    equipment: DB.maintenance,
+                    calibrationRecords: DB.calibrationLogs,
+                    at: now
+                });
                 const status = experimentStatusLabels[record.status] || '状态异常';
+                const readinessClass = readiness.ready ? 'experiment-calibration-ready' : 'experiment-calibration-blocked';
                 let actions = '';
                 if (record.status === 'planned') {
-                    actions = '<button type="button" class="btn btn-primary btn-sm" data-experiment-action="start" data-experiment-id="' + esc(record.id) + '">开始实验</button> ' +
+                    actions = '<button type="button" class="btn btn-primary btn-sm" data-experiment-action="start" data-experiment-id="' + esc(record.id) + '"' +
+                        (readiness.ready ? '' : ' disabled aria-disabled="true" title="' + esc(readiness.message) + '，当前仅可保留计划或取消计划"') +
+                        '>开始实验</button> ' +
                         '<button type="button" class="btn btn-outline btn-sm" data-experiment-action="cancel" data-experiment-id="' + esc(record.id) + '">取消计划</button>';
                 } else if (record.status === 'in-progress') {
                     actions = '<button type="button" class="btn btn-primary btn-sm" data-experiment-action="complete" data-experiment-id="' + esc(record.id) + '">完成实验</button> ' +
@@ -1048,7 +1083,7 @@
                 ).join('');
                 return '<tr>' +
                     '<td><strong>' + esc(record.title) + '</strong><small>' + esc(record.id) + '</small><details class="experiment-purpose"><summary>查看目的与说明</summary><p>' + esc(record.purpose) + '</p></details></td>' +
-                    '<td>' + esc(asset?.name || ('设备编号 ' + record.assetId)) + '</td>' +
+                    '<td><strong>' + esc(asset?.name || ('设备编号 ' + record.assetId)) + '</strong><small class="' + readinessClass + '">' + esc(readiness.label) + ' · ' + esc(readiness.message) + '</small></td>' +
                     '<td>' + esc(record.plannedDate) + '</td>' +
                     '<td>' + esc(record.owner) + '</td>' +
                     '<td><span class="experiment-status status-' + esc(record.status) + '">' + esc(status) + '</span></td>' +
@@ -1057,7 +1092,7 @@
                     '</tr>';
             }).join('');
             container.innerHTML = '<div class="table-scroll"><table class="experiment-table"><thead><tr>' +
-                '<th>实验计划</th><th>关联设备</th><th>计划日期</th><th>负责人</th><th>当前状态</th><th>审计历史</th><th>允许操作</th>' +
+                '<th>实验计划</th><th>设备 / 校准就绪</th><th>计划日期</th><th>负责人</th><th>当前状态</th><th>审计历史</th><th>允许操作</th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>';
         }
 
@@ -1139,20 +1174,14 @@
                 const domain = await import('../../src/domain/index.js');
                 const current = domain.validateExperimentRecord(DB.experiments[index]);
                 if (nextStatus === 'in-progress') {
-                    const assetExists = DB.maintenance.some(asset => String(asset.id) === String(current.assetId));
-                    if (!assetExists) throw new Error('关联设备已不在设备台账中，不能启动实验');
-                    const calibrationStatus = domain.getAssetCalibrationStatus(
-                        DB.calibrationLogs || [], current.assetId, new Date()
-                    );
-                    const calibrationMessages = {
-                        'not-recorded': '设备尚无校准记录，不能启动实验',
-                        failed: '设备最近一次校准不合格，不能启动实验',
-                        expired: '设备校准已过期，不能启动实验',
-                        'future-dated': '设备校准日期晚于当前日期，请核实证书后再启动',
-                        ambiguous: '设备存在同一时刻的多份最新校准记录，无法确认有效证书'
-                    };
-                    if (calibrationStatus !== 'current') {
-                        throw new Error(calibrationMessages[calibrationStatus] || '设备校准状态无法确认，不能启动实验');
+                    const readiness = domain.getExperimentEquipmentReadiness({
+                        assetId: current.assetId,
+                        equipment: DB.maintenance,
+                        calibrationRecords: DB.calibrationLogs || [],
+                        at: new Date()
+                    });
+                    if (!readiness.ready) {
+                        throw new Error(readiness.message + '，不能启动实验');
                     }
                 }
                 const updated = domain.transitionExperiment(current, nextStatus, actor, new Date().toISOString());
