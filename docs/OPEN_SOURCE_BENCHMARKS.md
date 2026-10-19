@@ -48,3 +48,20 @@
 - `assets/js/legacy-app.js` 的设备台账使用领域状态渲染到期徽标；遗留无效日期显示为“日期异常”，不再把解析失败当作正常。
 - `test/domain.test.js` 覆盖逾期、当天到期、30 天边界、31 天正常、非法日期和非法策略参数。
 - 保养状态与校准状态仍是不同维度：完成保养不代表校准有效，校准合格也不代表保养未逾期。
+
+
+## 7. 扩展开源对标：电子实验记录 / LIMS / 设备资产
+
+> 覆盖说明：eLabFTW 与 SENAITE 是服务器型 LIMS/ELN；本项目当前为浏览器本地运营台。借鉴实体和流程，不宣称具备其多人权限、可信时间戳或电子签名。
+
+| 上游项目 | 可核查入口 | 可迁移模式 | 本项目不具备的上游能力 |
+|---|---|---|---|
+| [eLabFTW](https://github.com/elabftw/elabftw) | [实验记录用户指南](https://github.com/elabftw/elabftw/blob/master/documentation/docs/usage/user-guide/experiments.md)、[库存指南](https://github.com/elabftw/elabftw/blob/master/documentation/docs/usage/inventory.md) | 实验条目/模板/标签/附件/资源关联，库存实体，导入导出与日历 | 团队账户、服务端权限、可信时间戳/区块链时间戳、审计安全体系 |
+| [SENAITE.CORE](https://github.com/senaite/senaite.core) | [核心实体和安装定位](https://github.com/senaite/senaite.core) | LIMS 实体和样本/分析流程模块化；核心与最终用户 UI 分层 | 它是 Plone/SENAITE 系统组件，不能作为单文件 HTML 页面直接移植 |
+| [Baobab LIMS](https://github.com/BaobabLims/baobab.lims) | [项目仓库](https://github.com/BaobabLims/baobab.lims) | 样本/资源与元数据生命周期、结构化标识 | 部署框架和样本追溯实现与当前本地 JSON 数据层不同 |
+
+### 对本项目的实现映射
+- 首页工作流已连接气体资源、设备维保、备件库存、实验计划四个真实模块。
+- 下一阶段以稳定 ID 关联设备、气体批次、校准记录、备件库存、实验与测试日志；每次数量变化形成独立事件，余额可复算。
+- 实验/校准更正要保存版本及原因；尚未实现服务端用户认证前，不提供“签署”“已审核”“不可抵赖审计”字样。
+- 安全相关数据必须保留单位、批次、来源和日期；演示数据不得进入真实安全统计。
