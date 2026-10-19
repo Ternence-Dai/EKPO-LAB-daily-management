@@ -11,6 +11,30 @@ function parseMaintenanceDate(value, field) {
   return value;
 }
 
+export function getMaintenanceScheduleStatus(nextDate, asOf = new Date(), dueSoonDays = 30) {
+  if (!(asOf instanceof Date) || !Number.isFinite(asOf.getTime())) {
+    throw new TypeError("maintenance status reference date must be a valid Date");
+  }
+  if (!Number.isSafeInteger(dueSoonDays) || dueSoonDays < 0 || dueSoonDays > 3650) {
+    throw new RangeError("dueSoonDays must be a safe integer from 0 to 3650");
+  }
+  const normalizedNextDate = parseMaintenanceDate(nextDate, "next date");
+  if (!normalizedNextDate) {
+    return Object.freeze({ status:"unscheduled", daysUntil:null, nextDate:"" });
+  }
+  const [nextYear, nextMonth, nextDay] = normalizedNextDate.split("-").map(Number);
+  const next = new Date(0);
+  next.setUTCFullYear(nextYear, nextMonth - 1, nextDay);
+  next.setUTCHours(0, 0, 0, 0);
+  const today = new Date(0);
+  today.setUTCFullYear(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  today.setUTCHours(0, 0, 0, 0);
+  const daysUntil = Math.round((next.getTime() - today.getTime()) / 86400000);
+  const status = daysUntil < 0 ? "overdue"
+    : daysUntil <= dueSoonDays ? "due-soon" : "scheduled";
+  return Object.freeze({ status, daysUntil, nextDate:normalizedNextDate });
+}
+
 export function validateMaintenanceAsset(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("maintenance asset must be an object");
