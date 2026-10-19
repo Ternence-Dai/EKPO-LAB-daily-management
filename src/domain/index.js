@@ -229,6 +229,29 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
   if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) throw new RangeError("calibration expiry is outside the supported date range");
   return at.getTime() <= expiry;
 }
+export function getAssetCalibrationStatus(records, assetId, at = new Date()) {
+  if (!Array.isArray(records)) throw new TypeError("calibration records must be an array");
+  if (!(typeof assetId === "string" || Number.isSafeInteger(assetId)) || String(assetId).trim() === "") {
+    throw new TypeError("assetId is required");
+  }
+  if (!(at instanceof Date) || !Number.isFinite(at.getTime())) {
+    throw new TypeError("at must be a valid Date");
+  }
+  const matching = records
+    .filter(record => record && String(record.assetId) === String(assetId))
+    .map(record => createCalibrationRecord(record))
+    .sort((a, b) => Date.parse(b.calibratedAt) - Date.parse(a.calibratedAt));
+  if (!matching.length) return "not-recorded";
+  const latest = matching[0];
+  const latestTime = Date.parse(latest.calibratedAt);
+  if (latestTime > at.getTime()) return "future-dated";
+  if (matching.length > 1 && Date.parse(matching[1].calibratedAt) === latestTime) {
+    return "ambiguous";
+  }
+  if (latest.result === "fail") return "failed";
+  return isCalibrationCurrent(latest, at) ? "current" : "expired";
+}
+
 export function createCalibrationRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("calibration record must be an object");
