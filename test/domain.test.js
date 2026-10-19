@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, getAssetCalibrationStatus, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
+import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, getAssetCalibrationStatus, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset, getMaintenanceScheduleStatus } from "../src/domain/index.js";
 test("creates a traceable planned experiment record with immutable creation audit",()=>{
  const record=createExperimentRecord({
   id:"EXP-20261018-001",title:"Fuel-cell polarization sweep",assetId:2,
