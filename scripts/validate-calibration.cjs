@@ -8,7 +8,7 @@ const app = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const productCss = fs.readFileSync('assets/css/product-system.css', 'utf8');
 const combined = html + '\n' + app;
 
-assert.ok(html.includes('product-system.css?v=20261019-v7'),
+assert.ok(html.includes('product-system.css?v=20261019-v8'),
   'LabOS must load the V6 operations workspace stylesheet');
 assert.ok(html.includes('class="labos-demo-note"'),
   'the source-data warning must retain a dedicated responsive style hook');
@@ -191,3 +191,14 @@ assert.ok(failedCommitBranch.includes('storageRecoveryRequired = previousRecover
 
 
 console.log('Equipment calibration UI, persistence, legacy backup compatibility, and import validation checks passed.');
+
+
+assert.ok(productCss.includes('V4 · EKPO LabOS operations control room') &&
+          productCss.includes('.labos-intro:after{') &&
+          productCss.includes('.product-workflow__grid{') &&
+          productCss.includes('.content-body .metrics-grid>.card:after{'),
+  'EKPO V4 must implement the lab operations masthead, workflow cards and KPI treatment');
+assert.ok(productCss.includes('@media(max-width:900px)') &&
+          productCss.includes('@media(max-width:520px)') &&
+          productCss.includes('.product-workflow__item:hover'),
+  'EKPO V4 must include responsive operations workflows and interactive states');
