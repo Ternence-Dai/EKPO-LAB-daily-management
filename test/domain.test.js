@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, getAssetCalibrationStatus, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset, getMaintenanceScheduleStatus } from "../src/domain/index.js";
+import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, getAssetCalibrationStatus, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset, getMaintenanceScheduleStatus, getExperimentEquipmentReadiness } from "../src/domain/index.js";
 test("creates a traceable planned experiment record with immutable creation audit",()=>{
  const record=createExperimentRecord({
   id:"EXP-20261018-001",title:"Fuel-cell polarization sweep",assetId:2,
@@ -338,4 +338,42 @@ test("rejects malformed maintenance dates and invalid schedule policy inputs",()
  assert.throws(()=>getMaintenanceScheduleStatus("2026-10-20",new Date("invalid")),TypeError);
  assert.throws(()=>getMaintenanceScheduleStatus("2026-10-20",new Date(),-1),RangeError);
  assert.throws(()=>getMaintenanceScheduleStatus("2026-10-20",new Date(),3651),RangeError);
+});
+
+
+test("experiment equipment readiness explains missing or invalid calibration before test start",()=>{
+ const equipment=[{id:7,name:"Polarization bench"},{id:" 8 ",name:"Gas analyser"}];
+ const at=new Date("2026-10-19T00:00:00.000Z");
+ const record=(id,assetId,date,result="pass",days=365)=>createCalibrationRecord({
+  id,assetId,calibratedAt:date,validForDays:days,certificateNo:"CERT-"+id,
+  organization:"Metrology Lab",operator:"Operator",result
+ });
+ const current=getExperimentEquipmentReadiness({
+  assetId:" 7 ",equipment,calibrationRecords:[record(1,7,"2026-10-01T00:00:00Z")],at
+ });
+ assert.equal(current.ready,true);
+ assert.equal(current.status,"current");
+ assert.equal(current.label,"校准有效");
+ assert.equal(current.assetId,"7");
+ assert.equal(current.assetExists,true);
+ assert.ok(Object.isFrozen(current));
+
+ const cases=[
+  [[], "not-recorded", "设备尚无校准记录"],
+  [[record(2,7,"2026-10-01T00:00:00Z","fail")],"failed","设备最近一次校准不合格"],
+  [[record(3,7,"2025-01-01T00:00:00Z","pass",30)],"expired","设备校准已过期"],
+  [[record(4,7,"2026-10-20T00:00:00Z")],"future-dated","设备校准日期晚于当前日期，请核实证书"],
+  [[record(5,7,"2026-10-01T00:00:00Z"),record(6,7,"2026-10-01T00:00:00Z")],"ambiguous","设备存在同一时刻的多份最新校准记录，无法确认有效证书"]
+ ];
+ for(const [calibrationRecords,status,message] of cases){
+  const result=getExperimentEquipmentReadiness({assetId:7,equipment,calibrationRecords,at});
+  assert.equal(result.ready,false);
+  assert.equal(result.status,status);
+  assert.equal(result.message,message);
+ }
+ const absent=getExperimentEquipmentReadiness({assetId:9,equipment,calibrationRecords:[],at});
+ assert.equal(absent.assetExists,false);
+ assert.equal(absent.status,"not-registered");
+ assert.throws(()=>getExperimentEquipmentReadiness({assetId:" ",equipment,calibrationRecords:[],at}),TypeError);
+ assert.throws(()=>getExperimentEquipmentReadiness({assetId:7,equipment:{},calibrationRecords:[],at}),TypeError);
 });
