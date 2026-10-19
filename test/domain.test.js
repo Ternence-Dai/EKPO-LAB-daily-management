@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
+import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, getAssetCalibrationStatus, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset } from "../src/domain/index.js";
 test("creates a traceable planned experiment record with immutable creation audit",()=>{
  const record=createExperimentRecord({
   id:"EXP-20261018-001",title:"Fuel-cell polarization sweep",assetId:2,
@@ -154,6 +154,25 @@ test("normalizes optional test diary text and rejects unsafe operational values"
   {result:42},{cycle:[]},{error:"E-01\nforged"},{errorDesc:"x".repeat(2001)},
   {unit:"operator\u0000name"},{operator:"x".repeat(121)}
  ]) assert.throws(()=>validateTestDiaryEntry({...base,...patch}));
+});
+test("equipment calibration readiness blocks missing failed expired future and ambiguous records",()=>{
+ const at=new Date("2026-10-19T00:00:00.000Z");
+ const record=(id,calibratedAt,result="pass",validForDays=365)=>createCalibrationRecord({
+  id,assetId:7,calibratedAt,validForDays,certificateNo:"CERT-"+id,
+  organization:"Metrology Lab",operator:"Lab operator",result
+ });
+ assert.equal(getAssetCalibrationStatus([],7,at),"not-recorded");
+ assert.equal(getAssetCalibrationStatus([record(1,"2026-01-01T00:00:00Z","fail")],7,at),"failed");
+ assert.equal(getAssetCalibrationStatus([record(2,"2025-01-01T00:00:00Z","pass",30)],7,at),"expired");
+ assert.equal(getAssetCalibrationStatus([record(3,"2026-10-20T00:00:00Z")],7,at),"future-dated");
+ assert.equal(getAssetCalibrationStatus([
+  record(4,"2026-10-01T00:00:00Z"),record(5,"2026-10-01T00:00:00Z")
+ ],7,at),"ambiguous");
+ assert.equal(getAssetCalibrationStatus([
+  record(6,"2026-10-01T00:00:00Z"),record(7,"2026-09-01T00:00:00Z")
+ ],7,at),"current");
+ assert.throws(()=>getAssetCalibrationStatus({},7,at),TypeError);
+ assert.throws(()=>getAssetCalibrationStatus([],7,new Date("invalid")),TypeError);
 });
 test("calibration timestamps require an explicit timezone and real calendar date",()=>{
  const at=new Date("2026-01-15T00:00:00Z");
