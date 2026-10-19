@@ -15,36 +15,41 @@ export function validateMaintenanceAsset(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("maintenance asset must be an object");
   }
-  const name = typeof entry.name === "string" ? entry.name.trim() : "";
-  if (!name) throw new TypeError("maintenance asset name is required");
+  const textField = (field, maxLength, required = false) => {
+    if (entry[field] === undefined || entry[field] === null) {
+      if (required) throw new TypeError(`maintenance ${field} is required`);
+      return "";
+    }
+    if (typeof entry[field] !== "string") throw new TypeError(`maintenance ${field} must be text`);
+    const value = entry[field].trim();
+    if (required && !value) throw new TypeError(`maintenance ${field} is required`);
+    if (value.length > maxLength) throw new RangeError(`maintenance ${field} exceeds ${maxLength} characters`);
+    if (/[\\x00-\\x1F\\x7F]/.test(value)) throw new TypeError(`maintenance ${field} must not contain control characters`);
+    return value;
+  };
+  const name = textField("name", 120, true);
   if (!Number.isSafeInteger(entry.qty) || entry.qty < 1) {
     throw new RangeError("maintenance asset quantity must be a positive safe integer");
   }
   const allowedCycles = new Set(["一级保养", "二级保养", "三级保养"]);
   if (!allowedCycles.has(entry.cycle)) throw new RangeError("maintenance cycle is invalid");
-  const freq = typeof entry.freq === "string" ? entry.freq.trim() : "";
-  if (!freq) throw new TypeError("maintenance frequency is required");
+  const freq = textField("freq", 80, true);
   const last = parseMaintenanceDate(entry.last, "last date");
   const next = parseMaintenanceDate(entry.next, "next date");
   if (last && next && next < last) {
     throw new RangeError("next maintenance date cannot precede last maintenance date");
   }
-  const textField = (field) => {
-    if (entry[field] === undefined || entry[field] === null) return "";
-    if (typeof entry[field] !== "string") throw new TypeError(`maintenance ${field} must be text`);
-    return entry[field].trim();
-  };
   return Object.freeze({
     name,
-    category: textField("category"),
-    location: textField("location"),
+    category: textField("category", 80),
+    location: textField("location", 120),
     qty: entry.qty,
     cycle: entry.cycle,
     freq,
     last,
     next,
-    responsible: textField("responsible"),
-    record: textField("record")
+    responsible: textField("responsible", 120),
+    record: textField("record", 2000)
   });
 }
 
