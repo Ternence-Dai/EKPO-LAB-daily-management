@@ -48,6 +48,10 @@ test("rejects experiment records with missing traceability, invalid plans or sta
  assert.throws(()=>createExperimentRecord({...base,assetId:" "}),/asset reference is required/);
  assert.throws(()=>createExperimentRecord({...base,plannedDate:"2026-02-30"}),/calendar date/);
  assert.throws(()=>createExperimentRecord({...base,purpose:" "}),/purpose is required/);
+ assert.throws(()=>createExperimentRecord({...base,id:"EXP\\nFORGED"}),/control characters/);
+ assert.throws(()=>createExperimentRecord({...base,assetId:"ASSET\\u0000X"}),/safe text/);
+ assert.throws(()=>createExperimentRecord({...base,actor:"operator\\nforged"}),/control characters/);
+ assert.throws(()=>createExperimentRecord({...base,title:"title\\u007f"}),/control characters/);
  const created=createExperimentRecord(base);
  assert.throws(()=>validateExperimentRecord({...created,status:"completed"}),/does not match/);
  assert.throws(()=>validateExperimentRecord({...created,audit:[]}),/include record creation/);
@@ -73,6 +77,9 @@ test("rejects impossible, skipped, reordered or tampered experiment audit chains
   started.audit[0],{from:"planned",to:"in-progress",actor:" ",at:"2026-10-18T01:01:00.000Z"}
  ]}),/actor is required/);
  assert.throws(()=>validateExperimentRecord({...started,unexpected:{mutable:true}}),/unsupported fields/);
+ assert.throws(()=>validateExperimentRecord({...started,audit:[
+  started.audit[0],{from:"planned",to:"in-progress",actor:"operator-2\\nforged",at:"2026-10-18T01:01:00.000Z"}
+ ]}),/control characters/);
  assert.throws(()=>validateExperimentRecord({...started,audit:[
   started.audit[0],{from:"planned",to:"in-progress",actor:"operator-2",at:"2026-10-18T01:01:00.000Z",metadata:"unreviewed"}
  ]}),/immutable lifecycle schema/);
