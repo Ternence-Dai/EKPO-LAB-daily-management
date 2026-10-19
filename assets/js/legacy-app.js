@@ -1126,6 +1126,23 @@
             try {
                 const domain = await import('../../src/domain/index.js');
                 const current = domain.validateExperimentRecord(DB.experiments[index]);
+                if (nextStatus === 'in-progress') {
+                    const assetExists = DB.maintenance.some(asset => String(asset.id) === String(current.assetId));
+                    if (!assetExists) throw new Error('关联设备已不在设备台账中，不能启动实验');
+                    const calibrationStatus = domain.getAssetCalibrationStatus(
+                        DB.calibrationLogs || [], current.assetId, new Date()
+                    );
+                    const calibrationMessages = {
+                        'not-recorded': '设备尚无校准记录，不能启动实验',
+                        failed: '设备最近一次校准不合格，不能启动实验',
+                        expired: '设备校准已过期，不能启动实验',
+                        'future-dated': '设备校准日期晚于当前日期，请核实证书后再启动',
+                        ambiguous: '设备存在同一时刻的多份最新校准记录，无法确认有效证书'
+                    };
+                    if (calibrationStatus !== 'current') {
+                        throw new Error(calibrationMessages[calibrationStatus] || '设备校准状态无法确认，不能启动实验');
+                    }
+                }
                 const updated = domain.transitionExperiment(current, nextStatus, actor, new Date().toISOString());
                 domain.validateExperimentRecord(updated);
                 const previousDB = snapshotLabDB();
