@@ -30,3 +30,8 @@ The modernization work is being applied directly to `main`. The verified slice i
 The experiment lifecycle UI is present: users can create plans, associate registered equipment, advance or cancel allowed states, and inspect the append-only actor/time audit history. Remaining delivery work includes attachment and certificate-file handling, authenticated role/access controls and approval workflows, broader end-to-end browser coverage, and verification against actual laboratory source records. The browser cache is not yet a durable multi-user LIMS backend; the current self-reported actor field is traceability metadata, not proof of authenticated identity.
 
 See [the rebuild plan](docs/REBUILD_PLAN.md) and [domain rules, units and validation boundaries](docs/DOMAIN_CORE.md).
+
+
+## 开源项目深度对标
+
+本项目采用的上游参考、架构借鉴、实现边界与后续验收要求见 [docs/OPEN_SOURCE_BENCHMARKS.md](docs/OPEN_SOURCE_BENCHMARKS.md)。
