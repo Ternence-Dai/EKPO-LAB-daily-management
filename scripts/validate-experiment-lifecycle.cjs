@@ -127,12 +127,12 @@ for (const selector of [
 console.log('EKPO experiment lifecycle UI, persistence, backup migration and audit integration checks passed.');
 
 
-assert.ok(productCss.includes('V4 · EKPO LabOS operations control room') &&
-          productCss.includes('.labos-intro:after{') &&
-          productCss.includes('.product-workflow__grid{') &&
-          productCss.includes('.content-body .metrics-grid>.card:after{'),
+assert.ok(css.includes('V4 · EKPO LabOS operations control room') &&
+          css.includes('.labos-intro:after{') &&
+          css.includes('.product-workflow__grid{') &&
+          css.includes('.content-body .metrics-grid>.card:after{'),
   'EKPO V4 must implement the lab operations masthead, workflow cards and KPI treatment');
-assert.ok(productCss.includes('@media(max-width:900px)') &&
-          productCss.includes('@media(max-width:520px)') &&
-          productCss.includes('.product-workflow__item:hover'),
+assert.ok(css.includes('@media(max-width:900px)') &&
+          css.includes('@media(max-width:520px)') &&
+          css.includes('.product-workflow__item:hover'),
   'EKPO V4 must include responsive operations workflows and interactive states');
