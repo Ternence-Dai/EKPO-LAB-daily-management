@@ -41,3 +41,10 @@
 - [eLabFTW 实验记录文档](https://github.com/elabftw/elabftw/blob/master/documentation/docs/usage/user-guide/experiments.md)
 - [eLabFTW 库存管理文档](https://github.com/elabftw/elabftw/blob/master/documentation/docs/usage/inventory.md)
 - [Baobab LIMS](https://github.com/BaobabLims/baobab.lims)
+
+## 6. 2026-10-19 实施补充：保养计划状态归入领域核心
+
+- `src/domain/index.js` 新增 `getMaintenanceScheduleStatus(nextDate, asOf, dueSoonDays)`，统一返回 `unscheduled`、`overdue`、`due-soon` 或 `scheduled`，并返回距到期天数。
+- `assets/js/legacy-app.js` 的设备台账使用领域状态渲染到期徽标；遗留无效日期显示为“日期异常”，不再把解析失败当作正常。
+- `test/domain.test.js` 覆盖逾期、当天到期、30 天边界、31 天正常、非法日期和非法策略参数。
+- 保养状态与校准状态仍是不同维度：完成保养不代表校准有效，校准合格也不代表保养未逾期。
