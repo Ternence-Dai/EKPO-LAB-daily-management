@@ -89,3 +89,12 @@ body[data-workspace="health"] .w5-module-context__home,body[data-workspace="erp"
 body[data-workspace="health"] .w5-experiment-context,body[data-workspace="erp"] .w5-experiment-context,body[data-workspace="ekpo"] .w5-experiment-context{display:none}
 @media(max-width:640px){.w5-module-context{align-items:flex-start;padding:11px 12px}.w5-module-context__actions{flex-direction:column;align-items:flex-end;gap:5px}.w5-module-context__description{max-width:48ch}.w5-module-context__state{display:none}.w5-experiment-context{align-items:flex-start;flex-direction:column}.w5-experiment-context__tags{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.w5-module-context__home{transition:none}}
+
+/* Workspace V5.3 — experiment equipment readiness indicators */
+body[data-workspace="ekpo"] .experiment-calibration-ready{display:block;margin-top:5px;color:#21806f;font-size:9px;font-weight:750;line-height:1.5}
+body[data-workspace="ekpo"] .experiment-calibration-blocked{display:block;margin-top:5px;color:#a36b2d;font-size:9px;font-weight:750;line-height:1.5}
+body[data-workspace="ekpo"] .experiment-table td:nth-child(2){min-width:170px}
+body[data-workspace="ekpo"] .experiment-table button:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.45)}
+body[data-workspace="ekpo"] #experiment-asset option{padding:6px}
+body[data-workspace="ekpo"] .experiment-table .experiment-actions{min-width:170px}
+@media(max-width:760px){body[data-workspace="ekpo"] .experiment-table td:nth-child(2){min-width:145px}body[data-workspace="ekpo"] .experiment-table .experiment-actions{min-width:145px}}
