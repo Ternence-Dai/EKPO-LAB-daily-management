@@ -8,8 +8,8 @@ const app = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const productCss = fs.readFileSync('assets/css/product-system.css', 'utf8');
 const combined = html + '\n' + app;
 
-assert.ok(html.includes('product-system.css?v=20261018-v3'),
-  'LabOS must load the V3 operations workspace stylesheet');
+assert.ok(html.includes('product-system.css?v=20261019-v6'),
+  'LabOS must load the V6 operations workspace stylesheet');
 assert.ok(html.includes('class="labos-demo-note"'),
   'the source-data warning must retain a dedicated responsive style hook');
 assert.ok(html.includes('class="topbar-actions"'),
