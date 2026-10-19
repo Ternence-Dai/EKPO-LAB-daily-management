@@ -24,7 +24,7 @@ export function validateMaintenanceAsset(entry) {
     const value = entry[field].trim();
     if (required && !value) throw new TypeError(`maintenance ${field} is required`);
     if (value.length > maxLength) throw new RangeError(`maintenance ${field} exceeds ${maxLength} characters`);
-    if (/[\\x00-\\x1F\\x7F]/.test(value)) throw new TypeError(`maintenance ${field} must not contain control characters`);
+    if (/[\x00-\x1F\x7F]/.test(value)) throw new TypeError(`maintenance ${field} must not contain control characters`);
     return value;
   };
   const name = textField("name", 120, true);
