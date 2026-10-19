@@ -439,13 +439,25 @@
             });
             filtered.forEach(m => {
                 let totalCost = DB.maintLogs.filter(l => l.eqId === m.id).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
-                const dueDate = m.next ? new Date(m.next + 'T00:00:00') : null;
-                const days = dueDate && Number.isFinite(dueDate.getTime())
-                    ? Math.round((dueDate - today) / 86400000) : null;
-                let badge = days === null ? '<span class="badge badge-normal">未设置日期</span>'
-                    : days < 0 ? '<span class="badge badge-danger">已逾期</span>'
-                    : days <= 30 ? '<span class="badge badge-warning">即将到期</span>'
-                    : '<span class="badge badge-success">正常</span>';
+                let schedule = null;
+                if (calibrationDomain && typeof calibrationDomain.getMaintenanceScheduleStatus === 'function') {
+                    try {
+                        schedule = calibrationDomain.getMaintenanceScheduleStatus(m.next || '', new Date(), 30);
+                    } catch (error) {
+                        schedule = { status: 'invalid', daysUntil: null };
+                        console.warn('设备保养日期无效：' + (m.name || m.id), error);
+                    }
+                }
+                const days = schedule ? schedule.daysUntil : null;
+                const scheduleBadge = {
+                    unscheduled: '<span class="badge badge-normal">未设置日期</span>',
+                    overdue: '<span class="badge badge-danger">已逾期</span>',
+                    'due-soon': '<span class="badge badge-warning">即将到期</span>',
+                    scheduled: '<span class="badge badge-success">正常</span>',
+                    invalid: '<span class="badge badge-danger">日期异常</span>'
+                };
+                const badge = schedule ? (scheduleBadge[schedule.status] || scheduleBadge.invalid)
+                    : '<span class="badge badge-normal">规则不可用</span>';
                 const calibration = latestCalibrationByAsset.get(String(m.id));
                 let calibrationLabel = '规则不可用';
                 let calibrationBadge = 'badge-normal';
