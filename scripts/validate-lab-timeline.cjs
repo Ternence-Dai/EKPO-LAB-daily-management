@@ -11,8 +11,10 @@ assert.match(html, /api\.value\(1\)/, 'custom timeline renderer must read start 
 assert.match(html, /api\.value\(2\)/, 'custom timeline renderer must read end timestamp');
 assert.match(html, /Number\(l\.cost\)\s*\|\|\s*0/,
   'maintenance cost aggregation must coerce imported numeric values');
-assert.match(html, /days === null[\s\S]{0,160}未设置日期/,
-  'missing due dates must not be shown as healthy/normal');
+assert.match(html, /unscheduled:\\s*'<span class="badge badge-normal">未设置日期<\\/span>'/,
+  'missing due dates must remain explicitly unscheduled, not healthy/normal');
+assert.match(html, /schedule\\.status/,
+  'equipment due-date display must use the domain-owned maintenance schedule status');
 assert.match(html, /年度已记录费用（气体\+维保）/,
   'annual expense KPI must distinguish recorded costs from inventory valuation');
 assert.match(html, /let totalCost = totalGasCost \+ totalMaintCost;/,
