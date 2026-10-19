@@ -251,6 +251,20 @@ test("validates equipment maintenance assets before saving",()=>{
  assert.ok(Object.isFrozen(valid));
  assert.throws(()=>{valid.name="tampered";},TypeError);
 });
+test("maintenance asset text is bounded and rejects control-character injection",()=>{
+ const base={name:"Bench",category:"Equipment",location:"Lab",qty:1,cycle:"一级保养",freq:"季度",last:"2026-01-01",next:"2026-04-01",responsible:"Operator",record:"Inspection"};
+ const valid=validateMaintenanceAsset({...base,name:" Bench ",freq:" 每季度 "});
+ assert.equal(valid.name,"Bench");
+ assert.equal(valid.freq,"每季度");
+ for(const patch of [
+  {name:"N".repeat(121)},{freq:"F".repeat(81)},
+  {category:"C".repeat(81)},{location:"L".repeat(121)},
+  {responsible:"R".repeat(121)},{record:"D".repeat(2001)},
+  {name:"Bench\\nforged"},{freq:"Quarter\\u0000ly"},
+  {category:"Equipment\\nforged"},{location:"Lab\\u0000A"},
+  {responsible:"Operator\\nforged"},{record:"note\\u0000forged"}
+ ]) assert.throws(()=>validateMaintenanceAsset({...base,...patch}));
+});
 test("rejects incomplete or impossible maintenance asset quantities and cycles",()=>{
  const base={name:"Bench",category:"Equipment",location:"Lab",qty:1,cycle:"一级保养",freq:"季度",last:"2026-01-01",next:"2026-04-01"};
  assert.throws(()=>validateMaintenanceAsset({...base,name:" "}),/name is required/);
