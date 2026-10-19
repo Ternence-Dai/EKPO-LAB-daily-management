@@ -405,3 +405,54 @@ export function validateTestDiaryEntry(entry) {
     errorDesc:optionalText(entry.errorDesc, "error description", 2000)
   });
 }
+
+
+const experimentCalibrationMessages = {
+  "not-registered": "关联设备已不在设备台账中",
+  "not-recorded": "设备尚无校准记录",
+  failed: "设备最近一次校准不合格",
+  expired: "设备校准已过期",
+  "future-dated": "设备校准日期晚于当前日期，请核实证书",
+  ambiguous: "设备存在同一时刻的多份最新校准记录，无法确认有效证书",
+  current: "校准有效"
+};
+
+export function getExperimentEquipmentReadiness({
+  assetId, equipment, calibrationRecords, at = new Date()
+} = {}) {
+  if (!(typeof assetId === "string" || Number.isSafeInteger(assetId)) ||
+      String(assetId).trim() === "" || String(assetId).length > 80 ||
+      [...String(assetId)].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
+    throw new TypeError("experiment equipment assetId is required and must be safe text");
+  }
+  if (!Array.isArray(equipment)) throw new TypeError("experiment equipment register must be an array");
+  if (!Array.isArray(calibrationRecords)) throw new TypeError("experiment calibration records must be an array");
+  if (!(at instanceof Date) || !Number.isFinite(at.getTime())) {
+    throw new TypeError("experiment equipment readiness reference time must be valid");
+  }
+  const normalizedAssetId = String(assetId).trim();
+  const asset = equipment.find(item => item &&
+    (typeof item.id === "string" || Number.isSafeInteger(item.id)) &&
+    String(item.id).trim() === normalizedAssetId);
+  if (!asset) {
+    return Object.freeze({
+      assetId: normalizedAssetId, assetExists: false, status: "not-registered",
+      ready: false, label: "设备不在台账", message: experimentCalibrationMessages["not-registered"]
+    });
+  }
+  const calibrationStatus = getAssetCalibrationStatus(calibrationRecords, normalizedAssetId, at);
+  return Object.freeze({
+    assetId: normalizedAssetId,
+    assetExists: true,
+    status: calibrationStatus,
+    ready: calibrationStatus === "current",
+    label: calibrationStatus === "current" ? "校准有效" : "校准" + ({
+      "not-recorded": "未记录",
+      failed: "不合格",
+      expired: "已过期",
+      "future-dated": "日期待核实",
+      ambiguous: "记录冲突"
+    }[calibrationStatus] || "状态待核实"),
+    message: experimentCalibrationMessages[calibrationStatus] || "设备校准状态无法确认"
+  });
+}
