@@ -57,7 +57,7 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
   const saveEnd=html.indexOf('function editMaintLog',saveStart);
   assert.ok(saveStart>=0&&saveEnd>saveStart,'saveMaint implementation must be extractable for rollback testing');
   const saveSource=html.slice(saveStart,saveEnd).replace(
-    "const domain = await import('../../src/domain/index.js');",
+    /const domain = await import\(['"]\.\.\/\.\.\/src\/domain\/index\.js(?:\?v=[^'"]+)?['"]\);/,
     "const domain = {validateMaintenanceAsset: input => Object.freeze({...input})};"
   );
   function runSave({editing=true,saveAllowed=false}={}){
