@@ -431,7 +431,7 @@
             }
             const latestCalibrationByAsset = new Map();
             (DB.calibrationLogs || []).forEach(record => {
-                const key = String(record.assetId);
+                const key = String(record.assetId).trim();
                 const current = latestCalibrationByAsset.get(key);
                 if (!current || String(record.calibratedAt) > String(current.calibratedAt)) {
                     latestCalibrationByAsset.set(key, record);
@@ -458,7 +458,7 @@
                 };
                 const badge = schedule ? (scheduleBadge[schedule.status] || scheduleBadge.invalid)
                     : '<span class="badge badge-normal">规则不可用</span>';
-                const calibration = latestCalibrationByAsset.get(String(m.id));
+                const calibration = latestCalibrationByAsset.get(String(m.id).trim());
                 let calibrationLabel = '规则不可用';
                 let calibrationBadge = 'badge-normal';
                 if (calibrationDomain) {
