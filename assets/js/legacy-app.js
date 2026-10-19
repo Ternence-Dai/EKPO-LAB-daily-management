@@ -2,6 +2,17 @@
         // Escape untrusted local/imported text before inserting it into HTML.
         const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g,
             char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+        // Keep foreign-key joins stable across imported numeric and string IDs.
+        function labIdKey(value) {
+            if (typeof value === 'string') return value.trim();
+            return Number.isSafeInteger(value) ? String(value) : '';
+        }
+        function sameLabId(a, b) {
+            const left = labIdKey(a);
+            return left !== '' && left === labIdKey(b);
+        }
+        // HTML-escape a JSON string literal for safe use as an inline handler argument.
+        function labInlineId(value) { return esc(JSON.stringify(String(value))); }
         // ==================== 1. 数据层（兼容升级） ====================
         // Guard browser storage access: a blocked/corrupt cache must not prevent the lab app from opening.
         let DB;
@@ -404,9 +415,9 @@
                 String(result.getDate()).padStart(2, '0');
         }
         function syncMaintenanceSchedule(eqId) {
-            const eq = DB.maintenance.find(item => item.id === eqId);
+            const eq = DB.maintenance.find(item => sameLabId(item.id, eqId));
             if (!eq) return false;
-            const logs = DB.maintLogs.filter(log => log.eqId === eqId && isValidDateOnly(log.date));
+            const logs = DB.maintLogs.filter(log => sameLabId(log.eqId, eqId) && isValidDateOnly(log.date));
             if (!logs.length) return false;
             logs.sort((a, b) => a.date.localeCompare(b.date));
             const latest = logs[logs.length - 1];
@@ -438,7 +449,7 @@
                 }
             });
             filtered.forEach(m => {
-                let totalCost = DB.maintLogs.filter(l => l.eqId === m.id).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
+                let totalCost = DB.maintLogs.filter(l => sameLabId(l.eqId, m.id)).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
                 let schedule = null;
                 if (calibrationDomain && typeof calibrationDomain.getMaintenanceScheduleStatus === 'function') {
                     try {
@@ -480,7 +491,7 @@
                 tbody.innerHTML += `<tr>
                     <td><strong>${esc(m.name||'')}</strong></td><td>${esc(m.category||'')}</td><td>${esc(m.location||'')}</td><td>${esc(m.qty||0)}</td><td>${esc(m.cycle||'')}</td><td>${esc(m.freq||'')}</td>
                     <td>${esc(m.last || '-')}</td><td>${esc(m.next || '-')} ${badge}</td><td>${calibrationBadgeHtml}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${esc(m.responsible||'')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editMaint(${Number(m.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${Number(m.id)})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editMaint(${labInlineId(m.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${labInlineId(m.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -524,15 +535,15 @@
         function renderMaintLogs() {
             let tbody = document.querySelector('#table-maint-logs tbody'); tbody.innerHTML = '';
             DB.maintLogs.sort((a,b) => (b.date||'').localeCompare(a.date||'')).forEach(l => {
-                let eq = DB.maintenance.find(m => m.id === l.eqId);
+                let eq = DB.maintenance.find(m => sameLabId(m.id, l.eqId));
                 tbody.innerHTML += `<tr>
                     <td>${esc(l.date)}</td><td><strong>${esc(eq ? eq.name : '未知设备')}</strong></td><td>${esc(l.checker||'')}</td><td>${esc(l.operator||'')}</td><td>¥${(l.cost||0).toLocaleString()}</td><td>${esc(l.record||'')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editMaintLog(${Number(l.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintLogs', ${Number(l.id)})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editMaintLog(${labInlineId(l.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintLogs', ${labInlineId(l.id)})">删除</button></td>
                 </tr>`;
             });
         }
 
-        function editMaint(id) { let m = DB.maintenance.find(x => x.id === id); document.getElementById('m-id').value=m.id; document.getElementById('m-name').value=m.name||''; document.getElementById('m-category').value=m.category||''; document.getElementById('m-location').value=m.location||''; document.getElementById('m-qty').value=m.qty||0; document.getElementById('m-cycle').value=m.cycle||'一级保养'; document.getElementById('m-freq').value=m.freq||''; document.getElementById('m-last').value=m.last||''; document.getElementById('m-next').value=m.next||''; document.getElementById('m-responsible').value=m.responsible||''; document.getElementById('m-record').value=m.record||''; openModal('modal-maint'); }
+        function editMaint(id) { let m = DB.maintenance.find(x => sameLabId(x.id, id)); if(!m){showToast('设备记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('m-id').value=m.id; document.getElementById('m-name').value=m.name||''; document.getElementById('m-category').value=m.category||''; document.getElementById('m-location').value=m.location||''; document.getElementById('m-qty').value=m.qty||0; document.getElementById('m-cycle').value=m.cycle||'一级保养'; document.getElementById('m-freq').value=m.freq||''; document.getElementById('m-last').value=m.last||''; document.getElementById('m-next').value=m.next||''; document.getElementById('m-responsible').value=m.responsible||''; document.getElementById('m-record').value=m.record||''; openModal('modal-maint'); }
         async function saveMaint() {
             const id = document.getElementById('m-id').value;
             const data = {
@@ -560,7 +571,7 @@
             let previous = null;
             let newRecordId = null;
             if (id) {
-                existingIndex = DB.maintenance.findIndex(item => String(item.id) === String(id));
+                existingIndex = DB.maintenance.findIndex(item => sameLabId(item.id, id));
                 if (existingIndex < 0) {
                     showToast('原设备记录已不存在，请刷新后重试', 'error');
                     return;
@@ -569,9 +580,7 @@
                 DB.maintenance[existingIndex] = { ...previous, ...validated };
             } else {
                 newRecordId = Date.now();
-                if (DB.maintenance.some(item => item &&
-                    (typeof item.id === 'string' || Number.isSafeInteger(item.id)) &&
-                    String(item.id).trim() === String(newRecordId).trim())) {
+                if (DB.maintenance.some(item => sameLabId(item && item.id, newRecordId))) {
                     showToast('设备编号冲突，请重试保存', 'error');
                     return;
                 }
@@ -581,7 +590,7 @@
             const saved = await saveToLocal();
             if (!saved) {
                 if (existingIndex >= 0) DB.maintenance[existingIndex] = previous;
-                else DB.maintenance = DB.maintenance.filter(item => String(item.id) !== String(newRecordId));
+                else DB.maintenance = DB.maintenance.filter(item => !sameLabId(item.id, newRecordId));
                 showToast('设备台账保存失败，已撤销本次修改；请检查存储后重试', 'error');
                 return;
             }
@@ -590,12 +599,13 @@
             renderMaintenance();
         }
         function editMaintLog(id) {
-            let l = DB.maintLogs.find(x => x.id === id);
+            let l = DB.maintLogs.find(x => sameLabId(x.id, id));
+            if (!l) { showToast('维保记录不存在或已被删除，请刷新后重试', 'error'); return; }
             // 动态生成设备下拉框
             let eqSelect = document.getElementById('ml-eq');
-            eqSelect.innerHTML = DB.maintenance.map(m => `<option value="${Number(m.id)}">${esc(m.name)}</option>`).join('');
+            eqSelect.innerHTML = DB.maintenance.map(m => `<option value="${esc(labIdKey(m.id))}">${esc(m.name)}</option>`).join('');
             document.getElementById('ml-id').value = l.id;
-            document.getElementById('ml-eq').value = l.eqId;
+            document.getElementById('ml-eq').value = labIdKey(l.eqId);
             document.getElementById('ml-date').value = l.date;
             document.getElementById('ml-checker').value = l.checker;
             document.getElementById('ml-operator').value = l.operator;
@@ -605,22 +615,22 @@
         }
         async function saveMaintLog() {
             const id = document.getElementById('ml-id').value;
-            const eqId = Number(document.getElementById('ml-eq').value);
+            const eqIdInput = document.getElementById('ml-eq').value;
+            const selectedEquipment = DB.maintenance.find(item => sameLabId(item.id, eqIdInput));
+            if (!selectedEquipment) { showToast('请选择有效的设备台账记录', 'error'); return; }
+            const eqId = selectedEquipment.id;
             const date = document.getElementById('ml-date').value;
             const costRaw = document.getElementById('ml-cost').value;
             const cost = costRaw === '' ? 0 : Number(costRaw);
-            if (!DB.maintenance.some(item => item.id === eqId)) {
-                showToast('请选择有效的设备台账记录', 'error'); return;
-            }
             if (!isValidDateOnly(date)) { showToast('维保日期无效', 'error'); return; }
             if (!Number.isFinite(cost) || cost < 0) { showToast('维保费用必须是大于或等于 0 的有效数字', 'error'); return; }
-            const data = { eqId, date, checker: document.getElementById('ml-checker').value,
+            const data = { eqId: selectedEquipment.id, date, checker: document.getElementById('ml-checker').value,
                 operator: document.getElementById('ml-operator').value, cost,
                 record: document.getElementById('ml-record').value };
             const previousDB = snapshotLabDB();
             let previousEqId = null;
             if (id) {
-                const i = DB.maintLogs.findIndex(x => String(x.id) === String(id));
+                const i = DB.maintLogs.findIndex(x => sameLabId(x.id, id));
                 if (i < 0) { showToast('原维保记录已不存在，请刷新后重试', 'error'); return; }
                 previousEqId = DB.maintLogs[i].eqId;
                 DB.maintLogs[i] = { ...DB.maintLogs[i], ...data };
@@ -631,7 +641,7 @@
                 }
                 DB.maintLogs.push(data);
             }
-            if (previousEqId !== null && previousEqId !== eqId) syncMaintenanceSchedule(previousEqId);
+            if (previousEqId !== null && !sameLabId(previousEqId, eqId)) syncMaintenanceSchedule(previousEqId);
             syncMaintenanceSchedule(eqId);
             if (!await commitLabMutation(previousDB, '维保记录保存失败，本次修改已撤销')) return;
             closeModal('modal-maint-log');
@@ -1336,19 +1346,19 @@
             if (storageRecoveryRequired) { showToast('缓存待恢复，已阻止删除', 'error'); return; }
             const rows = DB[table];
             if (!Array.isArray(rows)) { showToast('数据表不存在，无法删除', 'error'); return; }
-            const target = rows.find(item => String(item.id) === String(id));
+            const target = rows.find(item => sameLabId(item.id, id));
             if (!target) { showToast('记录不存在或已被删除', 'error'); return; }
-            if (table === 'maintenance' && DB.maintLogs.some(item => String(item.eqId) === String(id))) {
+            if (table === 'maintenance' && DB.maintLogs.some(item => sameLabId(item.eqId, id))) {
                 showToast('该设备仍有关联维保历史，请先处理历史记录后再删除', 'error'); return;
             }
-            if (table === 'maintenance' && DB.experiments.some(item => String(item.assetId) === String(id))) {
+            if (table === 'maintenance' && DB.experiments.some(item => sameLabId(item.assetId, id))) {
                 showToast('该设备仍被实验计划引用；当前没有安全归档/解除引用流程，不能删除设备台账', 'error'); return;
             }
             if (table === 'spareParts' && DB.spareLogs.some(item => String(item.partId) === String(id))) {
                 showToast('该备件仍有关联出入库流水，请先处理流水后再删除', 'error'); return;
             }
             if (table === 'spareLogs') {
-                const part = DB.spareParts.find(item => String(item.id) === String(target.partId));
+                const part = DB.spareParts.find(item => sameLabId(item.id, target.partId));
                 const qty = Number(target.qty);
                 const currentQty = part ? Number(part.qty) : NaN;
                 if (!part || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(currentQty)) {
@@ -1362,15 +1372,15 @@
             }
             const previousDB = snapshotLabDB();
             if (table === 'spareLogs') {
-                const part = DB.spareParts.find(item => String(item.id) === String(target.partId));
+                const part = DB.spareParts.find(item => sameLabId(item.id, target.partId));
                 const qty = Number(target.qty);
                 const currentQty = Number(part.qty);
                 part.qty = target.action === '入库' ? currentQty - qty : currentQty + qty;
                 part.update = target.date;
             }
             const affectedMaintenanceIds = table === 'maintLogs'
-                ? [...new Set(DB.maintLogs.filter(item => String(item.id) === String(id)).map(item => item.eqId))] : [];
-            DB[table] = rows.filter(item => String(item.id) !== String(id));
+                ? [...new Set(DB.maintLogs.filter(item => sameLabId(item.id, id)).map(item => item.eqId))] : [];
+            DB[table] = rows.filter(item => !sameLabId(item.id, id));
             if (table === 'maintLogs') affectedMaintenanceIds.forEach(syncMaintenanceSchedule);
             if (!await commitLabMutation(previousDB, '删除未能保存，本次操作已撤销')) return;
             if (table === 'gases') renderGases();
@@ -1479,18 +1489,18 @@
                 for (const row of rows) {
                     if (!row || typeof row !== 'object' || Array.isArray(row) ||
                         !((typeof row.id === 'string' && row.id.trim()) || Number.isSafeInteger(row.id))) return false;
-                    const id = String(row.id);
+                    const id = labIdKey(row.id);
                     if (ids.has(id)) return false;
                     ids.add(id);
                 }
             }
-            const maintenanceIds = new Set(value.maintenance.map(row => String(row.id)));
+            const maintenanceIds = new Set(value.maintenance.map(row => labIdKey(row.id)));
             if ((value.maintLogs || []).some(row =>
-                !maintenanceIds.has(String(row.eqId)) ||
+                !maintenanceIds.has(labIdKey(row.eqId)) ||
                 !isValidDateOnly(row.date) || !Number.isFinite(Number(row.cost)) || Number(row.cost) < 0)) return false;
             const calibrationReferences = new Set();
             if ((value.calibrationLogs || []).some(row => {
-                const reference = JSON.stringify([String(row.assetId), String(row.organization || '').trim(), String(row.certificateNo || '').trim()]);
+                const reference = JSON.stringify([labIdKey(row.assetId), String(row.organization || '').trim(), String(row.certificateNo || '').trim()]);
                 if (calibrationReferences.has(reference)) return true;
                 calibrationReferences.add(reference);
                 const match = typeof row.calibratedAt === 'string'
@@ -1563,10 +1573,10 @@
                         ...domain.validateMaintenanceAsset(asset)
                     }));
                     imported.calibrationLogs = imported.calibrationLogs.map(row => domain.createCalibrationRecord(row));
-                    const importedAssetIds = new Set(imported.maintenance.map(asset => String(asset.id)));
+                    const importedAssetIds = new Set(imported.maintenance.map(asset => labIdKey(asset.id)));
                     imported.experiments = imported.experiments.map(row => {
                         const record = domain.validateExperimentRecord(row);
-                        if (!importedAssetIds.has(String(record.assetId))) {
+                        if (!importedAssetIds.has(labIdKey(record.assetId))) {
                             throw new Error('实验计划引用了不存在的设备台账: ' + record.id);
                         }
                         return record;

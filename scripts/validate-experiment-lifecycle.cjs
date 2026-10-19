@@ -69,8 +69,8 @@ assert.ok(transition.includes('domain.validateExperimentRecord(DB.experiments[in
 const saveMaintStart = app.indexOf('async function saveMaint()');
 const saveMaintEnd = app.indexOf('function editMaintLog(', saveMaintStart);
 const saveMaintSource = app.slice(saveMaintStart, saveMaintEnd);
-assert.ok(saveMaintSource.includes('String(item.id).trim() === String(newRecordId).trim()'),
-  'new equipment IDs must be checked using the same whitespace-normalized identity as readiness validation');
+assert.ok(saveMaintSource.includes('sameLabId(item.id, newRecordId)'),
+  'new equipment IDs must be checked using the shared canonical identity helper');
 
 assert.ok(domain.includes('export function getAssetCalibrationStatus(') &&
           domain.includes('export function getExperimentEquipmentReadiness(') &&
@@ -122,7 +122,7 @@ assert.ok(backup.includes("value.experiments !== undefined && !Array.isArray(val
 assert.ok(restore.includes('if (!imported.experiments) imported.experiments = []') &&
           restore.includes('domain.validateExperimentRecord(row)') &&
           restore.indexOf('domain.validateExperimentRecord(row)') < restore.indexOf('DB = imported;') &&
-          restore.includes('importedAssetIds.has(String(record.assetId))'),
+          restore.includes('importedAssetIds.has(labIdKey(record.assetId))'),
   'backup restore must migrate legacy exports and validate every experiment before replacing live state');
 assert.ok(startup.includes('domain.validateExperimentRecord(record)') &&
           startup.includes('storageRecoveryRequired = true') &&

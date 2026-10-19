@@ -34,7 +34,9 @@ console.log('Imported-data HTML escaping regression checks passed.');
     confirm: () => true, showToast: () => {}, saveToLocal: async () => true,
     renderSpareParts: () => {}, renderSpareLogs: () => {}, renderGases: () => {},
     renderMaintenance: () => {}, renderMaintLogs: () => {}, renderTestDiary: () => {},
-    syncMaintenanceSchedule: () => {}
+    syncMaintenanceSchedule: () => {},
+    sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);},
+    labIdKey:value=>typeof value==='string'?value.trim():Number.isSafeInteger(value)?String(value):''
   };
   sandbox.snapshotLabDB = () => JSON.parse(JSON.stringify(sandbox.DB));
   sandbox.commitLabMutation = async previousDB => {

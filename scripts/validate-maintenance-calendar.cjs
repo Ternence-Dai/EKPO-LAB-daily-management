@@ -3,6 +3,17 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
+assert.ok(html.includes('function labIdKey(value)') && html.includes('function sameLabId(a, b)') && html.includes('function labInlineId(value)'),
+  'equipment and maintenance history must share safe canonical string/integer ID helpers');
+const identityStart = html.indexOf('function labIdKey(value)');
+const identityEnd = html.indexOf('function isValidDateOnly(value)', identityStart);
+const identityContext = {esc:value=>String(value == null ? '' : value).replace(/[&<>"\']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))};
+vm.runInNewContext(html.slice(identityStart, identityEnd) + '\nthis.identity={labIdKey,sameLabId,labInlineId};', identityContext);
+assert.equal(identityContext.identity.labIdKey(' asset-01 '), 'asset-01');
+assert.equal(identityContext.identity.sameLabId(' asset-01 ', 'asset-01'), true);
+assert.ok(!identityContext.identity.labInlineId('asset-01" onclick="alert(1)').includes('"'),
+  'string equipment IDs must be safely encoded before they are embedded in inline HTML handlers');
+
 const start = html.indexOf('function isValidDateOnly');
 const end = html.indexOf('async function renderMaintenance', start);
 if (start < 0 || end < 0) throw new Error('Maintenance date helpers not found');
@@ -30,6 +41,10 @@ assert.equal(api.addCalendarMonths('2026-01-31', 3), '2026-04-30');
 api.syncMaintenanceSchedule(1);
 assert.equal(context.DB.maintenance[0].last, '2026-04-30', 'latest log must win');
 assert.equal(context.DB.maintenance[0].next, '2026-07-30');
+context.DB.maintenance[0].id = ' 1 ';
+context.DB.maintLogs = [{id:3,eqId:1,date:'2026-05-31'}];
+api.syncMaintenanceSchedule('1');
+assert.equal(context.DB.maintenance[0].last, '2026-05-31', 'maintenance history joins must normalize legacy string/integer equipment IDs');
 console.log('Maintenance calendar interval regression checks passed.');
 
 assert.ok(html.includes('domain.validateMaintenanceAsset(data)'),
@@ -62,18 +77,19 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
   );
   function runSave({editing=true,saveAllowed=false}={}){
     const values={
-      'm-id': editing ? '1' : '',
+      'm-id': editing ? (formId === undefined ? String(previousId) : formId) : '',
       'm-name':'Test asset','m-category':'Equipment','m-location':'Lab',
       'm-qty':'2','m-cycle':'一级保养','m-freq':'季度',
       'm-last':'2026-10-18','m-next':'2027-01-18',
       'm-responsible':'Operator','m-record':'updated'
     };
-    const previous={id:1,name:'Old asset',category:'Equipment',location:'Lab',qty:1,
+    const previous={id:previousId,name:'Old asset',category:'Equipment',location:'Lab',qty:1,
       cycle:'一级保养',freq:'季度',last:'2026-07-18',next:'2026-10-18',
       responsible:'Operator',record:'old'};
     const db={maintenance:editing?[previous]:[]};
     const messages=[];let closed=0,renders=0;
     const context={
+      sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);},
       DB:db,
       document:{getElementById:key=>({value:values[key]??''})},
       saveToLocal:async()=>saveAllowed,
@@ -98,6 +114,9 @@ assert.ok(html.includes('DB.maintenance.push({ ...validated, id: newRecordId })'
   assert.equal(failedNew.db.maintenance.length,0,
     'failed new maintenance record must not leave an in-memory record');
 
+  const paddedIdUpdate=await runSave({editing:true,saveAllowed:true,previousId:' asset-01 ',formId:'asset-01'});
+  assert.equal(paddedIdUpdate.db.maintenance[0].name,'Test asset',
+    'editing must preserve valid string equipment IDs even when a legacy ID contains surrounding whitespace');
   const successful=await runSave({editing:true,saveAllowed:true});
   assert.equal(successful.db.maintenance[0].name,'Test asset',
     'successful maintenance update must replace validated record data');
