@@ -78,7 +78,7 @@ function requiredExperimentText(entry, field, maxLength) {
   }
   const value = entry[field].trim();
   if (value.length > maxLength) throw new RangeError(`experiment ${field} exceeds ${maxLength} characters`);
-  if (/[\\x00-\\x1F\\x7F]/.test(value)) throw new TypeError(`experiment ${field} must not contain control characters`);
+  if ([...value].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) throw new TypeError(`experiment ${field} must not contain control characters`);
   return value;
 }
 export function createExperimentRecord(entry) {
@@ -86,12 +86,12 @@ export function createExperimentRecord(entry) {
     throw new TypeError("experiment record must be an object");
   }
   if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
-      /[\\x00-\\x1F\\x7F]/.test(entry.id)) {
+      [...entry.id].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
     throw new TypeError("experiment id is required and must not contain control characters");
   }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
       String(entry.assetId).trim() === "" || String(entry.assetId).length > 80 ||
-      /[\\x00-\\x1F\\x7F]/.test(String(entry.assetId))) {
+      [...String(entry.assetId)].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
     throw new TypeError("experiment asset reference is required and must be safe text");
   }
   const title = requiredExperimentText(entry, "title", 120);
@@ -151,7 +151,7 @@ export function validateExperimentRecord(entry) {
       throw new TypeError("experiment audit entries must use the immutable lifecycle schema");
     }
     if (typeof record.actor !== "string" || !record.actor.trim() ||
-        record.actor.trim().length > 120 || /[\\x00-\\x1F\\x7F]/.test(record.actor)) {
+        record.actor.trim().length > 120 || [...record.actor].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
       throw new TypeError("experiment audit actor is required, bounded and free of control characters");
     }
     const at = normalizeExperimentInstant(record.at, "audit timestamp");
