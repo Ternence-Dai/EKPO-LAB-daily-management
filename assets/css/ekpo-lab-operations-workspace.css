@@ -1,0 +1,10 @@
+/* EKPO LabOS — traceable laboratory operations workspace */
+body[data-workspace="ekpo"]{background:radial-gradient(ellipse at 85% 0%,rgba(39,131,154,.13),transparent 36rem),#f1f6f8;color:#173344}
+body[data-workspace="ekpo"] .sidebar{background:linear-gradient(180deg,#12394a,#0c2738);box-shadow:9px 0 30px rgba(13,54,69,.09)}
+body[data-workspace="ekpo"] .sidebar-header{padding:22px 18px;border-bottom:1px solid rgba(220,242,245,.13);font-weight:800;letter-spacing:.01em}
+body[data-workspace="ekpo"] .main-content{background:transparent;min-width:0}
+body[data-workspace="ekpo"] .topbar{min-height:68px;padding:12px clamp(16px,3vw,38px);background:rgba(249,253,253,.91);border-bottom:1px solid #dce9eb;backdrop-filter:blur(16px)}
+body[data-workspace="ekpo"] .card,body[data-workspace="ekpo"] .panel,body[data-workspace="ekpo"] .metric-card{border:1px solid #dce9eb;border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(20,67,77,.055)}
+body[data-workspace="ekpo"] .nav-item.active{background:rgba(34,168,167,.17);box-shadow:inset 3px 0 #3fc1b9}
+body[data-workspace="ekpo"] .main-content{padding-bottom:30px}
+@media(max-width:760px){body[data-workspace="ekpo"] .topbar{padding:10px 14px}}
