@@ -65,3 +65,19 @@
 - 下一阶段以稳定 ID 关联设备、气体批次、校准记录、备件库存、实验与测试日志；每次数量变化形成独立事件，余额可复算。
 - 实验/校准更正要保存版本及原因；尚未实现服务端用户认证前，不提供“签署”“已审核”“不可抵赖审计”字样。
 - 安全相关数据必须保留单位、批次、来源和日期；演示数据不得进入真实安全统计。
+
+
+## 8. 2026-10-19 源码级复核：SENAITE.CORE 样本/分析请求生命周期
+
+本次不只引用项目首页，实际读取了上游 `senaite/senaite.core` 的以下源码与测试（分支 `2.x`）：
+
+- [`src/senaite/core/content/samples.py`](https://github.com/senaite/senaite.core/blob/2.x/src/senaite/core/content/samples.py)：`Samples` 是导航层的容器/入口，明确不是样本记录本身；说明 SENAITE 将导航组织与真实业务实体分开。
+- [`src/senaite/core/tests/test_AnalysisRequest_retract.py`](https://github.com/senaite/senaite.core/blob/2.x/src/senaite/core/tests/test_AnalysisRequest_retract.py)：集成测试实际创建 Analysis Request，执行 `receive`，将样本状态推进到 `sample_received`；分析结果录入后执行 `submit` 到 `to_be_verified`，再执行 `retract` 到 `retracted`；最后对请求执行 `retract`，验证回到 `sample_received`。测试同时断言每次工作流转换后的状态，而不是只检查按钮或静态字段。
+- 上游项目将样本容器、分析请求和分析结果生命周期分层；不能把导航列表本身误当作样本数据模型。
+
+### 对 EKPO LabOS 的具体映射
+
+- 当前 EKPO 已为实验记录提供 `planned → in-progress → completed/cancelled` 有限状态转换，并在每次转换时追加 actor 与时间戳审计事件；校验器会重放整条事件链并拒绝跳步、倒序、伪造 actor 或状态与审计不一致。
+- 与 SENAITE 对比，当前 EKPO 的实验生命周期仍较轻量：没有独立的样本接收实体、分析请求/子分析结果、复核/撤回流程，也没有服务器端角色授权。因此不得把本地实验计划标注为已审核或受监管的 LIMS 样本。
+- 后续优先级：先为样本/实验对象建立稳定 ID 和独立样本接收记录；再引入分析任务与结果版本；最后设计复核、撤回及更正事件。任何撤回都应追加可追溯事件，不应覆盖或删除原始结果。
+- 本地浏览器审计仅用于操作追溯，不提供 SENAITE/Plone 服务端工作流的身份认证、角色权限、事务隔离或不可抵赖能力。
