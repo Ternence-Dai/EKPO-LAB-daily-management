@@ -6,6 +6,7 @@ const html = fs.readFileSync('index.html', 'utf8');
 const app = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const domain = fs.readFileSync('src/domain/index.js', 'utf8');
 const css = fs.readFileSync('assets/css/product-system.css', 'utf8');
+const workspaceCss = fs.readFileSync('assets/css/workspace-v5.css', 'utf8');
 const seed = fs.readFileSync('assets/js/demo-seed-data.js', 'utf8');
 
 assert.ok(html.includes('product-system.css?v=20261019-v8'),
@@ -34,7 +35,7 @@ assert.ok(seed.includes('experiments: []') &&
           seed.includes('No fabricated experiment plans or execution records are seeded'),
   'demo data must not invent experiment plans or run records');
 
-const renderStart = app.indexOf('function renderExperiments()');
+const renderStart = app.indexOf('async function renderExperiments()');
 const createStart = app.indexOf('async function createLabExperiment()', renderStart);
 const transitionStart = app.indexOf('async function transitionLabExperiment(id, nextStatus)', createStart);
 const bindStart = app.indexOf('function bindExperimentActions()', transitionStart);
@@ -49,6 +50,10 @@ const binding = app.slice(bindStart, yearlyStart);
 assert.ok(render.includes('record.audit.map') && render.includes('data-experiment-action') &&
           render.includes('record.owner') && render.includes('record.plannedDate') && render.includes('record.purpose'),
   'experiment table must display owners, planned dates, permitted actions and audit history');
+assert.ok(render.includes('domain.getExperimentEquipmentReadiness(') &&
+          render.includes('readiness.label') && render.includes('readiness.ready ?') &&
+          render.includes('disabled aria-disabled="true"'),
+  'experiment workspace must show each equipment calibration state and disable unsafe planned starts');
 assert.ok(create.includes('domain.createExperimentRecord') &&
           create.includes('DB.experiments.push(record)') &&
           create.includes('snapshotLabDB()') &&
@@ -62,19 +67,20 @@ assert.ok(transition.includes('domain.validateExperimentRecord(DB.experiments[in
           transition.includes('commitLabMutation('),
   'each lifecycle transition must validate and atomically persist its audit trail');
 assert.ok(domain.includes('export function getAssetCalibrationStatus(') &&
-          transition.includes('domain.getAssetCalibrationStatus(') &&
+          domain.includes('export function getExperimentEquipmentReadiness(') &&
+          transition.includes('domain.getExperimentEquipmentReadiness(') &&
           transition.includes("nextStatus === 'in-progress'") &&
-          transition.includes("calibrationStatus !== 'current'") &&
-          transition.indexOf('domain.getAssetCalibrationStatus(') < transition.indexOf('domain.transitionExperiment('),
-  'experiment start must be blocked unless the latest linked equipment calibration is current and passing');
-for (const status of ['not-recorded', 'future-dated']) {
-  assert.ok(transition.includes("'" + status + "'"),
-    'experiment start must explain the calibration readiness failure: ' + status);
+          transition.includes('!readiness.ready') &&
+          transition.indexOf('domain.getExperimentEquipmentReadiness(') < transition.indexOf('domain.transitionExperiment('),
+  'experiment start must be blocked unless the centralized equipment-readiness gate confirms a current passing calibration');
+for (const status of ['not-recorded', 'future-dated', 'failed', 'expired', 'ambiguous', 'not-registered']) {
+  assert.ok(domain.includes("'" + status + "'"),
+    'domain equipment-readiness gate must explain the calibration failure state: ' + status);
 }
-for (const status of ['failed', 'expired', 'ambiguous']) {
-  assert.ok(transition.includes(status + ':'),
-    'experiment start must explain the calibration readiness failure: ' + status);
-}
+assert.ok(workspaceCss.includes('.experiment-calibration-ready') &&
+          workspaceCss.includes('.experiment-calibration-blocked'),
+  'experiment table must visually distinguish equipment with current vs blocked calibration');
+
 assert.ok(transition.includes('experiment-action-actor') &&
           transition.includes('storageRecoveryRequired'),
   'state changes must identify the operator and respect recovery lock');
