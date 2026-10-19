@@ -308,3 +308,29 @@ test("rejects invalid or reversed equipment maintenance dates while allowing uns
  assert.equal(valid.last,"");
  assert.equal(valid.next,"");
 });
+
+
+test("classifies maintenance schedule dates against an explicit local calendar day",()=>{
+ const asOf=new Date("2026-10-19T12:00:00+08:00");
+ assert.deepEqual(getMaintenanceScheduleStatus("",asOf),{
+  status:"unscheduled",daysUntil:null,nextDate:""
+ });
+ assert.deepEqual(getMaintenanceScheduleStatus("2026-10-18",asOf),{
+  status:"overdue",daysUntil:-1,nextDate:"2026-10-18"
+ });
+ assert.deepEqual(getMaintenanceScheduleStatus("2026-10-19",asOf),{
+  status:"due-soon",daysUntil:0,nextDate:"2026-10-19"
+ });
+ assert.deepEqual(getMaintenanceScheduleStatus("2026-11-18",asOf),{
+  status:"due-soon",daysUntil:30,nextDate:"2026-11-18"
+ });
+ assert.deepEqual(getMaintenanceScheduleStatus("2026-11-19",asOf),{
+  status:"scheduled",daysUntil:31,nextDate:"2026-11-19"
+ });
+});
+test("rejects malformed maintenance dates and invalid schedule policy inputs",()=>{
+ assert.throws(()=>getMaintenanceScheduleStatus("2026-02-30",new Date("2026-10-19T00:00:00Z")),TypeError);
+ assert.throws(()=>getMaintenanceScheduleStatus("2026-10-20",new Date("invalid")),TypeError);
+ assert.throws(()=>getMaintenanceScheduleStatus("2026-10-20",new Date(),-1),RangeError);
+ assert.throws(()=>getMaintenanceScheduleStatus("2026-10-20",new Date(),3651),RangeError);
+});
