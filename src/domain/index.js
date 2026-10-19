@@ -409,6 +409,7 @@ export function validateTestDiaryEntry(entry) {
 
 const experimentCalibrationMessages = {
   "not-registered": "关联设备已不在设备台账中",
+  "asset-ambiguous": "设备台账存在重复资产编号，必须先完成主数据核对",
   "not-recorded": "设备尚无校准记录",
   failed: "设备最近一次校准不合格",
   expired: "设备校准已过期",
@@ -431,13 +432,21 @@ export function getExperimentEquipmentReadiness({
     throw new TypeError("experiment equipment readiness reference time must be valid");
   }
   const normalizedAssetId = String(assetId).trim();
-  const asset = equipment.find(item => item &&
+  const matchingAssets = equipment.filter(item => item &&
     (typeof item.id === "string" || Number.isSafeInteger(item.id)) &&
     String(item.id).trim() === normalizedAssetId);
-  if (!asset) {
+  if (!matchingAssets.length) {
     return Object.freeze({
       assetId: normalizedAssetId, assetExists: false, status: "not-registered",
       ready: false, label: "设备不在台账", message: experimentCalibrationMessages["not-registered"]
+    });
+  }
+  // Duplicate normalized IDs make the equipment-to-certificate relationship
+  // ambiguous. Never select the first matching master-data row and mark it ready.
+  if (matchingAssets.length > 1) {
+    return Object.freeze({
+      assetId: normalizedAssetId, assetExists: true, status: "asset-ambiguous",
+      ready: false, label: "设备编号冲突", message: experimentCalibrationMessages["asset-ambiguous"]
     });
   }
   const calibrationStatus = getAssetCalibrationStatus(calibrationRecords, normalizedAssetId, at);
