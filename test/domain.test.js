@@ -260,9 +260,9 @@ test("maintenance asset text is bounded and rejects control-character injection"
   {name:"N".repeat(121)},{freq:"F".repeat(81)},
   {category:"C".repeat(81)},{location:"L".repeat(121)},
   {responsible:"R".repeat(121)},{record:"D".repeat(2001)},
-  {name:"Bench\\nforged"},{freq:"Quarter\\u0000ly"},
-  {category:"Equipment\\nforged"},{location:"Lab\\u0000A"},
-  {responsible:"Operator\\nforged"},{record:"note\\u0000forged"}
+  {name:"Bench\nforged"},{freq:"Quarter\u0000ly"},
+  {category:"Equipment\nforged"},{location:"Lab\u0000A"},
+  {responsible:"Operator\nforged"},{record:"note\u0000forged"}
  ]) assert.throws(()=>validateMaintenanceAsset({...base,...patch}));
 });
 test("rejects incomplete or impossible maintenance asset quantities and cycles",()=>{
