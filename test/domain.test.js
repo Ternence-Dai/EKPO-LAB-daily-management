@@ -178,6 +178,11 @@ test("equipment calibration readiness blocks missing failed expired future and a
  assert.equal(getAssetCalibrationStatus([
   record(6,"2026-10-01T00:00:00Z"),record(7,"2026-09-01T00:00:00Z")
  ],7,at),"current");
+ const paddedAssetRecord={...record(8,"2026-10-01T00:00:00Z"),assetId:" 7 "};
+ assert.equal(getAssetCalibrationStatus([paddedAssetRecord],7,at),"current",
+  "calibration lookup must use the same trimmed asset identity as record normalization");
+ assert.equal(getAssetCalibrationStatus([paddedAssetRecord]," 7 ",at),"current",
+  "asset lookup input must be canonicalized consistently with stored calibration records");
  assert.throws(()=>getAssetCalibrationStatus({},7,at),TypeError);
  assert.throws(()=>getAssetCalibrationStatus([],7,new Date("invalid")),TypeError);
 });
