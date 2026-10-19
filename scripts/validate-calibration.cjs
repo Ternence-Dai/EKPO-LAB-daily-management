@@ -92,6 +92,9 @@ for (const token of [
   'equipment register must distinguish calibration state: ' + token);
 assert.ok(maintenanceSource.includes("String(record.calibratedAt) > String(current.calibratedAt)"),
   'equipment register must use the newest calibration record for each asset');
+assert.ok(maintenanceSource.includes('const key = String(record.assetId).trim()') &&
+          maintenanceSource.includes('latestCalibrationByAsset.get(String(m.id).trim())'),
+  'equipment register calibration labels must use the same trimmed asset identity as the domain readiness gate');
 
 
 assert.ok(app.includes("if (!Array.isArray(DB.calibrationLogs)) DB.calibrationLogs = []"),
