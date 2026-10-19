@@ -78,18 +78,21 @@ function requiredExperimentText(entry, field, maxLength) {
   }
   const value = entry[field].trim();
   if (value.length > maxLength) throw new RangeError(`experiment ${field} exceeds ${maxLength} characters`);
+  if (/[\\x00-\\x1F\\x7F]/.test(value)) throw new TypeError(`experiment ${field} must not contain control characters`);
   return value;
 }
 export function createExperimentRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("experiment record must be an object");
   }
-  if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80) {
-    throw new TypeError("experiment id is required");
+  if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
+      /[\\x00-\\x1F\\x7F]/.test(entry.id)) {
+    throw new TypeError("experiment id is required and must not contain control characters");
   }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
-      String(entry.assetId).trim() === "") {
-    throw new TypeError("experiment asset reference is required");
+      String(entry.assetId).trim() === "" || String(entry.assetId).length > 80 ||
+      /[\\x00-\\x1F\\x7F]/.test(String(entry.assetId))) {
+    throw new TypeError("experiment asset reference is required and must be safe text");
   }
   const title = requiredExperimentText(entry, "title", 120);
   const owner = requiredExperimentText(entry, "owner", 120);
@@ -117,12 +120,14 @@ export function validateExperimentRecord(entry) {
   if (Object.keys(entry).some(field => !allowedFields.has(field))) {
     throw new TypeError("experiment record contains unsupported fields");
   }
-  if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80) {
-    throw new TypeError("experiment id is required");
+  if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
+      /[\\x00-\\x1F\\x7F]/.test(entry.id)) {
+    throw new TypeError("experiment id is required and must not contain control characters");
   }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
-      String(entry.assetId).trim() === "") {
-    throw new TypeError("experiment asset reference is required");
+      String(entry.assetId).trim() === "" || String(entry.assetId).length > 80 ||
+      /[\\x00-\\x1F\\x7F]/.test(String(entry.assetId))) {
+    throw new TypeError("experiment asset reference is required and must be safe text");
   }
   const title = requiredExperimentText(entry, "title", 120);
   const owner = requiredExperimentText(entry, "owner", 120);
@@ -145,8 +150,9 @@ export function validateExperimentRecord(entry) {
         auditFields.some(field => typeof record[field] !== "string")) {
       throw new TypeError("experiment audit entries must use the immutable lifecycle schema");
     }
-    if (typeof record.actor !== "string" || !record.actor.trim()) {
-      throw new TypeError("experiment audit actor is required");
+    if (typeof record.actor !== "string" || !record.actor.trim() ||
+        record.actor.trim().length > 120 || /[\\x00-\\x1F\\x7F]/.test(record.actor)) {
+      throw new TypeError("experiment audit actor is required, bounded and free of control characters");
     }
     const at = normalizeExperimentInstant(record.at, "audit timestamp");
     const timestamp = Date.parse(at);
