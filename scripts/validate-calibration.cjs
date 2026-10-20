@@ -233,3 +233,10 @@ assert.equal(sandbox.validateBackup({
   calibrationLogs: [validCalibration, { ...validCalibration, id: 102, assetId: '11' }]
 }), false,
   'backup validation must detect duplicate certificate references when equivalent equipment IDs use number and string forms');
+
+
+assert.equal(sandbox.validateBackup({
+  ...legacyBackup,
+  calibrationLogs: [validCalibration, { ...validCalibration, id: 102, assetId: ' 11 ' }]
+}), false,
+  'backup validation must normalize whitespace around equipment references before checking duplicate certificates');
