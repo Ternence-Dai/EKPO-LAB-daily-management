@@ -6,4 +6,4 @@
     "test": "node --test",
     "check": "node scripts/check-js-syntax.cjs && node scripts/validate-file-save-setup.cjs && node scripts/validate-backup-export.cjs"
   }
-}\n
+}
