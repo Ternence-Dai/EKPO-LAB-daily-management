@@ -27,7 +27,7 @@ export function getMaintenanceScheduleStatus(nextDate, asOf = new Date(), dueSoo
   next.setUTCFullYear(nextYear, nextMonth - 1, nextDay);
   next.setUTCHours(0, 0, 0, 0);
   const today = new Date(0);
-  today.setUTCFullYear(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  today.setUTCFullYear(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate());
   today.setUTCHours(0, 0, 0, 0);
   const daysUntil = Math.round((next.getTime() - today.getTime()) / 86400000);
   const status = daysUntil < 0 ? "overdue"
