@@ -400,3 +400,16 @@ test("experiment equipment readiness explains missing or invalid calibration bef
  assert.throws(()=>getExperimentEquipmentReadiness({assetId:" ",equipment,calibrationRecords:[],at}),TypeError);
  assert.throws(()=>getExperimentEquipmentReadiness({assetId:7,equipment:{},calibrationRecords:[],at}),TypeError);
 });
+
+
+test("rejects duplicate canonical calibration record IDs for one asset",()=>{
+ const record=(id,calibratedAt)=>createCalibrationRecord({
+  id,assetId:7,calibratedAt,validForDays:365,certificateNo:"CERT-"+String(id),
+  organization:"org",operator:"operator",result:"pass"
+ });
+ assert.throws(()=>getAssetCalibrationStatus([
+  record(9,"2026-09-01T00:00:00Z"),
+  record("9","2026-10-01T00:00:00Z")
+ ],7,new Date("2026-10-19T00:00:00Z")),
+ /calibration record ids must be unique for an asset/);
+});
