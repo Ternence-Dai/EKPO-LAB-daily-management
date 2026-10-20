@@ -14,14 +14,34 @@ assert.equal(identityContext.identity.sameLabId(' asset-01 ', 'asset-01'), true)
 assert.ok(!identityContext.identity.labInlineId('asset-01" onclick="alert(1)').includes('"'),
   'string equipment IDs must be safely encoded before they are embedded in inline HTML handlers');
 
-const start = html.indexOf('function isValidDateOnly');
-const end = html.indexOf('async function renderMaintenance', start);
-if (start < 0 || end < 0) throw new Error('Maintenance date helpers not found');
-const source = html.slice(start, end);
-const context = { sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);}, DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
+function extractFunction(source, name) {
+  const marker = 'function ' + name + '(';
+  assert.ok(source.indexOf(marker) >= 0, 'maintenance helper must exist: ' + name);
+  const start = source.indexOf(marker);
+  const open = source.indexOf('{', start);
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  for (let i = open; i < source.length; i++) {
+    const ch = source[i];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
+    if (ch === '{') depth++;
+    if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
+  }
+  throw new Error('unterminated function: ' + name);
+}
+const helperNames = ['isValidDateOnly','isOverdueDateOnly','maintenanceIntervalMonths','addCalendarMonths','syncMaintenanceSchedule'];
+const helperSource = helperNames.map(name => extractFunction(html, name)).join('\n');
+const context = { sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);}, getToday:()=> '2026-10-17', DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
   {id:1,eqId:1,date:'2026-01-31'},{id:2,eqId:1,date:'2026-04-30'}
 ]}};
-vm.runInNewContext(source + '\nthis.testApi={isValidDateOnly,isOverdueDateOnly,maintenanceIntervalMonths,addCalendarMonths,syncMaintenanceSchedule};', context);
+vm.runInNewContext(helperSource + '\nthis.testApi={isValidDateOnly,isOverdueDateOnly,maintenanceIntervalMonths,addCalendarMonths,syncMaintenanceSchedule};', context);
 const api = context.testApi;
 assert.equal(api.isValidDateOnly('2026-02-28'), true);
 assert.equal(api.isValidDateOnly('2026-02-30'), false);
