@@ -226,3 +226,17 @@ assert.ok(productCss.includes('@media(max-width:900px)') &&
           productCss.includes('@media(max-width:520px)') &&
           productCss.includes('.product-workflow__item:hover'),
   'EKPO V4 must include responsive operations workflows and interactive states');
+
+
+assert.equal(sandbox.validateBackup({
+  ...legacyBackup,
+  calibrationLogs: [validCalibration, { ...validCalibration, id: 102, assetId: '11' }]
+}), false,
+  'backup validation must detect duplicate certificate references when equivalent equipment IDs use number and string forms');
+
+
+assert.equal(sandbox.validateBackup({
+  ...legacyBackup,
+  calibrationLogs: [validCalibration, { ...validCalibration, id: 102, assetId: ' 11 ' }]
+}), false,
+  'backup validation must normalize whitespace around equipment references before checking duplicate certificates');

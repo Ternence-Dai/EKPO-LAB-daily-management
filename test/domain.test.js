@@ -120,6 +120,16 @@ test("checks calibration expiry against an explicit date",()=>{
  assert.equal(isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:30},new Date("2026-01-15T00:00:00Z")),true);
  assert.equal(isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:30},new Date("2026-02-15T00:00:00Z")),false);
 });
+test("future-dated calibration is not current before its calibration instant",()=>{
+ assert.equal(isCalibrationCurrent(
+  {calibratedAt:"2026-10-21T00:00:00Z",validForDays:365},
+  new Date("2026-10-20T23:59:59Z")
+ ),false);
+ assert.equal(isCalibrationCurrent(
+  {calibratedAt:"2026-10-21T00:00:00Z",validForDays:365},
+  new Date("2026-10-21T00:00:00Z")
+ ),true);
+});
 test("rejects timestamp numbers and invalid comparison dates",()=>{
  assert.throws(()=>isCalibrationCurrent({calibratedAt:1767225600000,validForDays:30}),TypeError);
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:30},new Date("invalid")),TypeError);
@@ -208,6 +218,9 @@ test("creates immutable, traceable equipment calibration records",()=>{
 test("rejects untraceable or invalid calibration records",()=>{
  const base={id:1001,assetId:2,calibratedAt:"2026-01-01T00:00:00Z",validForDays:365,certificateNo:"CERT-1",organization:"Lab",operator:"A",result:"pass"};
  assert.throws(()=>createCalibrationRecord({...base,assetId:" "}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,id:"CERT"+String.fromCharCode(10)+"INJECT"}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,assetId:"ASSET"+String.fromCharCode(0)+"-7"}),TypeError);
+ assert.throws(()=>createCalibrationRecord({...base,assetId:"A".repeat(81)}),TypeError);
  assert.throws(()=>createCalibrationRecord({...base,certificateNo:" "}),TypeError);
  assert.throws(()=>createCalibrationRecord({...base,organization:" "}),TypeError);
  assert.throws(()=>createCalibrationRecord({...base,operator:" "}),TypeError);
@@ -386,4 +399,63 @@ test("experiment equipment readiness explains missing or invalid calibration bef
  assert.equal(absent.status,"not-registered");
  assert.throws(()=>getExperimentEquipmentReadiness({assetId:" ",equipment,calibrationRecords:[],at}),TypeError);
  assert.throws(()=>getExperimentEquipmentReadiness({assetId:7,equipment:{},calibrationRecords:[],at}),TypeError);
+});
+
+
+test("rejects duplicate canonical calibration record IDs for one asset",()=>{
+ const record=(id,calibratedAt)=>createCalibrationRecord({
+  id,assetId:7,calibratedAt,validForDays:365,certificateNo:"CERT-"+String(id),
+  organization:"org",operator:"operator",result:"pass"
+ });
+ assert.throws(()=>getAssetCalibrationStatus([
+  record(9,"2026-09-01T00:00:00Z"),
+  record("9","2026-10-01T00:00:00Z")
+ ],7,new Date("2026-10-19T00:00:00Z")),
+ /calibration record ids must be unique for an asset/);
+});
+
+test("rejects unsupported test diary fields instead of carrying unvalidated workflow flags",()=>{
+ const base={start:"2026-10-17",end:"2026-10-18",duration:2,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry({...base,approved:true}),/unsupported fields/);
+ assert.throws(()=>validateTestDiaryEntry({...base,role:"administrator"}),/unsupported fields/);
+ const valid=validateTestDiaryEntry(base);
+ assert.equal(Object.hasOwn(valid,"approved"),false);
+ assert.equal(Object.hasOwn(valid,"role"),false);
+});
+
+
+test("future calibration dates are not treated as current",()=>{
+ assert.equal(isCalibrationCurrent({calibratedAt:"2026-12-01T00:00:00Z",validForDays:30},new Date("2026-10-20T00:00:00Z")),false);
+});
+
+
+test("maintenance schedule uses UTC calendar day independent of local Date getters",()=>{
+ const asOf=new Date("2026-10-20T00:30:00Z");
+ asOf.getFullYear=()=>2026; asOf.getMonth=()=>9; asOf.getDate=()=>19;
+ assert.deepEqual(getMaintenanceScheduleStatus("2026-10-20",asOf),{status:"due-soon",daysUntil:0,nextDate:"2026-10-20"});
+});
+
+test("maintenance asset rejects unvalidated lifecycle and authorization fields",()=>{
+ const asset={name:"Pump",qty:1,cycle:"一级保养",freq:"monthly"};
+ assert.throws(()=>validateMaintenanceAsset({...asset,status:"approved"}),/unsupported fields/);
+ assert.throws(()=>validateMaintenanceAsset({...asset,role:"administrator"}),/unsupported fields/);
+ assert.equal(validateMaintenanceAsset(asset).name,"Pump");
+});
+
+
+test("experiment creation rejects unsupported fields rather than silently dropping workflow data",()=>{
+ const input={id:"EXP-STRICT",title:"Strict input",assetId:2,plannedDate:"2026-10-20",owner:"Operator",purpose:"Validate strict creation contract",actor:"operator-1",createdAt:"2026-10-20T01:00:00Z",status:"completed"};
+ assert.throws(()=>createExperimentRecord(input),/unsupported creation fields/);
+});
+
+
+test("experiment creation does not replace explicitly empty timestamps with the current time",()=>{
+ const base={id:"EXP-TIME-STRICT",title:"Timestamp validation",assetId:2,plannedDate:"2026-10-20",owner:"Operator",purpose:"Check explicit timestamp handling",actor:"operator-1"};
+ assert.throws(()=>createExperimentRecord({...base,createdAt:""}),TypeError);
+ assert.throws(()=>createExperimentRecord({...base,createdAt:null}),TypeError);
+});
+
+
+test("bounds calibration history before normalizing individual certificates",()=>{
+ assert.throws(()=>getAssetCalibrationStatus(new Array(50001),"ASSET-1"),/50000-record validation limit/);
 });

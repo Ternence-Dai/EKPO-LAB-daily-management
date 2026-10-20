@@ -27,7 +27,7 @@ export function getMaintenanceScheduleStatus(nextDate, asOf = new Date(), dueSoo
   next.setUTCFullYear(nextYear, nextMonth - 1, nextDay);
   next.setUTCHours(0, 0, 0, 0);
   const today = new Date(0);
-  today.setUTCFullYear(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  today.setUTCFullYear(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate());
   today.setUTCHours(0, 0, 0, 0);
   const daysUntil = Math.round((next.getTime() - today.getTime()) / 86400000);
   const status = daysUntil < 0 ? "overdue"
@@ -38,6 +38,13 @@ export function getMaintenanceScheduleStatus(nextDate, asOf = new Date(), dueSoo
 export function validateMaintenanceAsset(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("maintenance asset must be an object");
+  }
+  const allowedFields = new Set([
+    "name", "category", "location", "qty", "cycle", "freq",
+    "last", "next", "responsible", "record"
+  ]);
+  if (Object.keys(entry).some(field => !allowedFields.has(field))) {
+    throw new TypeError("maintenance asset contains unsupported fields");
   }
   const textField = (field, maxLength, required = false) => {
     if (entry[field] === undefined || entry[field] === null) {
@@ -109,6 +116,8 @@ export function createExperimentRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("experiment record must be an object");
   }
+  const allowedFields = new Set(["id","title","assetId","plannedDate","owner","purpose","actor","createdAt"]);
+  if (Object.keys(entry).some(field => !allowedFields.has(field))) throw new TypeError("experiment record contains unsupported creation fields");
   if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
       [...entry.id].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
     throw new TypeError("experiment id is required and must not contain control characters");
@@ -123,7 +132,8 @@ export function createExperimentRecord(entry) {
   const purpose = requiredExperimentText(entry, "purpose", 2000);
   const actor = requiredExperimentText(entry, "actor", 120);
   const plannedDate = parseExperimentDate(entry.plannedDate);
-  const createdAt = normalizeExperimentInstant(entry.createdAt || new Date().toISOString(), "createdAt");
+  const createdAtInput = entry.createdAt === undefined ? new Date().toISOString() : entry.createdAt;
+  const createdAt = normalizeExperimentInstant(createdAtInput, "createdAt");
   return Object.freeze({
     id: entry.id.trim(),
     title,
@@ -257,10 +267,13 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
   if (!(at instanceof Date) || !Number.isFinite(at.getTime())) throw new TypeError("at must be a valid Date");
   const expiry = calibratedTimestamp + validForDays * 86400000;
   if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) throw new RangeError("calibration expiry is outside the supported date range");
-  return at.getTime() <= expiry;
+  // A future-dated certificate is not evidence that calibration has already
+  // occurred; keep the primitive predicate consistent with readiness checks.
+  return calibratedTimestamp <= at.getTime() && at.getTime() <= expiry;
 }
 export function getAssetCalibrationStatus(records, assetId, at = new Date()) {
   if (!Array.isArray(records)) throw new TypeError("calibration records must be an array");
+  if (records.length > 50000) throw new RangeError("calibration history exceeds the 50000-record validation limit");
   if (!(typeof assetId === "string" || Number.isSafeInteger(assetId)) || String(assetId).trim() === "") {
     throw new TypeError("assetId is required");
   }
@@ -268,12 +281,18 @@ export function getAssetCalibrationStatus(records, assetId, at = new Date()) {
     throw new TypeError("at must be a valid Date");
   }
   const normalizedAssetId = String(assetId).trim();
+  const calibrationIds = new Set();
   const matching = records
-    // Match against the same canonical asset reference returned by
-    // createCalibrationRecord; legacy/imported whitespace must not hide a
-    // valid calibration from the equipment-readiness gate.
     .filter(record => record && String(record.assetId).trim() === normalizedAssetId)
-    .map(record => createCalibrationRecord(record))
+    .map(record => {
+      const normalized = createCalibrationRecord(record);
+      const identity = String(normalized.id);
+      if (calibrationIds.has(identity)) {
+        throw new RangeError("calibration record ids must be unique for an asset");
+      }
+      calibrationIds.add(identity);
+      return normalized;
+    })
     .sort((a, b) => Date.parse(b.calibratedAt) - Date.parse(a.calibratedAt));
   if (!matching.length) return "not-recorded";
   const latest = matching[0];
@@ -294,12 +313,16 @@ export function createCalibrationRecord(entry) {
   if (!((typeof id === "string" && id.trim()) || Number.isSafeInteger(id))) {
     throw new TypeError("calibration record id is required");
   }
+  if (typeof id === "string" && (!id.trim() || /[\x00-\x1F\x7F]/.test(id))) {
+    throw new TypeError("calibration record id must be non-empty and free of control characters");
+  }
   if (typeof id === "string" && id.trim().length > 80) {
     throw new RangeError("calibration record id must not exceed 80 characters");
   }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
-      String(entry.assetId).trim() === "") {
-    throw new TypeError("calibration asset reference is required");
+      String(entry.assetId).trim() === "" || String(entry.assetId).trim().length > 80 ||
+      /[\x00-\x1F\x7F]/.test(String(entry.assetId))) {
+    throw new TypeError("calibration asset reference must be non-empty, bounded and free of control characters");
   }
   const calibratedTimestamp = parseCalibrationInstant(entry.calibratedAt);
   const normalizedDate = new Date(calibratedTimestamp);
@@ -370,6 +393,13 @@ function normalizeDiaryDate(value, label) {
 }
 export function validateTestDiaryEntry(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError("test diary entry is required");
+  const allowedFields = new Set([
+    "start", "end", "duration", "unit", "operator",
+    "sap", "result", "cycle", "error", "errorDesc"
+  ]);
+  if (Object.keys(entry).some(field => !allowedFields.has(field))) {
+    throw new TypeError("test diary entry contains unsupported fields");
+  }
   const { start, end, duration, unit, operator } = entry;
   const normalizedStart = normalizeDiaryDate(start, "start time");
   const normalizedEnd = normalizeDiaryDate(end, "end time");
@@ -393,9 +423,9 @@ export function validateTestDiaryEntry(entry) {
     return normalized;
   };
   return Object.freeze({
-    ...entry,
     start:normalizedStart,
     end:normalizedEnd,
+    duration,
     unit:requiredText(unit, "unit", 120),
     operator:requiredText(operator, "operator", 120),
     sap:optionalText(entry.sap, "air-tightness result", 120),
