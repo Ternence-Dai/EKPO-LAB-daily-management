@@ -79,10 +79,12 @@
                 localSaved = true;
             } catch (storageError) {
                 storageWarning = true;
-                console.error('浏览器缓存保存失败；请立即导出 JSON 备份。', storageError);
-                showToast('浏览器缓存不可用，修改尚未可靠保存；请立即导出备份。', 'error');
+                storageRecoveryRequired = true;
+                console.error('浏览器缓存保存失败；已锁定后续写入，防止内存与持久化副本分叉。', storageError);
+                showToast('浏览器缓存不可用，已暂停写入并撤销本次修改；请先导出可用备份或恢复存储。', 'error');
                 const status = document.getElementById('saveText');
-                if (status) status.innerText = '浏览器缓存保存失败 · 请导出备份';
+                if (status) status.innerText = '浏览器缓存保存失败 · 自动保存已锁定';
+                return false;
             }
             if (fileHandle) {
                 try {
