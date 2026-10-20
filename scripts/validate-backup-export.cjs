@@ -57,7 +57,7 @@ assert.equal(demo.revoked, 1, 'temporary download URL must be revoked');
 const userData = runExport({ provenance: undefined });
 assert.match(userData.downloads[0], /^来源未核验_数据迁移副本_2026-10-20\.json$/,
   'legacy data without provenance must remain exportable but must not be labeled a verified backup');
-assert.match(userData.toasts[0], /来源未核验.*不能证明记录属于真实业务数据/,
+assert.match(userData.toasts[0], /来源未核验.*不能替代独立业务核验/,
   'legacy data export must disclose that structural validation does not verify business provenance');
 
 const forgedVerified = runExport({ provenance: 'verified-operational' });
