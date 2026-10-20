@@ -447,3 +447,10 @@ test("experiment creation rejects unsupported fields rather than silently droppi
  const input={id:"EXP-STRICT",title:"Strict input",assetId:2,plannedDate:"2026-10-20",owner:"Operator",purpose:"Validate strict creation contract",actor:"operator-1",createdAt:"2026-10-20T01:00:00Z",status:"completed"};
  assert.throws(()=>createExperimentRecord(input),/unsupported creation fields/);
 });
+
+
+test("experiment creation does not replace explicitly empty timestamps with the current time",()=>{
+ const base={id:"EXP-TIME-STRICT",title:"Timestamp validation",assetId:2,plannedDate:"2026-10-20",owner:"Operator",purpose:"Check explicit timestamp handling",actor:"operator-1"};
+ assert.throws(()=>createExperimentRecord({...base,createdAt:""}),TypeError);
+ assert.throws(()=>createExperimentRecord({...base,createdAt:null}),TypeError);
+});
