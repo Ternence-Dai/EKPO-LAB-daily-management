@@ -12,14 +12,16 @@ const masterEnd = html.indexOf('async function saveSpareLog()', masterStart);
 if (masterStart < 0 || masterEnd <= masterStart) throw new Error('saveSpare source not found');
 const masterSource = html.slice(masterStart, masterEnd);
 
-async function run(action, qty, stock, saveAllowed = true) {
-  const values = {'sl-part':'1','sl-action':action,'sl-qty':String(qty),'sl-date':'2026-10-17','sl-operator':'test','sl-note':''};
+async function run(action, qty, stock, saveAllowed = true, selectedPartId = '1', storedPartId = 1) {
+  const values = {'sl-part':String(selectedPartId),'sl-action':action,'sl-qty':String(qty),'sl-date':'2026-10-17','sl-operator':'test','sl-note':''};
   const messages = [];
   const document = {getElementById(id) {
     if (id === 'spare-log-view') return {classList:{contains:()=>true}};
     return {value:values[id] || ''};
   }};
-  const context = {document,DB:{spareParts:[{id:1,qty:stock}],spareLogs:[]},
+  const context = {document,DB:{spareParts:[{id:storedPartId,qty:stock}],spareLogs:[]},
+    sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);},
+    labIdKey:value=>typeof value==='string'?value.trim():Number.isSafeInteger(value)?String(value):'',
     isValidDateOnly:value=>/^\d{4}-\d{2}-\d{2}$/.test(value),
     showToast:message=>messages.push(message),saveToLocal:async()=>saveAllowed,closeModal:()=>{},
     renderSpareParts:()=>{},renderSpareLogs:()=>{},console:{error(){}}};
@@ -40,6 +42,8 @@ async function runMasterSave({id='1',qty=5,catalog='SKU-1',price=10,history=true
   };
   const messages=[];
   const context={
+    sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);},
+    labIdKey:value=>typeof value==='string'?value.trim():Number.isSafeInteger(value)?String(value):'',
     DB:{spareParts:[{id:1,category:'Test',desc:'Test part',catalog:'SKU-1',purpose:'Test',qty:5,brand:'Brand',price:10,location:'Shelf',update:'2026-10-17'},...otherParts],
         spareLogs:history?[{id:1,partId:1,date:'2026-10-17',action:'入库',qty:5}]:[]},
     document:{getElementById:key=>({value:values[key]??''})},
@@ -69,6 +73,11 @@ assert.equal(result.logs.length,0);
 result=await run('入库',2,5);
 assert.equal(result.stock,7,'valid inbound movement should increase stock');
 assert.equal(result.logs.length,1);
+result=await run('入库',2,5,true,'spare-asset-01',' spare-asset-01 ');
+assert.equal(result.stock,7,
+  'string-valued imported spare-part IDs must support stock receipts without numeric coercion');
+assert.equal(result.logs[0].partId,' spare-asset-01 ',
+  'a new stock movement must retain the exact original foreign-key value for traceability');
 result=await run('入库',2,5,false);
 assert.equal(result.stock,5,'failed persistence must roll inventory back to the original quantity');
 assert.equal(result.logs.length,0,'failed persistence must not leave an uncommitted stock ledger row');
@@ -97,6 +106,12 @@ assert.ok(master.messages.some(message=>message.includes('物料编码已存在'
 master=await runMasterSave({qty:5,price:12,saveAllowed:true});
 assert.equal(master.db.spareParts[0].price,12,
   'non-stock master fields may still be edited when movement history exists');
+master=await runMasterSave({id:' spare-asset-01 ',qty:5,catalog:'SKU-1',
+  otherParts:[],history:true,saveAllowed:true});
+assert.equal(master.db.spareParts[0].desc,'Test part',
+  'editing an imported string-ID spare master must resolve the original canonical ID');
+assert.equal(master.db.spareLogs[0].partId,1);
+
 
 console.log('Spare-part stock movement and persistence rollback checks passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

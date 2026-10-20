@@ -67,10 +67,20 @@ console.log('Imported-data HTML escaping regression checks passed.');
   sandbox.DB.spareLogs = [{id: 12, partId: 4, action: '入库', qty: 1}];
   await remove('spareParts', 4);
   assert.equal(sandbox.DB.spareParts.length, 1, 'spare parts with movement history must not be orphaned');
+  sandbox.DB.spareParts = [{id:' spare-string-1 ',qty:5}];
+  sandbox.DB.spareLogs = [{id:13,partId:'spare-string-1',action:'入库',qty:1}];
+  await remove('spareParts','spare-string-1');
+  assert.equal(sandbox.DB.spareParts.length,1,
+    'string-ID spare parts must retain their foreign-key protection during deletion');
   assert.ok(html.includes('${esc(m.name)}') && html.includes('${esc(p.desc)}'), 'imported option labels must be HTML escaped');
   assert.ok(html.includes('function isValidLabBackup(value)') &&
     html.includes("const required = ['gases', 'maintenance', 'spareParts', 'testDiary']") &&
     html.includes('if (!isValidLabBackup(imported))'),
     'imported tables must pass full structure and relationship validation before replacing live data');
-  console.log('Spare-parts ledger reversal and imported option escaping checks passed.');
+  assert.ok(html.includes('editSpare(${labInlineId(s.id)})') &&
+  html.includes('deleteItem(\'spareParts\', ${labInlineId(s.id)})') &&
+  html.includes('sameLabId(p.id, l.partId)') &&
+  html.includes('value="${esc(labIdKey(p.id))}"'),
+  'spare master actions, stock-movement selectors and ledger joins must support safe canonical string IDs');
+console.log('Spare-parts ledger reversal and imported option escaping checks passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

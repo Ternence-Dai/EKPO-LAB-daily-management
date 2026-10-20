@@ -761,7 +761,7 @@
                 tbody.innerHTML += `<tr>
                     <td>${esc(s.category||'')}</td><td><strong>${esc(s.desc||'')}</strong></td><td>${esc(s.catalog||'-')}</td><td>${esc(s.purpose||'')}</td><td>${esc(s.brand||'')}</td>
                     <td>${s.qty||0}</td><td>¥${(s.price||0).toLocaleString()}</td><td><strong>¥${totalPrice.toLocaleString()}</strong></td><td>${esc(s.location||'')}</td><td>${esc(s.update || '-')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editSpare(${Number(s.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('spareParts', ${Number(s.id)})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editSpare(${labInlineId(s.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('spareParts', ${labInlineId(s.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -790,16 +790,16 @@
         function renderSpareLogs() {
             let tbody = document.querySelector('#table-spare-logs tbody'); tbody.innerHTML = '';
             DB.spareLogs.sort((a,b) => (b.date||'').localeCompare(a.date||'')).forEach(l => {
-                let part = DB.spareParts.find(p => p.id === l.partId);
+                let part = DB.spareParts.find(p => sameLabId(p.id, l.partId));
                 let badge = l.action === '入库' ? '<span class="badge badge-success">入库</span>' : '<span class="badge badge-danger">出库</span>';
                 tbody.innerHTML += `<tr>
                     <td>${esc(l.date)}</td><td><strong>${esc(part ? part.desc : '未知备件')}</strong></td><td>${badge}</td><td>${esc(l.qty)}</td><td>${esc(l.operator||'')}</td><td>${esc(l.note||'')}</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="deleteItem('spareLogs', ${Number(l.id)})">删除</button></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteItem('spareLogs', ${labInlineId(l.id)})">删除</button></td>
                 </tr>`;
             });
         }
 
-        function editSpare(id) { let s = DB.spareParts.find(x => x.id === id); document.getElementById('s-id').value=s.id; document.getElementById('s-category').value=s.category||''; document.getElementById('s-desc').value=s.desc||''; document.getElementById('s-catalog').value=s.catalog||''; document.getElementById('s-purpose').value=s.purpose||''; document.getElementById('s-qty').value=s.qty||0; document.getElementById('s-brand').value=s.brand||''; document.getElementById('s-price').value=s.price||0; document.getElementById('s-location').value=s.location||''; document.getElementById('s-update').value=s.update||''; openModal('modal-spare'); }
+        function editSpare(id) { let s = DB.spareParts.find(x => sameLabId(x.id, id)); if(!s){showToast('备件记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('s-id').value=s.id; document.getElementById('s-category').value=s.category||''; document.getElementById('s-desc').value=s.desc||''; document.getElementById('s-catalog').value=s.catalog||''; document.getElementById('s-purpose').value=s.purpose||''; document.getElementById('s-qty').value=s.qty||0; document.getElementById('s-brand').value=s.brand||''; document.getElementById('s-price').value=s.price||0; document.getElementById('s-location').value=s.location||''; document.getElementById('s-update').value=s.update||''; openModal('modal-spare'); }
         async function saveSpare() {
             const id = document.getElementById('s-id').value;
             const update = document.getElementById('s-update').value || getToday();
@@ -821,17 +821,17 @@
             if (!isValidDateOnly(update)) { showToast('备件日期无效', 'error'); return; }
             const duplicateCatalog = DB.spareParts.find(item =>
                 String(item.catalog || '').trim().toLowerCase() === data.catalog.toLowerCase() &&
-                String(item.id) !== String(id));
+                !sameLabId(item.id, id));
             if (duplicateCatalog) {
                 showToast('物料编码已存在，请使用唯一编码', 'error');
                 return;
             }
             const previousDB = snapshotLabDB();
             if (id) {
-                const i = DB.spareParts.findIndex(x => String(x.id) === String(id));
+                const i = DB.spareParts.findIndex(x => sameLabId(x.id, id));
                 if (i < 0) { showToast('原备件记录已不存在，请刷新后重试', 'error'); return; }
                 const previous = DB.spareParts[i];
-                const hasHistory = DB.spareLogs.some(item => String(item.partId) === String(id));
+                const hasHistory = DB.spareLogs.some(item => sameLabId(item.partId, id));
                 if (hasHistory && Number(previous.qty) !== data.qty) {
                     showToast('该备件已有出入库流水，库存数量不可直接修改；请通过新增入库/出库流水调整', 'error');
                     return;
@@ -854,12 +854,12 @@
         }
 
         async function saveSpareLog() {
-            const partId = Number(document.getElementById('sl-part').value);
+            const partIdInput = document.getElementById('sl-part').value;
             const action = document.getElementById('sl-action').value;
             const qtyRaw = document.getElementById('sl-qty').value;
             const qty = qtyRaw === '' ? NaN : Number(qtyRaw);
             const date = document.getElementById('sl-date').value;
-            const part = DB.spareParts.find(p => p.id === partId);
+            const part = DB.spareParts.find(p => sameLabId(p.id, partIdInput));
             if (!part) { showToast('请选择有效的备件记录', 'error'); return; }
             if (!['入库', '出库'].includes(action)) { showToast('请选择有效的出入库类型', 'error'); return; }
             if (!Number.isFinite(qty) || qty <= 0) { showToast('出入库数量必须是大于 0 的有效数字', 'error'); return; }
@@ -871,7 +871,7 @@
             }
             const nextQty = action === '入库' ? currentQty + qty : currentQty - qty;
             if (!Number.isFinite(nextQty) || nextQty < 0) { showToast('出入库后库存无效', 'error'); return; }
-            const data = { partId, date, action, qty, operator: document.getElementById('sl-operator').value,
+            const data = { partId: part.id, date, action, qty, operator: document.getElementById('sl-operator').value,
                 note: document.getElementById('sl-note').value, id: Date.now() };
             if (DB.spareLogs.some(item => String(item.id) === String(data.id))) {
                 showToast('出入库流水编号冲突，请重试保存', 'error'); return;
@@ -1334,7 +1334,7 @@
             if (table === 'spareParts') openModal('modal-spare'); 
             if (table === 'spareLogs') {
                 let partSelect = document.getElementById('sl-part');
-                partSelect.innerHTML = DB.spareParts.map(p => `<option value="${Number(p.id)}">${esc(p.desc)}</option>`).join('');
+                partSelect.innerHTML = DB.spareParts.map(p => `<option value="${esc(labIdKey(p.id))}">${esc(p.desc)}</option>`).join('');
                 openModal('modal-spare-log');
             }
             if (table === 'testDiary') openModal('modal-testDiary'); 
@@ -1354,7 +1354,7 @@
             if (table === 'maintenance' && DB.experiments.some(item => sameLabId(item.assetId, id))) {
                 showToast('该设备仍被实验计划引用；当前没有安全归档/解除引用流程，不能删除设备台账', 'error'); return;
             }
-            if (table === 'spareParts' && DB.spareLogs.some(item => String(item.partId) === String(id))) {
+            if (table === 'spareParts' && DB.spareLogs.some(item => sameLabId(item.partId, id))) {
                 showToast('该备件仍有关联出入库流水，请先处理流水后再删除', 'error'); return;
             }
             if (table === 'spareLogs') {
