@@ -6,11 +6,10 @@ const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('ass
 const helperStart = html.indexOf('const esc = value =>');
 const helperEnd = html.indexOf('\n        // ==================== 1.', helperStart);
 if (helperStart < 0 || helperEnd < 0) throw new Error('HTML escaping helper not found');
-const helperSource = html.slice(helperStart, helperEnd)
-  .replace(/^const esc = /, '')
-  .trim()
-  .replace(/;\s*$/, '');
-const esc = vm.runInNewContext('(' + helperSource + ')');
+const helperSource = html.slice(helperStart, helperEnd);
+const escContext = vm.createContext({});
+vm.runInContext(helperSource + '\nthis.esc=esc;', escContext);
+const esc = escContext.esc;
 assert.equal(esc('<img src=x onerror=alert(1)>'), '&lt;img src=x onerror=alert(1)&gt;');
 assert.equal(esc('A&B "quoted"'), 'A&amp;B &quot;quoted&quot;');
 for (const token of [
