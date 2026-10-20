@@ -116,6 +116,8 @@ export function createExperimentRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("experiment record must be an object");
   }
+  const allowedFields = new Set(["id","title","assetId","plannedDate","owner","purpose","actor","createdAt"]);
+  if (Object.keys(entry).some(field => !allowedFields.has(field))) throw new TypeError("experiment record contains unsupported creation fields");
   if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
       [...entry.id].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
     throw new TypeError("experiment id is required and must not contain control characters");
