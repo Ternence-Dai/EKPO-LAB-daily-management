@@ -1356,6 +1356,9 @@
             if (table === 'maintenance' && DB.experiments.some(item => sameLabId(item.assetId, id))) {
                 showToast('该设备仍被实验计划引用；当前没有安全归档/解除引用流程，不能删除设备台账', 'error'); return;
             }
+            if (table === 'maintenance' && (DB.calibrationLogs || []).some(item => sameLabId(item.assetId, id))) {
+                showToast('该设备仍有关联校准证书与历史记录；当前没有安全归档/解除引用流程，不能删除设备台账', 'error'); return;
+            }
             if (table === 'spareParts' && DB.spareLogs.some(item => sameLabId(item.partId, id))) {
                 showToast('该备件仍有关联出入库流水，请先处理流水后再删除', 'error'); return;
             }
