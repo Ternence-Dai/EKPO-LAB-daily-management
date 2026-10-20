@@ -220,17 +220,33 @@
             }
             if (!window.showSaveFilePicker) { showToast('请使用Edge或Chrome浏览器', 'error'); return; }
             try {
-                fileHandle = await window.showSaveFilePicker({
+                // Do not advertise or retain a live file handle until the initial
+                // snapshot has been written and closed successfully.
+                const candidateHandle = await window.showSaveFilePicker({
                     suggestedName: `燃料电池实验室数据_${getToday()}.json`,
                     types: [{ description: 'JSON 数据文件', accept: { 'application/json': ['.json'] } }],
                 });
+                if (!candidateHandle || typeof candidateHandle.createWritable !== 'function') {
+                    throw new Error('未获得有效的本地文件写入句柄');
+                }
+                const writable = await candidateHandle.createWritable();
+                try {
+                    await writable.write(JSON.stringify(DB, null, 2));
+                    await writable.close();
+                } catch (writeError) {
+                    if (writable && typeof writable.abort === 'function') {
+                        try { await writable.abort(); }
+                        catch (abortError) { console.warn('初始文件写入失败后的临时文件回滚也失败。', abortError); }
+                    }
+                    throw writeError;
+                }
+                fileHandle = candidateHandle;
                 document.getElementById('saveDot').classList.add('active');
                 document.getElementById('saveText').innerText = '本地硬盘实时保存已开启！';
                 showToast('本地实时保存已开启！');
-                const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(DB, null, 2));
-                await writable.close();
-            } catch (err) { if (err.name !== 'AbortError') showToast('开启失败: ' + err.message, 'error'); }
+            } catch (err) {
+                if (err.name !== 'AbortError') showToast('开启失败: ' + err.message, 'error');
+            }
         }
 
         // ==================== 5. 仪表盘渲染 ====================
