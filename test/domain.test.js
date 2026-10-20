@@ -427,3 +427,10 @@ test("rejects unsupported test diary fields instead of carrying unvalidated work
 test("future calibration dates are not treated as current",()=>{
  assert.equal(isCalibrationCurrent({calibratedAt:"2026-12-01T00:00:00Z",validForDays:30},new Date("2026-10-20T00:00:00Z")),false);
 });
+
+
+test("maintenance schedule uses UTC calendar day independent of local Date getters",()=>{
+ const asOf=new Date("2026-10-20T00:30:00Z");
+ asOf.getFullYear=()=>2026; asOf.getMonth=()=>9; asOf.getDate=()=>19;
+ assert.deepEqual(getMaintenanceScheduleStatus("2026-10-20",asOf),{status:"due-soon",daysUntil:0,nextDate:"2026-10-20"});
+});
