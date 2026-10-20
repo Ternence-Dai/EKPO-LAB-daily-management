@@ -24,15 +24,16 @@ const start = html.indexOf('async function saveToLocal()');
 const end = html.indexOf('function getToday()', start);
 if (start < 0 || end < 0) throw new Error('saveToLocal source not found');
 const source = html.slice(start, end);
-async function run({locked=false,failWrites=false}={}) {
+async function run({locked=false,failWrites=false,withFile=false}={}) {
   let writes = 0;
+  let fileWrites = 0;
   const messages = [];
   const status = {innerText:''};
   const context = {
     storageRecoveryRequired:locked, storageWarning:locked,
     DB:{gases:[],maintenance:[],spareParts:[],testDiary:[]},
     localStorage:{setItem(){writes++;if(failWrites)throw new Error('quota exceeded');}},
-    fileHandle:null,
+    fileHandle:withFile ? {createWritable(){fileWrites++;return Promise.resolve({write:async()=>{},close:async()=>{}});}} : null,
     showToast:m=>messages.push(m),
     document:{getElementById:()=>status},
     console:{error(){}}
@@ -40,7 +41,7 @@ async function run({locked=false,failWrites=false}={}) {
   vm.createContext(context);
   vm.runInContext(source, context);
   const result = await context.saveToLocal();
-  return {writes,result,messages,status:status.innerText};
+  return {writes,fileWrites,result,messages,status:status.innerText,locked:context.storageRecoveryRequired};
 }
 (async()=>{
   let result=await run({locked:true});
@@ -56,7 +57,12 @@ async function run({locked=false,failWrites=false}={}) {
   assert.equal(result.result,false,'storage quota failure must be reported');
   assert.match(result.status,/保存失败/,'failed storage write must not be overwritten by a success status');
   assert.equal(result.messages.length,1,'failed storage write must show a backup warning');
-  console.log('Lab persistence recovery checks passed (locked, normal, quota failure).');
+  result=await run({failWrites:true,withFile:true});
+  assert.equal(result.result,false,'failed browser cache must not be treated as a successful file-only save');
+  assert.equal(result.fileWrites,0,'a bound file must not be written after browser cache persistence fails');
+  assert.equal(result.locked,true,'browser cache failure must activate the recovery lock');
+  assert.match(result.status,/自动保存已锁定/,'failed cache persistence must expose the recovery lock');
+  console.log('Lab persistence recovery checks passed (locked, normal, quota failure, bound-file divergence).');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
 assert.ok(html.includes('async function commitLabMutation('),
