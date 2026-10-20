@@ -296,7 +296,7 @@ export function createCalibrationRecord(entry) {
   if (!((typeof id === "string" && id.trim()) || Number.isSafeInteger(id))) {
     throw new TypeError("calibration record id is required");
   }
-  if (typeof id === "string" && (!id.trim() || /[\\x00-\\x1F\\x7F]/.test(id))) {
+  if (typeof id === "string" && (!id.trim() || /[\x00-\x1F\x7F]/.test(id))) {
     throw new TypeError("calibration record id must be non-empty and free of control characters");
   }
   if (typeof id === "string" && id.trim().length > 80) {
@@ -304,7 +304,7 @@ export function createCalibrationRecord(entry) {
   }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
       String(entry.assetId).trim() === "" || String(entry.assetId).trim().length > 80 ||
-      /[\\x00-\\x1F\\x7F]/.test(String(entry.assetId))) {
+      /[\x00-\x1F\x7F]/.test(String(entry.assetId))) {
     throw new TypeError("calibration asset reference must be non-empty, bounded and free of control characters");
   }
   const calibratedTimestamp = parseCalibrationInstant(entry.calibratedAt);
