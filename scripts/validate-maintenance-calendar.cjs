@@ -14,30 +14,23 @@ assert.equal(identityContext.identity.sameLabId(' asset-01 ', 'asset-01'), true)
 assert.ok(!identityContext.identity.labInlineId('asset-01" onclick="alert(1)').includes('"'),
   'string equipment IDs must be safely encoded before they are embedded in inline HTML handlers');
 
-function extractFunction(source, name) {
+function extractTopLevelFunction(source, name) {
   const marker = 'function ' + name + '(';
-  assert.ok(source.indexOf(marker) >= 0, 'maintenance helper must exist: ' + name);
   const start = source.indexOf(marker);
-  const open = source.indexOf('{', start);
-  let depth = 0;
-  let quote = null;
-  let escaped = false;
-  for (let i = open; i < source.length; i++) {
-    const ch = source[i];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === quote) quote = null;
-      continue;
-    }
-    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
-    if (ch === '{') depth++;
-    if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
-  }
-  throw new Error('unterminated function: ' + name);
+  assert.ok(start >= 0, 'maintenance helper must exist: ' + name);
+  const nextNames = [
+    'isValidDateOnly','isOverdueDateOnly','maintenanceIntervalMonths',
+    'addCalendarMonths','syncMaintenanceSchedule','renderMaintenance'
+  ].filter(candidate => candidate !== name);
+  const next = nextNames
+    .map(candidate => source.indexOf('function ' + candidate + '(', start + marker.length))
+    .filter(index => index >= 0)
+    .sort((a,b)=>a-b)[0];
+  assert.ok(next !== undefined, 'next maintenance function boundary must exist after ' + name);
+  return source.slice(start, next);
 }
 const helperNames = ['isValidDateOnly','isOverdueDateOnly','maintenanceIntervalMonths','addCalendarMonths','syncMaintenanceSchedule'];
-const helperSource = helperNames.map(name => extractFunction(html, name)).join('\n');
+const helperSource = helperNames.map(name => extractTopLevelFunction(html, name)).join('\n');
 const context = { sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);}, getToday:()=> '2026-10-17', DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
   {id:1,eqId:1,date:'2026-01-31'},{id:2,eqId:1,date:'2026-04-30'}
 ]}};
