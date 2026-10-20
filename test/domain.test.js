@@ -422,3 +422,8 @@ test("rejects unsupported test diary fields instead of carrying unvalidated work
  assert.equal(Object.hasOwn(valid,"approved"),false);
  assert.equal(Object.hasOwn(valid,"role"),false);
 });
+
+
+test("future calibration dates are not treated as current",()=>{
+ assert.equal(isCalibrationCurrent({calibratedAt:"2026-12-01T00:00:00Z",validForDays:30},new Date("2026-10-20T00:00:00Z")),false);
+});
