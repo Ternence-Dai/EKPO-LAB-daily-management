@@ -1462,26 +1462,19 @@
                 return;
             }
             const isDemoSeed = DB.dataProvenance === 'demo-seed';
-            const hasVerifiedProvenance = DB.dataProvenance === 'verified-operational';
             const dataStr = JSON.stringify(DB, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = (isDemoSeed
-                ? '演示样例_需核验_'
-                : hasVerifiedProvenance
-                    ? '燃料电池实验室数据备份_'
-                    : '来源未核验_数据迁移副本_') + getToday() + '.json';
+            a.download = (isDemoSeed ? '演示样例_需核验_' : '来源未核验_数据迁移副本_') + getToday() + '.json';
             document.body.appendChild(a);
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
             showToast(isDemoSeed
                 ? '已导出演示种子数据；其中示例记录未经业务核验，不可作为真实实验室备份。'
-                : hasVerifiedProvenance
-                    ? '数据已通过结构校验；业务来源标记为已核验，请按实验室备份策略妥善保管。'
-                    : '数据已通过结构校验并导出，但来源未核验；此文件仅为迁移副本，不能证明记录属于真实业务数据。');
+                : '数据已通过结构校验并导出，但来源未核验；文件内的来源字段不能替代独立业务核验，此文件仅为迁移副本。');
         }
 
         function exportAllToExcel() {
