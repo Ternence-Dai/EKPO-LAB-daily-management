@@ -4,14 +4,12 @@
 
 A traceable laboratory operations system for equipment, experiments, samples, reagents, calibration, maintenance, inventory, safety, and quality records.
 
-## Product modules
+## Current verified capabilities and planned modules
 
-- Equipment registry, append-only calibration certificates/results, calibration expiry status, and maintenance schedules
-- Experiment plans, runs, samples, and electronic lab records
-- Reagent and consumable inventory with lot/expiry tracking
-- SOPs, safety checks, incidents, and training records
-- Result capture, attachments, and review/approval workflow
-- Dashboards, exports, and complete audit history
+- **Verified:** equipment registry, append-only calibration metadata/results, calibration expiry status, maintenance schedules, experiment plans and lifecycle audit history
+- **Verified:** gas-use and spare-part inventory ledgers, validated stock movements, test-diary records, JSON backup/restore, and Excel exports
+- **Demonstration/reference data:** sample procurement, gas and laboratory readings are not verified operational records
+- **Planned, not yet implemented:** binary certificate/record attachments, durable attachment storage and integrity checks, sample/reagent lot workflows, SOP and safety workflows, authenticated review/approval, and complete multi-user audit controls
 
 ## Engineering principles
 
@@ -26,6 +24,8 @@ Track who/when/source for every critical record. Separate planned, measured, imp
 ## Delivery status
 
 The modernization work is being applied directly to `main`. The verified slice includes equipment maintenance scheduling, validated test-diary records, spare-part stock movement checks, append-only equipment calibration, and an experiment-planning lifecycle. Experiment plans must reference an in-register asset and include a real calendar date, owner, purpose, and self-reported recording actor. Allowed states are `planned → in-progress → completed` or cancellation from planned/in-progress; each event is appended to a frozen audit history and checked chronologically on load/import. Plan creation and state changes use persistence rollback; legacy backups without an experiment table migrate to an empty list, never fabricated runs. JSON backup/restore validates equipment references and audit chains, while Excel exports separate plan metadata from flattened audit events. The V3 interface adds a clear laboratory operations dashboard, refined cost/consumption charts and KPI cards, cleaner ledgers and calibration forms, grouped backup controls, and eight-route mobile navigation synchronized with the desktop sidebar. All sample procurement, gas and laboratory readings remain visibly identified as demo data. CI now includes domain-level lifecycle tests and application integration checks.
+
+The calibration form currently stores certificate identifiers and metadata only; it does not upload or retain the original certificate file. JSON backup/restore therefore preserves calibration metadata, not certificate binaries. Attachment storage must not be treated as delivered until file bytes, metadata, integrity checks, deletion/retention policy, and backup/restore consistency are implemented and tested.
 
 The experiment lifecycle UI is present: users can create plans, associate registered equipment, advance or cancel allowed states, and inspect the append-only actor/time audit history. Remaining delivery work includes attachment and certificate-file handling, authenticated role/access controls and approval workflows, broader end-to-end browser coverage, and verification against actual laboratory source records. The browser cache is not yet a durable multi-user LIMS backend; the current self-reported actor field is traceability metadata, not proof of authenticated identity.
 
