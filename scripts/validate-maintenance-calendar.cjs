@@ -7,7 +7,8 @@ const html = fs.readFileSync('index.html', 'utf8') + '\n' + app;
 assert.ok(html.includes('function labIdKey(value)') && html.includes('function sameLabId(a, b)') && html.includes('function labInlineId(value)'),
   'equipment and maintenance history must share safe canonical string/integer ID helpers');
 const identityStart = app.indexOf('function labIdKey(value)');
-const identityEnd = app.indexOf('function isValidDateOnly(value)', identityStart);
+const identityEnd = app.indexOf('// ==================== 1. 数据层', identityStart);
+assert.ok(identityStart >= 0 && identityEnd > identityStart, 'canonical equipment ID helper block must be bounded before app initialization');
 const identityContext = {esc:value=>String(value == null ? '' : value).replace(/[&<>"\']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))};
 vm.runInNewContext(app.slice(identityStart, identityEnd) + '\nthis.identity={labIdKey,sameLabId,labInlineId};', identityContext);
 assert.equal(identityContext.identity.labIdKey(' asset-01 '), 'asset-01');
