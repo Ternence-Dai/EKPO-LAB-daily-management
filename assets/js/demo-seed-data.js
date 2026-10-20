@@ -1,5 +1,6 @@
 /* Demonstration seed dataset; not a substitute for verified laboratory records. */
-const defaultData = {\n            dataProvenance: 'demo-seed',
+const defaultData = {
+            dataProvenance: 'demo-seed',
             gases: [
                 { id: 1, item: "Hydrogen", spec: "99.999%", supplier: "林德气体", batch: "H2-20260101", month: "2026-01", year: 2026, monthNum: 1, delivery: 182, return: 76, consumption: 106, cost: 9354.70, rent: 19827.58, freight: 3000 },
                 { id: 2, item: "Nitrogen", spec: "99.999%", supplier: "林德气体", batch: "N2-20260301", month: "2026-03", year: 2026, monthNum: 3, delivery: 48, return: 12, consumption: 36, cost: 2110.50, rent: 0, freight: 0 },
