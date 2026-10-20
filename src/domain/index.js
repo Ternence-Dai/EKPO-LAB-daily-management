@@ -257,7 +257,9 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
   if (!(at instanceof Date) || !Number.isFinite(at.getTime())) throw new TypeError("at must be a valid Date");
   const expiry = calibratedTimestamp + validForDays * 86400000;
   if (!Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15) throw new RangeError("calibration expiry is outside the supported date range");
-  return at.getTime() <= expiry;
+  // A future-dated certificate is not evidence that calibration has already
+  // occurred; keep the primitive predicate consistent with readiness checks.
+  return calibratedTimestamp <= at.getTime() && at.getTime() <= expiry;
 }
 export function getAssetCalibrationStatus(records, assetId, at = new Date()) {
   if (!Array.isArray(records)) throw new TypeError("calibration records must be an array");
