@@ -120,6 +120,16 @@ test("checks calibration expiry against an explicit date",()=>{
  assert.equal(isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:30},new Date("2026-01-15T00:00:00Z")),true);
  assert.equal(isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:30},new Date("2026-02-15T00:00:00Z")),false);
 });
+test("future-dated calibration is not current before its calibration instant",()=>{
+ assert.equal(isCalibrationCurrent(
+  {calibratedAt:"2026-10-21T00:00:00Z",validForDays:365},
+  new Date("2026-10-20T23:59:59Z")
+ ),false);
+ assert.equal(isCalibrationCurrent(
+  {calibratedAt:"2026-10-21T00:00:00Z",validForDays:365},
+  new Date("2026-10-21T00:00:00Z")
+ ),true);
+});
 test("rejects timestamp numbers and invalid comparison dates",()=>{
  assert.throws(()=>isCalibrationCurrent({calibratedAt:1767225600000,validForDays:30}),TypeError);
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00Z",validForDays:30},new Date("invalid")),TypeError);
