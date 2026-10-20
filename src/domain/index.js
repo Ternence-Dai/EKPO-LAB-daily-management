@@ -273,6 +273,7 @@ export function isCalibrationCurrent({ calibratedAt, validForDays }, at = new Da
 }
 export function getAssetCalibrationStatus(records, assetId, at = new Date()) {
   if (!Array.isArray(records)) throw new TypeError("calibration records must be an array");
+  if (records.length > 50000) throw new RangeError("calibration history exceeds the 50000-record validation limit");
   if (!(typeof assetId === "string" || Number.isSafeInteger(assetId)) || String(assetId).trim() === "") {
     throw new TypeError("assetId is required");
   }
