@@ -441,3 +441,9 @@ test("maintenance asset rejects unvalidated lifecycle and authorization fields",
  assert.throws(()=>validateMaintenanceAsset({...asset,role:"administrator"}),/unsupported fields/);
  assert.equal(validateMaintenanceAsset(asset).name,"Pump");
 });
+
+
+test("experiment creation rejects unsupported fields rather than silently dropping workflow data",()=>{
+ const input={id:"EXP-STRICT",title:"Strict input",assetId:2,plannedDate:"2026-10-20",owner:"Operator",purpose:"Validate strict creation contract",actor:"operator-1",createdAt:"2026-10-20T01:00:00Z",status:"completed"};
+ assert.throws(()=>createExperimentRecord(input),/unsupported creation fields/);
+});
