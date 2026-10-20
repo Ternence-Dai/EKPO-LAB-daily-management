@@ -88,6 +88,11 @@ assert.ok(html.includes('originalRaw') && html.includes('lab-browser-cache-recov
   'recovery-mode JSON export must contain original raw cache data, not demo fallback data');
 assert.ok(html.includes('function isValidLabBackup(value)'),
   'JSON restore must validate table rows and linked maintenance/spare ledgers');
+assert.ok(html.includes('storageRecoveryRequired = previousRecoveryRequired || storageRecoveryRequired;'),
+  'failed backup persistence must retain a newly raised recovery lock, not restore the previous unlocked state');
+assert.ok(html.includes('storageRecoveryRequired = true;') &&
+  html.includes('return false;'),
+  'browser cache write failure must stop before any bound-file-only success can be reported');
 assert.ok(html.includes('if (!await commitLabMutation(previousDB'),
   'JSON restore must report success only after persisted write succeeds');
 assert.ok(html.includes('原始缓存尚未恢复') && html.includes('阻止 Excel 导出'),
