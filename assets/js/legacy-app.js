@@ -1588,8 +1588,8 @@
                     if (!await commitLabMutation(previousDB, '备份写入失败；已恢复导入前的数据状态')) {
                         // A failed persistence commit must not unlock a cache
                         // that was already in recovery mode before this import.
-                        storageRecoveryRequired = previousRecoveryRequired;
-                        if (previousRecoveryRequired) storageWarning = true;
+                        storageRecoveryRequired = previousRecoveryRequired || storageRecoveryRequired;
+                        if (storageRecoveryRequired) storageWarning = true;
                         showToast('备份未完成恢复：浏览器存储仍不可用，原始缓存恢复保护已重新启用。', 'error');
                         return;
                     }
