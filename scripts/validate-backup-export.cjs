@@ -60,11 +60,11 @@ assert.match(userData.downloads[0], /^来源未核验_数据迁移副本_2026-10
 assert.match(userData.toasts[0], /来源未核验.*不能证明记录属于真实业务数据/,
   'legacy data export must disclose that structural validation does not verify business provenance');
 
-const verified = runExport({ provenance: 'verified-operational' });
-assert.match(verified.downloads[0], /^燃料电池实验室数据备份_2026-10-20\.json$/,
-  'explicitly verified operational data may use the normal backup filename');
-assert.match(verified.toasts[0], /业务来源标记为已核验/,
-  'verified operational provenance must be disclosed in the export confirmation');
+const forgedVerified = runExport({ provenance: 'verified-operational' });
+assert.match(forgedVerified.downloads[0], /^来源未核验_数据迁移副本_2026-10-20\.json$/,
+  'a self-asserted provenance field in an editable backup must not certify business data');
+assert.match(forgedVerified.toasts[0], /来源未核验.*不能替代独立业务核验/,
+  'export must disclose that source claims are not independently verified');
 
 const invalid = runExport({ provenance: undefined, invalid: true });
 assert.equal(invalid.clicks, 0, 'invalid database shape must not be exported as a backup');
