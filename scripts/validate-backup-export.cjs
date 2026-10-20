@@ -41,7 +41,7 @@ function runExport({ provenance, invalid = false, locked = false }) {
     }
   };
   vm.createContext(context);
-  vm.runInContext(source + '\nthis.exportNow = exportAllToJSON;', context);
+  vm.runInContext(dateSource + '\n' + validatorSource + '\n' + source + '\nthis.exportNow = exportAllToJSON;', context);
   context.exportNow();
   return events;
 }
