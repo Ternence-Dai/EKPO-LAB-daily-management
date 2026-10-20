@@ -443,6 +443,17 @@ test("maintenance asset rejects unvalidated lifecycle and authorization fields",
 });
 
 
+test("equipment readiness rejects oversized registers before scanning assets",()=>{
+ const oversized=new Array(50001);
+ Object.defineProperty(oversized,"0",{get(){throw new Error("equipment must not be traversed before size validation");}});
+ assert.throws(()=>getExperimentEquipmentReadiness({
+  assetId:"ASSET-1",equipment:oversized,calibrationRecords:[],at:new Date("2026-10-20T00:00:00Z")
+ }),/equipment register exceeds the 50000-record validation limit/);
+ assert.throws(()=>getExperimentEquipmentReadiness({
+  assetId:"ASSET-1",equipment:[],calibrationRecords:new Array(50001),at:new Date("2026-10-20T00:00:00Z")
+ }),/calibration records exceed the 50000-record validation limit/);
+});
+
 test("experiment creation rejects unsupported fields rather than silently dropping workflow data",()=>{
  const input={id:"EXP-STRICT",title:"Strict input",assetId:2,plannedDate:"2026-10-20",owner:"Operator",purpose:"Validate strict creation contract",actor:"operator-1",createdAt:"2026-10-20T01:00:00Z",status:"completed"};
  assert.throws(()=>createExperimentRecord(input),/unsupported creation fields/);

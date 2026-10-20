@@ -458,6 +458,8 @@ export function getExperimentEquipmentReadiness({
   }
   if (!Array.isArray(equipment)) throw new TypeError("experiment equipment register must be an array");
   if (!Array.isArray(calibrationRecords)) throw new TypeError("experiment calibration records must be an array");
+  if (equipment.length > 50000) throw new RangeError("experiment equipment register exceeds the 50000-record validation limit");
+  if (calibrationRecords.length > 50000) throw new RangeError("experiment calibration records exceed the 50000-record validation limit");
   if (!(at instanceof Date) || !Number.isFinite(at.getTime())) {
     throw new TypeError("experiment equipment readiness reference time must be valid");
   }
