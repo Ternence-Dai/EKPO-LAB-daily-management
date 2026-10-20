@@ -382,6 +382,13 @@ function normalizeDiaryDate(value, label) {
 }
 export function validateTestDiaryEntry(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError("test diary entry is required");
+  const allowedFields = new Set([
+    "start", "end", "duration", "unit", "operator",
+    "sap", "result", "cycle", "error", "errorDesc"
+  ]);
+  if (Object.keys(entry).some(field => !allowedFields.has(field))) {
+    throw new TypeError("test diary entry contains unsupported fields");
+  }
   const { start, end, duration, unit, operator } = entry;
   const normalizedStart = normalizeDiaryDate(start, "start time");
   const normalizedEnd = normalizeDiaryDate(end, "end time");
@@ -405,9 +412,9 @@ export function validateTestDiaryEntry(entry) {
     return normalized;
   };
   return Object.freeze({
-    ...entry,
     start:normalizedStart,
     end:normalizedEnd,
+    duration,
     unit:requiredText(unit, "unit", 120),
     operator:requiredText(operator, "operator", 120),
     sap:optionalText(entry.sap, "air-tightness result", 120),

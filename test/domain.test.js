@@ -413,3 +413,12 @@ test("rejects duplicate canonical calibration record IDs for one asset",()=>{
  ],7,new Date("2026-10-19T00:00:00Z")),
  /calibration record ids must be unique for an asset/);
 });
+
+test("rejects unsupported test diary fields instead of carrying unvalidated workflow flags",()=>{
+ const base={start:"2026-10-17",end:"2026-10-18",duration:2,unit:"Cell-A",operator:"operator-1"};
+ assert.throws(()=>validateTestDiaryEntry({...base,approved:true}),/unsupported fields/);
+ assert.throws(()=>validateTestDiaryEntry({...base,role:"administrator"}),/unsupported fields/);
+ const valid=validateTestDiaryEntry(base);
+ assert.equal(Object.hasOwn(valid,"approved"),false);
+ assert.equal(Object.hasOwn(valid,"role"),false);
+});
