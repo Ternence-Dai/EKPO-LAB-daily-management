@@ -50,7 +50,7 @@ async function runCase(picker) {
   assert.equal(successMetrics.writes[0], JSON.stringify(success.sandbox.DB, null, 2));
   assert.equal(successMetrics.closeCalls, 1, 'initial writable must close before activation');
   assert.ok(success.classes.has('active'), 'save indicator activates after successful close');
-  assert.equal(success.toasts.at(-1).type, 'success');
+  assert.match(success.toasts.at(-1).message, /本地实时保存已开启/);
 
   const failureMetrics = { abortCalls: 0, closeCalls: 0 };
   const failedHandle = {
