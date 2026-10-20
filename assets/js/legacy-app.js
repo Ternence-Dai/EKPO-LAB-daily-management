@@ -87,15 +87,21 @@
                 return false;
             }
             if (fileHandle) {
+                let writable = null;
                 try {
-                    const writable = await fileHandle.createWritable();
+                    writable = await fileHandle.createWritable();
                     await writable.write(JSON.stringify(DB, null, 2));
                     await writable.close();
+                    writable = null;
                     fileSaved = true;
                     document.getElementById('saveText').innerText = localSaved
                         ? '本地硬盘实时保存中...'
                         : '本地文件已保存 · 浏览器缓存仍失败';
                 } catch (err) {
+                    if (writable && typeof writable.abort === 'function') {
+                        try { await writable.abort(); }
+                        catch (abortError) { console.warn('文件自动保存失败后的写入回滚也失败。', abortError); }
+                    }
                     console.error(err);
                     document.getElementById('saveText').innerText = '写入本地文件失败';
                 }
