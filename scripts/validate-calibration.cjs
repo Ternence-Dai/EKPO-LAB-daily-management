@@ -118,6 +118,15 @@ assert.ok(app.includes("DB.calibrationLogs || []), \"设备校准记录\""),
   'Excel export must include the calibration history table');
 assert.ok(app.includes('DB.calibrationLogs.unshift(record)'),
   'calibration history must be append-only from the user interface');
+
+const deleteStart = app.indexOf('async function deleteItem(table, id)');
+const deleteEnd = app.indexOf('function exportAllToJSON()', deleteStart);
+assert.ok(deleteStart >= 0 && deleteEnd > deleteStart,
+  'shared delete handler must remain available');
+const deleteSource = app.slice(deleteStart, deleteEnd);
+assert.ok(deleteSource.includes("(DB.calibrationLogs || []).some(item => sameLabId(item.assetId, id))") &&
+          deleteSource.includes('不能删除设备台账'),
+  'equipment with calibration certificate history must not be deleted and orphan its calibration ledger');
 assert.ok(app.includes('storageRecoveryRequired') &&
   saveSource.includes('if (storageRecoveryRequired)'),
   'calibration saves must be blocked while source-cache recovery is required');
