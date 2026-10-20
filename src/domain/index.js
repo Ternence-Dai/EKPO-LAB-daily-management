@@ -132,7 +132,8 @@ export function createExperimentRecord(entry) {
   const purpose = requiredExperimentText(entry, "purpose", 2000);
   const actor = requiredExperimentText(entry, "actor", 120);
   const plannedDate = parseExperimentDate(entry.plannedDate);
-  const createdAt = normalizeExperimentInstant(entry.createdAt || new Date().toISOString(), "createdAt");
+  const createdAtInput = entry.createdAt === undefined ? new Date().toISOString() : entry.createdAt;
+  const createdAt = normalizeExperimentInstant(createdAtInput, "createdAt");
   return Object.freeze({
     id: entry.id.trim(),
     title,
