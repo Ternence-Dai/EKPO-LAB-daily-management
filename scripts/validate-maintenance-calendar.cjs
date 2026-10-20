@@ -2,13 +2,14 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
+const app = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8') + '\n' + app;
 assert.ok(html.includes('function labIdKey(value)') && html.includes('function sameLabId(a, b)') && html.includes('function labInlineId(value)'),
   'equipment and maintenance history must share safe canonical string/integer ID helpers');
-const identityStart = html.indexOf('function labIdKey(value)');
-const identityEnd = html.indexOf('function isValidDateOnly(value)', identityStart);
+const identityStart = app.indexOf('function labIdKey(value)');
+const identityEnd = app.indexOf('function isValidDateOnly(value)', identityStart);
 const identityContext = {esc:value=>String(value == null ? '' : value).replace(/[&<>"\']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))};
-vm.runInNewContext(html.slice(identityStart, identityEnd) + '\nthis.identity={labIdKey,sameLabId,labInlineId};', identityContext);
+vm.runInNewContext(app.slice(identityStart, identityEnd) + '\nthis.identity={labIdKey,sameLabId,labInlineId};', identityContext);
 assert.equal(identityContext.identity.labIdKey(' asset-01 '), 'asset-01');
 assert.equal(identityContext.identity.sameLabId(' asset-01 ', 'asset-01'), true);
 assert.ok(!identityContext.identity.labInlineId('asset-01" onclick="alert(1)').includes('"'),
@@ -30,7 +31,7 @@ function extractTopLevelFunction(source, name) {
   return source.slice(start, next);
 }
 const helperNames = ['isValidDateOnly','isOverdueDateOnly','maintenanceIntervalMonths','addCalendarMonths','syncMaintenanceSchedule'];
-const helperSource = helperNames.map(name => extractTopLevelFunction(html, name)).join('\n');
+const helperSource = helperNames.map(name => extractTopLevelFunction(app, name)).join('\n');
 const context = { sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);}, getToday:()=> '2026-10-17', DB:{maintenance:[{id:1,freq:'季度'}],maintLogs:[
   {id:1,eqId:1,date:'2026-01-31'},{id:2,eqId:1,date:'2026-04-30'}
 ]}};
