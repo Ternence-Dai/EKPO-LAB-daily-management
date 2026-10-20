@@ -39,6 +39,13 @@ export function validateMaintenanceAsset(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("maintenance asset must be an object");
   }
+  const allowedFields = new Set([
+    "name", "category", "location", "qty", "cycle", "freq",
+    "last", "next", "responsible", "record"
+  ]);
+  if (Object.keys(entry).some(field => !allowedFields.has(field))) {
+    throw new TypeError("maintenance asset contains unsupported fields");
+  }
   const textField = (field, maxLength, required = false) => {
     if (entry[field] === undefined || entry[field] === null) {
       if (required) throw new TypeError(`maintenance ${field} is required`);
