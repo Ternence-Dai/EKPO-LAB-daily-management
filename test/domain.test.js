@@ -470,3 +470,13 @@ test("experiment creation does not replace explicitly empty timestamps with the 
 test("bounds calibration history before normalizing individual certificates",()=>{
  assert.throws(()=>getAssetCalibrationStatus(new Array(50001),"ASSET-1"),/50000-record validation limit/);
 });
+
+
+test("rejects oversized experiment audit histories before scanning entries",()=>{
+ const oversized={
+  id:"EXP-LIMIT",title:"Audit bound",assetId:"2",plannedDate:"2026-10-20",
+  owner:"Operator",purpose:"Validate bounded audit import",status:"planned",
+  createdAt:"2026-10-18T01:00:00.000Z",audit:new Array(50001)
+ };
+ assert.throws(()=>validateExperimentRecord(oversized),RangeError);
+});
