@@ -20,12 +20,16 @@ function extractTopLevelFunction(source, name) {
   const marker = 'function ' + name + '(';
   const start = source.indexOf(marker);
   assert.ok(start >= 0, 'maintenance helper must exist: ' + name);
-  const nextNames = [
-    'isValidDateOnly','isOverdueDateOnly','maintenanceIntervalMonths',
-    'addCalendarMonths','syncMaintenanceSchedule','renderMaintenance'
-  ].filter(candidate => candidate !== name);
-  const next = nextNames
-    .map(candidate => source.indexOf('function ' + candidate + '(', start + marker.length))
+  const nextMarkers = name === 'syncMaintenanceSchedule'
+    ? ['async function renderMaintenance']
+    : [
+        'function isValidDateOnly','function isOverdueDateOnly',
+        'function maintenanceIntervalMonths','function addCalendarMonths',
+        'function syncMaintenanceSchedule','async function renderMaintenance'
+      ];
+  const next = nextMarkers
+    .filter(candidate => !candidate.endsWith(name))
+    .map(candidate => source.indexOf(candidate, start + marker.length))
     .filter(index => index >= 0)
     .sort((a,b)=>a-b)[0];
   assert.ok(next !== undefined, 'next maintenance function boundary must exist after ' + name);
