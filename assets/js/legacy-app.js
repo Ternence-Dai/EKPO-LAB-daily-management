@@ -713,7 +713,7 @@
                 return;
             }
             rows.forEach(record => {
-                const asset = DB.maintenance.find(item => String(item.id) === String(record.assetId));
+                const asset = DB.maintenance.find(item => sameLabId(item.id, record.assetId));
                 let status = record.result === 'fail' ? '校准不合格' :
                     domain.isCalibrationCurrent(record) ? '有效' : '已过期';
                 const badge = record.result === 'fail' ? 'badge-danger' :
@@ -737,7 +737,7 @@
                 return;
             }
             const assetId = String(document.getElementById('cal-asset').value || '').trim();
-            const asset = DB.maintenance.find(item => String(item.id) === assetId);
+            const asset = DB.maintenance.find(item => sameLabId(item.id, assetId));
             if (!asset) { showToast('请选择有效的在册设备', 'error'); return; }
             const validForDays = Number(document.getElementById('cal-valid-days').value);
             const certificateNo = document.getElementById('cal-certificate').value.trim();
@@ -750,7 +750,7 @@
                 calibratedAt = calibrationDateToIso(document.getElementById('cal-date').value);
                 const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
                 const duplicate = DB.calibrationLogs.some(row =>
-                    String(row.assetId) === assetId &&
+                    sameLabId(row.assetId, assetId) &&
                     row.certificateNo === certificateNo &&
                     row.organization === organization);
                 if (duplicate) {
@@ -1642,9 +1642,9 @@
             if (!storageRecoveryRequired && Array.isArray(DB.calibrationLogs) && DB.calibrationLogs.length) {
                 try {
                     const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
-                    const assetIds = new Set(DB.maintenance.map(asset => String(asset.id)));
+                    const assetIds = new Set(DB.maintenance.map(asset => labIdKey(asset.id)));
                     const validated = DB.calibrationLogs.map(row => domain.createCalibrationRecord(row));
-                    if (validated.some(row => !assetIds.has(String(row.assetId)))) {
+                    if (validated.some(row => !assetIds.has(labIdKey(row.assetId)))) {
                         throw new Error('校准记录引用了不存在的设备台账');
                     }
                     const certificateReferences = new Set();
