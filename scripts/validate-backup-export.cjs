@@ -83,7 +83,7 @@ const validatorContext = {
 };
 vm.createContext(validatorContext);
 vm.runInContext(dateSource + '\n' + validatorSource +
-  '\\nthis.validateBackup = isValidLabBackup;', validatorContext);
+  '\nthis.validateBackup = isValidLabBackup;', validatorContext);
 const normalizedForeignKey = validatorContext.validateBackup({
   gases: [],
   maintenance: [{ id: 7 }],
