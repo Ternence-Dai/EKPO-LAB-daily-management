@@ -454,3 +454,8 @@ test("experiment creation does not replace explicitly empty timestamps with the 
  assert.throws(()=>createExperimentRecord({...base,createdAt:""}),TypeError);
  assert.throws(()=>createExperimentRecord({...base,createdAt:null}),TypeError);
 });
+
+
+test("bounds calibration history before normalizing individual certificates",()=>{
+ assert.throws(()=>getAssetCalibrationStatus(new Array(50001),"ASSET-1"),/50000-record validation limit/);
+});
