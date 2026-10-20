@@ -55,13 +55,13 @@ assert.match(demo.toasts[0], /未经业务核验，不可作为真实实验室�
 assert.equal(demo.revoked, 1, 'temporary download URL must be revoked');
 
 const userData = runExport({ provenance: undefined });
-assert.match(userData.downloads[0], /^来源未核验_数据迁移副本_2026-10-20\\.json$/,
+assert.match(userData.downloads[0], /^来源未核验_数据迁移副本_2026-10-20\.json$/,
   'legacy data without provenance must remain exportable but must not be labeled a verified backup');
 assert.match(userData.toasts[0], /来源未核验.*不能证明记录属于真实业务数据/,
   'legacy data export must disclose that structural validation does not verify business provenance');
 
 const verified = runExport({ provenance: 'verified-operational' });
-assert.match(verified.downloads[0], /^燃料电池实验室数据备份_2026-10-20\\.json$/,
+assert.match(verified.downloads[0], /^燃料电池实验室数据备份_2026-10-20\.json$/,
   'explicitly verified operational data may use the normal backup filename');
 assert.match(verified.toasts[0], /业务来源标记为已核验/,
   'verified operational provenance must be disclosed in the export confirmation');
