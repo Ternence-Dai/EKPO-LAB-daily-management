@@ -34,9 +34,9 @@ async function run(action, qty, stock, saveAllowed = true, selectedPartId = '1',
   return {stock:context.DB.spareParts[0].qty,logs:context.DB.spareLogs,messages};
 }
 
-async function runMasterSave({id='1',qty=5,catalog='SKU-1',price=10,history=true,otherParts=[],saveAllowed=true}={}) {
+async function runMasterSave({id='1',storedPartId=1,desc='Test part',qty=5,catalog='SKU-1',price=10,history=true,otherParts=[],saveAllowed=true}={}) {
   const values = {
-    's-id':id,'s-update':'2026-10-18','s-category':'Test','s-desc':'Test part',
+    's-id':id,'s-update':'2026-10-18','s-category':'Test','s-desc':desc,
     's-catalog':catalog,'s-purpose':'Test','s-qty':String(qty),'s-brand':'Brand',
     's-price':String(price),'s-location':'Shelf'
   };
@@ -44,8 +44,8 @@ async function runMasterSave({id='1',qty=5,catalog='SKU-1',price=10,history=true
   const context={
     sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);},
     labIdKey:value=>typeof value==='string'?value.trim():Number.isSafeInteger(value)?String(value):'',
-    DB:{spareParts:[{id:1,category:'Test',desc:'Test part',catalog:'SKU-1',purpose:'Test',qty:5,brand:'Brand',price:10,location:'Shelf',update:'2026-10-17'},...otherParts],
-        spareLogs:history?[{id:1,partId:1,date:'2026-10-17',action:'入库',qty:5}]:[]},
+    DB:{spareParts:[{id:storedPartId,category:'Test',desc:'Test part',catalog:'SKU-1',purpose:'Test',qty:5,brand:'Brand',price:10,location:'Shelf',update:'2026-10-17'},...otherParts],
+        spareLogs:history?[{id:1,partId:storedPartId,date:'2026-10-17',action:'入库',qty:5}]:[]},
     document:{getElementById:key=>({value:values[key]??''})},
     getToday:()=> '2026-10-18',
     isValidDateOnly:value=>value === '2026-10-18' || value === '2026-10-17',
@@ -106,11 +106,14 @@ assert.ok(master.messages.some(message=>message.includes('物料编码已存在'
 master=await runMasterSave({qty:5,price:12,saveAllowed:true});
 assert.equal(master.db.spareParts[0].price,12,
   'non-stock master fields may still be edited when movement history exists');
-master=await runMasterSave({id:' spare-asset-01 ',qty:5,catalog:'SKU-1',
-  otherParts:[],history:true,saveAllowed:true});
-assert.equal(master.db.spareParts[0].desc,'Test part',
-  'editing an imported string-ID spare master must resolve the original canonical ID');
-assert.equal(master.db.spareLogs[0].partId,1);
+master=await runMasterSave({id:'spare-asset-01',storedPartId:' spare-asset-01 ',
+  desc:'Renamed spare part',qty:5,catalog:'SKU-1',history:true,saveAllowed:true});
+assert.equal(master.db.spareParts[0].desc,'Renamed spare part',
+  'editing an imported whitespace-padded string-ID spare master must resolve the canonical form ID');
+assert.equal(master.db.spareParts[0].id,' spare-asset-01 ',
+  'editing a spare master must preserve its original raw identifier');
+assert.equal(master.db.spareLogs[0].partId,' spare-asset-01 ',
+  'editing non-stock master fields must preserve the original ledger foreign key');
 
 
 console.log('Spare-part stock movement and persistence rollback checks passed.');
