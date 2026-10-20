@@ -1560,7 +1560,7 @@
                         utcYear >= 0 && utcYear <= 9999;
                 }
                 const expiry = timestamp + Number(row.validForDays) * 86400000;
-                return !maintenanceIds.has(String(row.assetId)) || !validTimestamp ||
+                return !maintenanceIds.has(labIdKey(row.assetId)) || !validTimestamp ||
                     !Number.isSafeInteger(row.validForDays) || row.validForDays < 1 ||
                     !Number.isFinite(expiry) || Math.abs(expiry) > 8.64e15 ||
                     typeof row.certificateNo !== 'string' || !row.certificateNo.trim() ||
