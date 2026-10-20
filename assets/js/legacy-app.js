@@ -1457,17 +1457,24 @@
                 }
                 return;
             }
+            if (!isValidLabBackup(DB)) {
+                showToast('当前数据未通过备份结构校验，已阻止导出；请先修复数据问题。', 'error');
+                return;
+            }
+            const isDemoSeed = DB.dataProvenance === 'demo-seed';
             const dataStr = JSON.stringify(DB, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = '燃料电池实验室数据备份_' + getToday() + '.json';
+            a.download = (isDemoSeed ? '演示样例_需核验_' : '燃料电池实验室数据备份_') + getToday() + '.json';
             document.body.appendChild(a);
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
-            showToast('数据已保存到本地磁盘！');
+            showToast(isDemoSeed
+                ? '已导出演示种子数据；其中示例记录未经业务核验，不可作为真实实验室备份。'
+                : '数据已通过结构校验并导出；请按实验室备份策略妥善保管。');
         }
 
         function exportAllToExcel() {
