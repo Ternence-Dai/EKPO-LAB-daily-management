@@ -434,3 +434,10 @@ test("maintenance schedule uses UTC calendar day independent of local Date gette
  asOf.getFullYear=()=>2026; asOf.getMonth=()=>9; asOf.getDate=()=>19;
  assert.deepEqual(getMaintenanceScheduleStatus("2026-10-20",asOf),{status:"due-soon",daysUntil:0,nextDate:"2026-10-20"});
 });
+
+test("maintenance asset rejects unvalidated lifecycle and authorization fields",()=>{
+ const asset={name:"Pump",qty:1,cycle:"一级保养",freq:"monthly"};
+ assert.throws(()=>validateMaintenanceAsset({...asset,status:"approved"}),/unsupported fields/);
+ assert.throws(()=>validateMaintenanceAsset({...asset,role:"administrator"}),/unsupported fields/);
+ assert.equal(validateMaintenanceAsset(asset).name,"Pump");
+});
