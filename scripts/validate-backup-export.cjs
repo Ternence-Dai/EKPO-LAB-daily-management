@@ -8,8 +8,16 @@ const start = app.indexOf('function exportAllToJSON()');
 const end = app.indexOf('function exportAllToExcel()', start);
 assert.ok(start >= 0 && end > start, 'JSON export function must exist');
 const source = app.slice(start, end);
+const validatorStart = app.indexOf('function isValidLabBackup(value) {');
+const validatorEnd = app.indexOf('function importFromLocal(event)', validatorStart);
+const dateStart = app.indexOf('function isValidDateOnly(value) {');
+const dateEnd = app.indexOf('function isOverdueDateOnly(value', dateStart);
+assert.ok(validatorStart >= 0 && validatorEnd > validatorStart, 'real backup validator must exist');
+assert.ok(dateStart >= 0 && dateEnd > dateStart, 'calendar-date validator must exist');
+const validatorSource = app.slice(validatorStart, validatorEnd);
+const dateSource = app.slice(dateStart, dateEnd);
 
-function runExport({ provenance, valid = true, locked = false }) {
+function runExport({ provenance, invalid = false, locked = false }) {
   const events = { downloads: [], toasts: [], revoked: 0, clicks: 0 };
   const anchor = {
     href: '',
@@ -18,9 +26,11 @@ function runExport({ provenance, valid = true, locked = false }) {
     remove() {}
   };
   const context = {
-    DB: { gases: [], maintenance: [], spareParts: [], testDiary: [], dataProvenance: provenance },
+    DB: invalid
+      ? { gases: [], maintenance: [{ id: 1 }, { id: 1 }], spareParts: [], testDiary: [], dataProvenance: provenance }
+      : { gases: [], maintenance: [], spareParts: [], testDiary: [], dataProvenance: provenance },
     storageRecoveryRequired: locked,
-    isValidLabBackup: () => valid,
+    labIdKey(value) { return typeof value === 'string' ? value.trim() : Number.isSafeInteger(value) ? String(value) : ''; },
     getToday: () => '2026-10-20',
     showToast: message => events.toasts.push(message),
     Blob: class { constructor(parts, options) { this.parts = parts; this.options = options; } },
@@ -50,7 +60,7 @@ assert.match(userData.downloads[0], /^燃料电池实验室数据备份_2026-10-
 assert.match(userData.toasts[0], /通过结构校验/,
   'normal backup export must report structural validation');
 
-const invalid = runExport({ provenance: undefined, valid: false });
+const invalid = runExport({ provenance: undefined, invalid: true });
 assert.equal(invalid.clicks, 0, 'invalid database shape must not be exported as a backup');
 assert.match(invalid.toasts[0], /阻止导出/);
 
