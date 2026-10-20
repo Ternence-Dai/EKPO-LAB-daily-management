@@ -172,6 +172,9 @@ export function validateExperimentRecord(entry) {
   if (!Array.isArray(entry.audit) || entry.audit.length < 1) {
     throw new TypeError("experiment audit history must include record creation");
   }
+  if (entry.audit.length > 50000) {
+    throw new RangeError("experiment audit history exceeds the 50000-record validation limit");
+  }
   let expectedStatus = "planned";
   let previousTimestamp = -Infinity;
   const audit = entry.audit.map((record, index) => {
