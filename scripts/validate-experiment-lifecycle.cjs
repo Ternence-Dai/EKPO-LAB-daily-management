@@ -99,8 +99,9 @@ assert.ok(binding.includes("container.addEventListener('click'") &&
 const deleteStart = app.indexOf('function deleteItem(table, id)');
 const deleteEnd = app.indexOf('function exportAllToJSON', deleteStart);
 const deleteSource = app.slice(deleteStart, deleteEnd);
-assert.ok(deleteSource.includes("table === 'maintenance' && DB.experiments.some(item => String(item.assetId) === String(id))"),
-  'equipment referenced by an experiment must not be deletable');
+assert.ok(deleteSource.includes("table === 'maintenance' && DB.experiments.some(item => sameLabId(item.assetId, id))") &&
+          deleteSource.includes('sameLabId(item.assetId, id)'),
+  'equipment referenced by an experiment must not be deletable under the canonical ID relationship helper');
 const exportStart = app.indexOf('function exportAllToExcel()');
 const exportEnd = app.indexOf('function isValidLabBackup', exportStart);
 const exportSource = app.slice(exportStart, exportEnd);
