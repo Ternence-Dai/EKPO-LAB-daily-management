@@ -189,9 +189,9 @@ assert.ok(importSource.includes('const previousRecoveryRequired = storageRecover
 const failedCommitStart = importSource.indexOf('if (!await commitLabMutation(previousDB');
 const failedCommitEnd = importSource.indexOf('switchTab(\'dashboard\'', failedCommitStart);
 const failedCommitBranch = importSource.slice(failedCommitStart, failedCommitEnd);
-assert.ok(failedCommitBranch.includes('storageRecoveryRequired = previousRecoveryRequired;') &&
-          failedCommitBranch.includes('if (previousRecoveryRequired) storageWarning = true;'),
-  'a failed restore write must restore the original recovery lock and preserve the warning');
+assert.ok(failedCommitBranch.includes('storageRecoveryRequired = previousRecoveryRequired || storageRecoveryRequired;') &&
+          failedCommitBranch.includes('if (storageRecoveryRequired) storageWarning = true;'),
+  'a failed restore write must preserve both the original lock and any newly raised cache-failure lock');
 
 
 console.log('Equipment calibration UI, persistence, legacy backup compatibility, and import validation checks passed.');
