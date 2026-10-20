@@ -119,6 +119,17 @@ assert.ok(app.includes("DB.calibrationLogs || []), \"设备校准记录\""),
 assert.ok(app.includes('DB.calibrationLogs.unshift(record)'),
   'calibration history must be append-only from the user interface');
 
+assert.ok(app.includes('DB.maintenance.find(item => sameLabId(item.id, record.assetId))'),
+  'calibration history must resolve equipment IDs using canonical identity');
+assert.ok(app.includes('DB.maintenance.find(item => sameLabId(item.id, assetId))'),
+  'new calibration records must accept canonical-equivalent equipment IDs');
+assert.ok(app.includes('sameLabId(row.assetId, assetId)'),
+  'duplicate certificate checks must use canonical equipment identity');
+assert.ok(app.includes('const assetIds = new Set(DB.maintenance.map(asset => labIdKey(asset.id)))') &&
+          app.includes('validated.some(row => !assetIds.has(labIdKey(row.assetId)))'),
+  'startup calibration foreign-key checks must normalize the same IDs as the domain core');
+
+
 const deleteStart = app.indexOf('async function deleteItem(table, id)');
 const deleteEnd = app.indexOf('function exportAllToJSON()', deleteStart);
 assert.ok(deleteStart >= 0 && deleteEnd > deleteStart,
