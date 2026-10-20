@@ -74,4 +74,33 @@ const recovery = runExport({ provenance: 'demo-seed', locked: true });
 assert.equal(recovery.clicks, 0, 'recovery mode must continue to block ordinary JSON export');
 assert.match(recovery.toasts[0], /原始缓存/);
 
+
+const validatorContext = {
+  labIdKey(value) {
+    return typeof value === 'string' ? value.trim()
+      : Number.isSafeInteger(value) ? String(value) : '';
+  }
+};
+vm.createContext(validatorContext);
+vm.runInContext(dateSource + '\\n' + validatorSource +
+  '\\nthis.validateBackup = isValidLabBackup;', validatorContext);
+const normalizedForeignKey = validatorContext.validateBackup({
+  gases: [],
+  maintenance: [{ id: 7 }],
+  spareParts: [],
+  testDiary: [],
+  calibrationLogs: [{
+    id: 'CAL-NORMALIZED-FK',
+    assetId: ' 7 ',
+    calibratedAt: '2026-10-20T00:00:00.000Z',
+    validForDays: 30,
+    certificateNo: 'CERT-NORMALIZED-FK',
+    organization: 'Calibration Lab',
+    operator: 'technician',
+    result: 'pass'
+  }]
+});
+assert.equal(normalizedForeignKey, true,
+  'calibration foreign keys must use the same trimmed numeric/string ID normalization as equipment references');
+
 console.log('JSON backup export provenance and structure checks passed.');
