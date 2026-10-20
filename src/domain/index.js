@@ -296,12 +296,14 @@ export function createCalibrationRecord(entry) {
   if (!((typeof id === "string" && id.trim()) || Number.isSafeInteger(id))) {
     throw new TypeError("calibration record id is required");
   }
-  if (typeof id === "string" && id.trim().length > 80) {
-    throw new RangeError("calibration record id must not exceed 80 characters");
+  if (typeof id === "string" && (!id.trim() || id.trim().length > 80 ||
+      /[\\x00-\\x1F\\x7F]/.test(id))) {
+    throw new TypeError("calibration record id must be non-empty, bounded and free of control characters");
   }
   if (!(typeof entry.assetId === "string" || Number.isSafeInteger(entry.assetId)) ||
-      String(entry.assetId).trim() === "") {
-    throw new TypeError("calibration asset reference is required");
+      String(entry.assetId).trim() === "" || String(entry.assetId).trim().length > 80 ||
+      /[\\x00-\\x1F\\x7F]/.test(String(entry.assetId))) {
+    throw new TypeError("calibration asset reference must be non-empty, bounded and free of control characters");
   }
   const calibratedTimestamp = parseCalibrationInstant(entry.calibratedAt);
   const normalizedDate = new Date(calibratedTimestamp);
