@@ -1,0 +1,26 @@
+/* EKPO LabOS — eLabFTW notebook + SENAITE quality operations */
+body[data-workspace="ekpo"]{--lab-ink:#1e4052;--lab-muted:#708b97;--lab-line:#d9e7e9;--lab-teal:#167e86;--lab-blue:#397fa7}
+body[data-workspace="ekpo"] .main-content{background:radial-gradient(ellipse at 100% 0,rgba(30,130,137,.065),transparent 40%),#f0f6f7}
+body[data-workspace="ekpo"] .sidebar{background:linear-gradient(180deg,#123b4d,#102f40 70%,#0c2737);border-right:1px solid #2d5b6a}
+body[data-workspace="ekpo"] .topbar{background:rgba(255,255,255,.96);border-bottom:1px solid var(--lab-line);box-shadow:0 4px 18px rgba(22,70,81,.04)}
+body[data-workspace="ekpo"] .labos-intro{position:relative;overflow:hidden;margin:22px 26px 18px;padding:28px 30px;border:1px solid #cfe1e4;border-radius:19px;background:linear-gradient(112deg,#fff,#f0f8f8 62%,#e3f1f1);box-shadow:0 15px 38px rgba(22,72,83,.065)}
+body[data-workspace="ekpo"] .labos-intro h2{font-size:clamp(23px,3vw,32px);color:#1a4555}
+body[data-workspace="ekpo"] .labos-intro p{max-width:760px;color:#6a858f;font-size:14px;line-height:1.75}
+body[data-workspace="ekpo"] .labos-tags span{padding:7px 10px;border:1px solid #d4e7e7;border-radius:8px;background:#f9fdfc;color:#31777a}
+body[data-workspace="ekpo"] .labos-stamp{border:1px solid #cce2e1;border-radius:14px;background:#e8f5f2;color:#277e77}
+body[data-workspace="ekpo"] .product-workflow{margin:0 26px 18px;padding:19px;border:1px solid var(--lab-line);border-radius:17px;background:#fff;box-shadow:0 8px 24px rgba(24,70,80,.045)}
+body[data-workspace="ekpo"] .product-workflow__grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+body[data-workspace="ekpo"] .product-workflow__item{min-height:118px;padding:14px;border:1px solid #dce9e9;border-radius:12px;background:linear-gradient(150deg,#fff,#f5fafa);text-align:left}
+body[data-workspace="ekpo"] .product-workflow__item i{background:#e4f2f0;color:#177e81}
+body[data-workspace="ekpo"] .product-workflow__item b{color:#234c59;font-size:14px}
+body[data-workspace="ekpo"] .product-workflow__item small{color:#708991;font-size:12px}
+body[data-workspace="ekpo"] .product-workflow__item span{color:#177e81}
+body[data-workspace="ekpo"] .content-body{padding:8px 26px 32px}
+body[data-workspace="ekpo"] .content-body .metrics-grid{gap:13px}
+body[data-workspace="ekpo"] .content-body .card{border:1px solid #dce8e9;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(24,70,80,.05)}
+body[data-workspace="ekpo"] .content-body .card-title{color:#6a838d;font-size:12px}
+body[data-workspace="ekpo"] .content-body .card-value{color:#1b5966;font-size:25px;font-variant-numeric:tabular-nums}
+body[data-workspace="ekpo"] .content-body :is(table,th,td){border-color:#e2ecec}
+body[data-workspace="ekpo"] .content-body :is(input,select,textarea){border:1px solid #d4e2e5;border-radius:8px;background:#fbfdfd;color:#254653}
+@media(max-width:900px){body[data-workspace="ekpo"] .product-workflow__grid{grid-template-columns:repeat(2,minmax(0,1fr))}body[data-workspace="ekpo"] .labos-intro,body[data-workspace="ekpo"] .product-workflow,body[data-workspace="ekpo"] .content-body{margin-left:14px;margin-right:14px;padding-left:0;padding-right:0}}
+@media(max-width:560px){body[data-workspace="ekpo"] .product-workflow__grid{grid-template-columns:1fr}body[data-workspace="ekpo"] .labos-intro{padding:20px 17px}}
