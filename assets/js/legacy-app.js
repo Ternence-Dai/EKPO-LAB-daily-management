@@ -159,7 +159,19 @@
         function showToast(msg, type = 'success') { let t = document.getElementById('toast'); t.className = `toast toast-${type} show`; t.innerText = msg; setTimeout(() => t.classList.remove('show'), 3000); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function initChart(domId) { let dom = document.getElementById(domId); if (!dom) return null; let chart = echarts.getInstanceByDom(dom); if (!chart) chart = echarts.init(dom); return chart; }
+        function initChart(domId) {
+            let dom = document.getElementById(domId);
+            if (!dom) return null;
+            // Charts are an enhancement: the laboratory ledgers remain usable if the CDN is unavailable.
+            if (typeof echarts === 'undefined') {
+                dom.textContent = '图表组件暂不可用，请检查网络连接后刷新页面；台账数据仍可正常使用。';
+                dom.setAttribute('role', 'status');
+                return null;
+            }
+            let chart = echarts.getInstanceByDom(dom);
+            if (!chart) chart = echarts.init(dom);
+            return chart;
+        }
 
         // ==================== 2. 动态年份生成 ====================
         function generateYearOptions(selectId) {
@@ -1500,6 +1512,10 @@
         }
 
         function exportAllToExcel() {
+            if (typeof XLSX === 'undefined') {
+                showToast('Excel组件加载失败，暂时无法导出Excel；请检查网络连接后刷新页面。JSON备份功能不受影响。', 'error');
+                return;
+            }
             if (storageRecoveryRequired) {
                 showToast('原始缓存尚未恢复；为避免将演示数据误导出为备份，已阻止 Excel 导出。请先导出原始 JSON 恢复包。', 'error');
                 return;
