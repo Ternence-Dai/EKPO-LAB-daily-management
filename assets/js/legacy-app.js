@@ -20,8 +20,12 @@
         // Never let fallback demo records overwrite an unreadable or malformed user cache.
         let storageRecoveryRequired = false;
         let cachedLabRaw = null;
+        // Best-effort stale-tab detection only; localStorage has no atomic compare-and-swap.
+        let lastKnownLabStorageValue = null;
+        let labStorageConflictDetected = false;
         try {
             cachedLabRaw = localStorage.getItem('lab_management_db_v9');
+            lastKnownLabStorageValue = cachedLabRaw;
             DB = cachedLabRaw ? JSON.parse(cachedLabRaw) : JSON.parse(JSON.stringify(defaultData));
             if (!DB || !Array.isArray(DB.gases) || !Array.isArray(DB.maintenance) ||
                 !Array.isArray(DB.spareParts) || !Array.isArray(DB.testDiary) ||
@@ -63,6 +67,12 @@
 
         let fileHandle = null;
 
+        window.addEventListener('storage', event => {
+            if (event.key !== 'lab_management_db_v9') return;
+            labStorageConflictDetected = true;
+            showToast('检测到其他标签页已修改实验室数据。本页已暂停保存，请先导出未保存更改并重新载入最新数据。', 'error');
+        });
+
         async function saveToLocal() {
             if (storageRecoveryRequired) {
                 storageWarning = true;
@@ -71,10 +81,22 @@
                 if (status) status.innerText = '缓存待恢复 · 自动保存已锁定';
                 return false;
             }
+            if (labStorageConflictDetected) {
+                showToast('实验室数据存在跨标签页冲突，已阻止覆盖最新缓存。请先导出未保存更改，再重新载入。', 'error');
+                return false;
+            }
             let localSaved = false;
             let fileSaved = false;
             try {
-                localStorage.setItem('lab_management_db_v9', JSON.stringify(DB));
+                const currentLabStorageValue = localStorage.getItem('lab_management_db_v9');
+                if (currentLabStorageValue !== lastKnownLabStorageValue) {
+                    labStorageConflictDetected = true;
+                    showToast('实验室缓存已被其他标签页或进程更新，已阻止本次保存。请先导出未保存更改，再重新载入。', 'error');
+                    return false;
+                }
+                const nextLabStorageValue = JSON.stringify(DB);
+                localStorage.setItem('lab_management_db_v9', nextLabStorageValue);
+                lastKnownLabStorageValue = nextLabStorageValue;
                 storageWarning = false;
                 localSaved = true;
             } catch (storageError) {
