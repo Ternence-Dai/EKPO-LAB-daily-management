@@ -42,7 +42,6 @@ const { chromium } = require('playwright');
     await page.locator('#page-gases .action-bar button.btn-primary').click();
     const gasModal = page.locator('#modal-gas');
     await gasModal.waitFor({ state: 'visible' });
-    const gasFixture = 'PW-Synthetic-Hydrogen-Fixture';
     await gasModal.locator('#g-item').selectOption('Hydrogen');
     await gasModal.locator('#g-year').selectOption('2026');
     await gasModal.locator('#g-month').selectOption('10');
@@ -70,10 +69,10 @@ const { chromium } = require('playwright');
       const row = (db.gases || []).find(item => item.batch === 'PW-GAS-001');
       return !!row && row.delivery === 30 && row.return === 4 &&
         row.consumption === 26 && row.cost === 120 && row.year === 2026 && row.monthNum === 10;
-    }, { timeout: 10000 });
+    }, undefined, { timeout: 10000 });
     labCache = await page.evaluate(() => JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}'));
     if ((labCache.gases || []).filter(row => row.batch === 'PW-GAS-001').length !== 1 ||
-        !(await page.locator('#table-gases tbody').innerText()).includes('PW-GAS-001')) {
+        !(await page.locator('#table-gases tbody').innerText()).includes('Synthetic test supplier')) {
       throw new Error('Valid gas usage record was not persisted exactly once and rendered in the table');
     }
 
