@@ -10,7 +10,7 @@ body :where(input,select,textarea,button) { font-size:16px !important; }
 body :where(p,li,td,th) { line-height:1.6; }
 body :where(table) { font-size:14px; }
 body :where(td,th) { padding-block:max(10px,0.65em); }
-body :where(svg text,canvas + .chart-label) { font-size:12px; }
+body :where(svg text,canvas + .chart-label) { font-size: 14px; }
 body :where(button,a,input,select,textarea,[tabindex]):focus-visible { outline:3px solid #f59e0b !important; outline-offset:3px !important; }
 @media (max-width:640px) {
   body { font-size:16px !important; }
