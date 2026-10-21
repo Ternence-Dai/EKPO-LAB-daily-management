@@ -20,20 +20,28 @@ const lockRelease = importSource.indexOf('storageRecoveryRequired = false;');
 const importCommit = importSource.indexOf('await commitLabMutation(previousDB');
 assert.ok(importValidation >= 0 && lockRelease > importValidation && importCommit > lockRelease,
   'only fully validated JSON import may release the recovery lock, and it must persist before success');
+assert.match(html, /window\.addEventListener\('storage'[\s\S]*?labStorageConflictDetected = true/,
+  'cross-tab cache changes must pause writes in this tab');
+assert.match(html, /currentLabStorageValue !== lastKnownLabStorageValue/,
+  'save must compare the current cache with the snapshot loaded by this tab');
+assert.match(html, /localStorage has no atomic compare-and-swap/,
+  'the implementation must disclose that localStorage conflict detection is not atomic');
 const start = html.indexOf('async function saveToLocal()');
 const end = html.indexOf('function getToday()', start);
 if (start < 0 || end < 0) throw new Error('saveToLocal source not found');
 const source = html.slice(start, end);
-async function run({locked=false,failWrites=false,withFile=false,failFileWrites=false}={}) {
+async function run({locked=false,failWrites=false,withFile=false,failFileWrites=false,stale=false}={}) {
   let writes = 0;
   let fileWrites = 0;
   let fileAborts = 0;
   const messages = [];
   const status = {innerText:''};
+  let currentRaw = stale ? 'newer-tab-value' : null;
   const context = {
     storageRecoveryRequired:locked, storageWarning:locked,
+    lastKnownLabStorageValue:null, labStorageConflictDetected:false,
     DB:{gases:[],maintenance:[],spareParts:[],testDiary:[]},
-    localStorage:{setItem(){writes++;if(failWrites)throw new Error('quota exceeded');}},
+    localStorage:{getItem(){return currentRaw;},setItem(key,value){writes++;currentRaw=value;if(failWrites)throw new Error('quota exceeded');}},
     fileHandle:withFile ? {createWritable(){fileWrites++;return Promise.resolve({write:async()=>{if(failFileWrites)throw new Error('disk write failed');},close:async()=>{},abort:async()=>{fileAborts++;}});}} : null,
     showToast:m=>messages.push(m),
     document:{getElementById:()=>status},
@@ -49,6 +57,10 @@ async function run({locked=false,failWrites=false,withFile=false,failFileWrites=
   assert.equal(result.result,false,'locked save must report failure');
   assert.equal(result.writes,0,'locked save must not overwrite the cache');
   assert.equal(result.messages.length,1,'locked save must explain the recovery requirement');
+  result=await run({stale:true});
+  assert.equal(result.result,false,'stale tab must refuse to save');
+  assert.equal(result.writes,0,'stale tab must not overwrite the newer cache');
+  assert.equal(result.messages.length,1,'stale-tab conflict must explain the required recovery action');
   result=await run();
   assert.equal(result.writes,1,'normal save should persist when recovery is not required');
   assert.equal(result.result,true,'successful browser save must be reported');
