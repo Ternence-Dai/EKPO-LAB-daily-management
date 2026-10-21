@@ -11,6 +11,10 @@ const { chromium } = require('playwright');
 
   try {
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
+    const contextScript = await page.locator('script[src*="workspace-v5-context.js"]').getAttribute('src');
+    if (!contextScript || !contextScript.includes('v=20261021-mutationobserver-fix-v1')) {
+      throw new Error('Workspace observer fix cache-busting URL is missing: ' + contextScript);
+    }
     await page.waitForSelector('#page-dashboard:not(.hidden)');
     if (!(await page.locator('#page-dashboard').innerText()).trim()) {
       throw new Error('EKPO dashboard did not render its operating summary');
