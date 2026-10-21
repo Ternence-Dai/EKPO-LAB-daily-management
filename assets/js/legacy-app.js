@@ -20,6 +20,7 @@
         // Never let fallback demo records overwrite an unreadable or malformed user cache.
         let storageRecoveryRequired = false;
         let cachedLabRaw = null;
+        // Best-effort stale-tab detection only; localStorage has no atomic compare-and-swap.
         let lastKnownLabStorageValue = null;
         let labStorageConflictDetected = false;
         try {
