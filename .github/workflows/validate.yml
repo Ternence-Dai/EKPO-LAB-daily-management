@@ -57,3 +57,29 @@ jobs:
           });
           console.log(`Syntax OK: ${executable.length} inline script(s)`);
           NODE
+
+  browser-ekpo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: npm install --no-save --package-lock=false playwright
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Serve the standalone lab operations workspace
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/ekpo-http.log 2>&1 &
+          echo $! > /tmp/ekpo-http.pid
+          for attempt in $(seq 1 20); do
+            if curl --silent --fail http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ekpo-http.log
+          exit 1
+      - name: Verify operations modules and mobile navigation
+        run: node scripts/browser-ekpo-smoke.cjs
