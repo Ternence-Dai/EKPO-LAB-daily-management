@@ -33,6 +33,8 @@ jobs:
         run: node scripts/validate-calibration.cjs
       - name: Validate experiment lifecycle and audit integration
         run: node scripts/validate-experiment-lifecycle.cjs
+      - name: Validate readable typography and focus states
+        run: node scripts/validate-readability.cjs
       - name: Parse embedded JavaScript
         run: |
           node <<'NODE'
