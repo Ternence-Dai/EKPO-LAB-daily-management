@@ -50,6 +50,15 @@
         }
         
         // 兼容旧版本数据升级
+        if (!cachedLabRaw) {
+            try {
+                const initialLedgerValue = JSON.stringify(DB);
+                localStorage.setItem('lab_management_db_v9', initialLedgerValue);
+                lastKnownLabStorageValue = initialLedgerValue;
+            } catch (initializationError) {
+                console.warn('新建空台账无法写入浏览器缓存；继续以当前内存账本运行。', initializationError);
+            }
+        }
         if (!DB.maintLogs) DB.maintLogs = [];
         if (!DB.spareLogs) DB.spareLogs = [];
         // Legacy caches predate the calibration ledger. Add an empty table;
