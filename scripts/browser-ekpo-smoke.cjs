@@ -61,6 +61,12 @@ const { chromium } = require('playwright');
         !(await page.locator('.sidebar .nav-item[data-tab="gases"]').count())) {
       throw new Error('EKPO active app, workspace and lifecycle navigation are not loaded');
     }
+    const demoDisclosure = page.locator('.labos-demo-note');
+    if (!(await demoDisclosure.isVisible()) ||
+        !(await demoDisclosure.innerText()).includes('属于初始演示数据') ||
+        !(await demoDisclosure.innerText()).includes('尚未与现场原始台账核对')) {
+      throw new Error('Seeded laboratory figures must remain visibly disclosed as unverified demonstration data');
+    }
     await page.waitForSelector('#page-dashboard:not(.hidden)');
     if (!(await page.locator('#page-dashboard').innerText()).trim()) {
       throw new Error('EKPO dashboard did not render its operating summary');
