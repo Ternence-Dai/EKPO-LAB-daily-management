@@ -80,7 +80,7 @@
         <div class="content-body">
             <!-- 1. 仪表盘 -->
                 
-            <div class="labos-demo-note" role="note" style="margin:12px 0;padding:12px 16px;border:1px solid #f0c36d;border-radius:10px;background:#fff8e8;color:#7a4b00;font-size:13px;line-height:1.65"><b>数据核验提醒：</b>系统内置的气体批次、供应商、费用、设备数量、维保人员及测试记录属于初始演示数据，尚未与现场原始台账核对。请勿将其作为真实采购、库存、校准或安全凭证；导入并核验真实记录后再用于统计和决策。</div>
+            <div id="labos-data-note" class="labos-demo-note" role="note" style="margin:12px 0;padding:12px 16px;border:1px solid #d8e5e1;border-radius:10px;background:#f5faf8;color:#42645e;font-size:12px;line-height:1.65"><b>数据来源：</b><span data-provenance-note>正在识别当前账本来源…</span></div>
             
             <section id="page-dashboard">
                 <div class="metrics-grid">
@@ -102,28 +102,7 @@
                         <button type="button" onclick="switchTab('testDiary', document.querySelector('[data-tab=testDiary]'))">测试日志</button>
                     </div>
                 </div>
-                <section class="labos-workflow-board" aria-label="实验室运营生命周期">
-                    <div class="labos-workflow-board__head">
-                        <div><span class="eyebrow">LAB OPERATIONS LIFECYCLE</span><h3>资源 → 设备 → 实验 → 记录</h3>
-                        <p>按实验生命周期处理资源、设备可用性、实验执行和运行记录；点击阶段进入对应原始台账。</p></div>
-                        <span class="labos-workflow-board__mode">LOCAL LEDGER · DEMO DATA DISCLOSED</span>
-                    </div>
-                    <div class="labos-workflow-board__track">
-                        <button type="button" class="labos-workflow-step" data-labos-step="gases" onclick="switchTab('gases',document.querySelector('[data-tab=gases]'))">
-                            <span>01 · RESOURCE</span><strong>气体与资源</strong><small>批次、余量、成本与供应商</small><b data-labos-count="gases">—</b><i>打开资源台账 ↗</i>
-                        </button>
-                        <button type="button" class="labos-workflow-step" data-labos-step="maintenance" onclick="switchTab('maintenance',document.querySelector('[data-tab=maintenance]'))">
-                            <span>02 · EQUIPMENT</span><strong>设备与校准</strong><small>维护计划、证书和就绪状态</small><b data-labos-count="maintenance">—</b><i>打开设备台账 ↗</i>
-                        </button>
-                        <button type="button" class="labos-workflow-step" data-labos-step="experiments" onclick="switchTab('experiments',document.querySelector('[data-tab=experiments]'))">
-                            <span>03 · EXECUTION</span><strong>实验计划</strong><small>计划、执行状态和设备关联</small><b data-labos-count="experiments">—</b><i>打开实验计划 ↗</i>
-                        </button>
-                        <button type="button" class="labos-workflow-step" data-labos-step="testDiary" onclick="switchTab('testDiary',document.querySelector('[data-tab=testDiary]'))">
-                            <span>04 · EVIDENCE</span><strong>运行与结果记录</strong><small>测试日志、异常和可追溯证据</small><b data-labos-count="testDiary">—</b><i>打开运行日志 ↗</i>
-                        </button>
-                    </div>
-                    <div class="labos-workflow-board__foot"><strong>就绪原则</strong><span>没有有效校准记录、维护日期异常或设备关联证据缺失时，设备状态保持“未就绪 / 待核验”，不会默认视为可用。</span></div>
-                </section>
+                
                 <div class="charts-row">
                     <div class="card"><div class="card-title">📊 历年费用构成（树状图）</div><div id="chart-dash-treemap" class="chart-box"></div></div>
                     <div class="card"><div class="card-title">📈 历年气体消耗趋势</div><div id="chart-dash-gas" class="chart-box"></div></div>
