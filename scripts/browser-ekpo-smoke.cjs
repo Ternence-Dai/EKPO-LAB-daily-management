@@ -54,9 +54,12 @@ const { chromium } = require('playwright');
     }
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => document.activeElement?.id === 'main-content');
-    const contextScript = await page.locator('script[src*="workspace-v5-context.js"]').getAttribute('src');
-    if (!contextScript || !contextScript.includes('v=20261021-mutationobserver-fix-v1')) {
-      throw new Error('Workspace observer fix cache-busting URL is missing: ' + contextScript);
+    const appScript = await page.locator('script[src*="assets/js/legacy-app.js"]').getAttribute('src');
+    const workspaceScript = await page.locator('script[src*="assets/js/workspace-v5.js"]').getAttribute('src');
+    if (!appScript || !appScript.includes('v=20261020-ekpo-record-id-v6') ||
+        !workspaceScript || !workspaceScript.includes('v=20261019-v5') ||
+        typeof await page.evaluate(() => window.switchTab) !== 'function') {
+      throw new Error('EKPO active app and workspace controllers are not loaded');
     }
     await page.waitForSelector('#page-dashboard:not(.hidden)');
     if (!(await page.locator('#page-dashboard').innerText()).trim()) {
@@ -72,7 +75,7 @@ const { chromium } = require('playwright');
         readiness:board?.innerText || ''};
     });
     if (!lifecycleBoard.present || lifecycleBoard.steps !== 4 ||
-        lifecycleBoard.counts.length !== 4 || lifecycleBoard.counts.some(item => !/^\\d+$/.test(item.value)) ||
+        lifecycleBoard.counts.length !== 4 || lifecycleBoard.counts.some(item => !/^[0-9]+$/.test(item.value)) ||
         !lifecycleBoard.readiness.includes('未就绪') && !lifecycleBoard.readiness.includes('待核验')) {
       throw new Error('EKPO lab lifecycle board did not render all four record-backed stages: ' + JSON.stringify(lifecycleBoard));
     }
