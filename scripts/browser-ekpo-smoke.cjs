@@ -69,29 +69,14 @@ const { chromium } = require('playwright');
         !(await page.locator('.sidebar .nav-item[data-tab="gases"]').count())) {
       throw new Error('EKPO active app, workspace and lifecycle navigation are not loaded');
     }
-    const demoDisclosure = page.locator('.labos-demo-note');
+    const demoDisclosure = page.locator('#labos-data-note');
     if (!(await demoDisclosure.isVisible()) ||
-        !(await demoDisclosure.innerText()).includes('属于初始演示数据') ||
-        !(await demoDisclosure.innerText()).includes('尚未与现场原始台账核对')) {
-      throw new Error('Seeded laboratory figures must remain visibly disclosed as unverified demonstration data');
+        !(await demoDisclosure.locator('[data-provenance-note]').innerText()).includes('示例账本')) {
+      throw new Error('The active laboratory ledger provenance must be visible on the dashboard');
     }
     await page.waitForSelector('#page-dashboard:not(.hidden)');
     if (!(await page.locator('#page-dashboard').innerText()).trim()) {
       throw new Error('EKPO dashboard did not render its operating summary');
-    }
-
-    const lifecycleBoard = await page.evaluate(() => {
-      const board = document.querySelector('#page-dashboard .labos-workflow-board');
-      const counts = [...(board?.querySelectorAll('[data-labos-count]') || [])].map(node => ({
-        key:node.dataset.labosCount,value:node.textContent.trim()
-      }));
-      return {present:!!board,steps:board?.querySelectorAll('.labos-workflow-step').length || 0,counts,
-        readiness:board?.innerText || ''};
-    });
-    if (!lifecycleBoard.present || lifecycleBoard.steps !== 4 ||
-        lifecycleBoard.counts.length !== 4 || lifecycleBoard.counts.some(item => !/^[0-9]+$/.test(item.value)) ||
-        !lifecycleBoard.readiness.includes('未就绪') && !lifecycleBoard.readiness.includes('待核验')) {
-      throw new Error('EKPO lab lifecycle board did not render all four record-backed stages: ' + JSON.stringify(lifecycleBoard));
     }
 
     await page.waitForFunction(() => {
@@ -101,17 +86,28 @@ const { chromium } = require('playwright');
         panel.getAttribute('aria-busy') === 'false';
     }, undefined, { timeout: 15000 });
     const dashboardPriority = await page.evaluate(() => {
-      const panel = document.getElementById('lab-readiness');
-      const charts = document.querySelector('#page-dashboard .charts-row');
+      const root = document.querySelector('#page-dashboard');
+      const panel = root?.querySelector('#lab-readiness');
+      const metrics = root?.querySelector('.metrics-grid');
+      const charts = root?.querySelector('.charts-row');
+      const note = document.querySelector('#labos-data-note [data-provenance-note]')?.textContent || '';
       return {
-        panelBeforeCharts: !!panel && !!charts && !!(panel.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING),
+        hasGenericLifecycleBoard: !!root?.querySelector('.labos-workflow-board'),
+        readinessBeforeMetrics: !!panel && !!metrics && !!(panel.compareDocumentPosition(metrics) & Node.DOCUMENT_POSITION_FOLLOWING),
+        readinessBeforeCharts: !!panel && !!charts && !!(panel.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING),
         top: panel?.getBoundingClientRect().top ?? Infinity,
-        metrics: panel?.querySelectorAll('[data-readiness-metric]').length ?? 0
+        metricsCount: panel?.querySelectorAll('[data-readiness-metric]').length ?? 0,
+        provenanceNote: note
       };
     });
-    if (!dashboardPriority.panelBeforeCharts || dashboardPriority.metrics !== 5 ||
-        dashboardPriority.top > 720) {
-      throw new Error('Equipment readiness is not a primary dashboard workspace: ' + JSON.stringify(dashboardPriority));
+    if (dashboardPriority.hasGenericLifecycleBoard ||
+        !dashboardPriority.readinessBeforeMetrics ||
+        !dashboardPriority.readinessBeforeCharts ||
+        dashboardPriority.metricsCount !== 5 ||
+        dashboardPriority.top > 720 ||
+        !dashboardPriority.provenanceNote.includes('示例账本')) {
+      throw new Error('EKPO dashboard must prioritize live readiness, remove duplicated static lifecycle cards, and disclose the demo ledger: ' +
+        JSON.stringify(dashboardPriority));
     }
     const readinessEvidence = await page.evaluate(() => {
       const panel = document.getElementById('lab-readiness');
@@ -131,27 +127,6 @@ const { chromium } = require('playwright');
         !readinessEvidence.labels.includes('需要关注的设备')) {
       throw new Error('EKPO dashboard readiness panel did not expose its live operational metrics: ' +
         JSON.stringify(readinessEvidence));
-    }
-
-    const dashboardPriority = await page.evaluate(() => {
-      const root = document.querySelector('#page-dashboard');
-      const readiness = root?.querySelector('#lab-readiness');
-      const metrics = root?.querySelector('.metrics-grid');
-      const charts = root?.querySelector('.charts-row');
-      const note = document.querySelector('#labos-data-note [data-provenance-note]')?.textContent || '';
-      return {
-        hasGenericLifecycleBoard: !!root?.querySelector('.labos-workflow-board'),
-        readinessBeforeMetrics: !!readiness && !!metrics && readiness.compareDocumentPosition(metrics) & Node.DOCUMENT_POSITION_FOLLOWING,
-        readinessBeforeCharts: !!readiness && !!charts && readiness.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING,
-        provenanceNote: note
-      };
-    });
-    if (dashboardPriority.hasGenericLifecycleBoard ||
-        !dashboardPriority.readinessBeforeMetrics ||
-        !dashboardPriority.readinessBeforeCharts ||
-        !dashboardPriority.provenanceNote.includes('示例账本')) {
-      throw new Error('EKPO home must prioritize live equipment readiness and disclose demo-ledger provenance: ' +
-        JSON.stringify(dashboardPriority));
     }
 
     const tabs = ['gases', 'maintenance', 'spareParts', 'testDiary', 'experiments', 'yearly', 'system'];
