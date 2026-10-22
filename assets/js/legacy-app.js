@@ -291,6 +291,15 @@
 
         // ==================== 5. 仪表盘渲染 ====================
         function renderDashboard() {
+            const provenance = DB.dataProvenance || DB.settings?.dataProvenance || 'unknown';
+            const provenanceNote = document.querySelector('#labos-data-note [data-provenance-note]');
+            if (provenanceNote) {
+                provenanceNote.textContent = provenance === 'demo-seed'
+                    ? '当前显示程序内置示例账本。气体批次、供应商、费用、设备、校准和测试记录均为演示样本；请导入现场原始台账并核验后，再用于运营判断。'
+                    : provenance === 'unknown'
+                        ? '当前账本来源未标记。请在数据设置中核对导入来源、责任人和更新时间；未经核验的数据不视为真实现场记录。'
+                        : '当前使用本机账本数据（来源标记：' + String(provenance) + '）。请继续核对原始凭证、更新时间和记录责任人；本应用不会将本机数据视为外部实时数据。';
+            }
             let totalGasCost = DB.gases.reduce((sum, g) => sum + (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0), 0);
             let totalMaintCost = DB.maintLogs.reduce((sum, m) => sum + (Number(m.cost) || 0), 0);
             let totalSpareCost = DB.spareParts.reduce((sum, s) => sum + ((Number(s.qty) || 0) * (Number(s.price) || 0)), 0);
@@ -373,8 +382,8 @@
                 panel.id = 'lab-readiness';
                 panel.className = 'lab-readiness';
                 panel.setAttribute('aria-label', '设备与实验就绪度');
-                const firstVisualization = page.querySelector('.charts-row');
-                if (firstVisualization) page.insertBefore(panel, firstVisualization);
+                const firstOperationalMetric = page.querySelector('.metrics-grid') || page.querySelector('.charts-row');
+                if (firstOperationalMetric) page.insertBefore(panel, firstOperationalMetric);
                 else page.appendChild(panel);
             }
             panel.setAttribute('aria-busy', 'true');
