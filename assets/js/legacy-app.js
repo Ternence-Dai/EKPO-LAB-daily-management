@@ -363,7 +363,9 @@
                 panel.id = 'lab-readiness';
                 panel.className = 'lab-readiness';
                 panel.setAttribute('aria-label', '设备与实验就绪度');
-                page.appendChild(panel);
+                const firstVisualization = page.querySelector('.charts-row');
+                if (firstVisualization) page.insertBefore(panel, firstVisualization);
+                else page.appendChild(panel);
             }
             panel.setAttribute('aria-busy', 'true');
             panel.dataset.loaded = 'false';
