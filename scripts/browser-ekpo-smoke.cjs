@@ -70,7 +70,7 @@ const { chromium } = require('playwright');
     await page.waitForFunction(() => document.activeElement?.id === 'main-content');
     const appScript = await page.locator('script[src*="assets/js/legacy-app.js"]').getAttribute('src');
     const workspaceScript = await page.locator('script[src*="assets/js/workspace-v5.js"]').getAttribute('src');
-    if (!appScript || !appScript.includes('v=20261022-empty-ledger-v1') ||
+    if (!appScript || !appScript.includes('v=20261022-demo-migration-v2') ||
         !workspaceScript || !workspaceScript.includes('v=20261019-v5') ||
         !(await page.locator('.sidebar .nav-item[data-tab="gases"]').count())) {
       throw new Error('EKPO active app, workspace and lifecycle navigation are not loaded');
