@@ -58,8 +58,8 @@ const { chromium } = require('playwright');
     const workspaceScript = await page.locator('script[src*="assets/js/workspace-v5.js"]').getAttribute('src');
     if (!appScript || !appScript.includes('v=20261020-ekpo-record-id-v6') ||
         !workspaceScript || !workspaceScript.includes('v=20261019-v5') ||
-        typeof await page.evaluate(() => window.switchTab) !== 'function') {
-      throw new Error('EKPO active app and workspace controllers are not loaded');
+        !(await page.locator('.sidebar .nav-item[data-tab="gases"]').count())) {
+      throw new Error('EKPO active app, workspace and lifecycle navigation are not loaded');
     }
     await page.waitForSelector('#page-dashboard:not(.hidden)');
     if (!(await page.locator('#page-dashboard').innerText()).trim()) {
