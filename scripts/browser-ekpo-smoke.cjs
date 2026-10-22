@@ -17,10 +17,12 @@ const { chromium } = require('playwright');
     const referenceCssText = await referenceCssResponse.text();
     const labOperationsLayout = await page.locator('.sidebar').evaluate(node => ({
       position: getComputedStyle(node).position,
-      width: getComputedStyle(node).width
+      width: getComputedStyle(node).width,
+      flexBasis: getComputedStyle(node).flexBasis
     }));
     if (!referenceCssResponse.ok() || !referenceCssText.includes('--lims-teal:#1b8683') ||
-        labOperationsLayout.position !== 'sticky' || labOperationsLayout.width !== '252px') {
+        labOperationsLayout.position !== 'sticky' || labOperationsLayout.width !== '252px' ||
+        labOperationsLayout.flexBasis !== '252px') {
       throw new Error('LIMS operations layout was not loaded/applied: ' + JSON.stringify(labOperationsLayout));
     }
 
