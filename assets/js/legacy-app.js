@@ -343,6 +343,131 @@
             if (testErrors > 0) alerts.push(`📅 测试台运行日志中存在 ${testErrors} 次故障记录`);
             let alertList = document.getElementById('alert-list');
             alertList.innerHTML = alerts.length === 0 ? '<li>✅ 当前无待处理事项</li>' : alerts.map(a => `<li>${esc(a)}</li>`).join('');
+            renderLabReadiness().catch(error => {
+                console.error('实验室设备与实验就绪度汇总失败。', error);
+                const panel = document.getElementById('lab-readiness');
+                if (panel) {
+                    panel.dataset.loaded = 'false';
+                    panel.setAttribute('aria-busy', 'false');
+                    panel.innerHTML = '<div class="lab-readiness__unavailable"><strong>设备与实验就绪度暂不可用</strong><span>未能核验设备或校准状态。本面板不会推断设备正常；请刷新页面或进入设备维保模块检查。</span></div>';
+                }
+            });
+        }
+
+        async function renderLabReadiness() {
+            const page = document.getElementById('page-dashboard');
+            if (!page) return;
+            let panel = document.getElementById('lab-readiness');
+            if (!panel) {
+                panel = document.createElement('section');
+                panel.id = 'lab-readiness';
+                panel.className = 'lab-readiness';
+                panel.setAttribute('aria-label', '设备与实验就绪度');
+                page.appendChild(panel);
+            }
+            panel.setAttribute('aria-busy', 'true');
+            panel.dataset.loaded = 'false';
+
+            const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+            if (page.classList.contains('hidden')) return;
+
+            const now = new Date();
+            const assets = Array.isArray(DB.maintenance) ? DB.maintenance : [];
+            const calibrationRecords = Array.isArray(DB.calibrationLogs) ? DB.calibrationLogs : [];
+            const experiments = Array.isArray(DB.experiments) ? DB.experiments : [];
+            const readinessRows = assets.map(asset => {
+                let schedule;
+                let readiness;
+                try {
+                    schedule = domain.getMaintenanceScheduleStatus(asset.next || '', now, 30);
+                } catch (error) {
+                    schedule = { status: 'invalid', daysUntil: null, nextDate: '' };
+                    console.warn('设备维保日期需要核对：' + (asset.name || asset.id), error);
+                }
+                try {
+                    readiness = domain.getExperimentEquipmentReadiness({
+                        assetId: asset.id,
+                        equipment: assets,
+                        calibrationRecords,
+                        at: now
+                    });
+                } catch (error) {
+                    readiness = {
+                        ready: false,
+                        status: 'invalid',
+                        label: '校准状态待核验',
+                        message: '设备或校准记录存在格式问题'
+                    };
+                    console.warn('设备校准状态需要核对：' + (asset.name || asset.id), error);
+                }
+                return { asset, schedule, readiness };
+            });
+
+            const overdue = readinessRows.filter(row => row.schedule.status === 'overdue').length;
+            const dueSoon = readinessRows.filter(row => row.schedule.status === 'due-soon').length;
+            const calibrationBlocked = readinessRows.filter(row => !row.readiness.ready).length;
+            const calibrated = readinessRows.filter(row => row.readiness.ready).length;
+            const activeExperiments = experiments.filter(row => row.status === 'in-progress').length;
+            const plannedExperiments = experiments.filter(row => row.status === 'planned').length;
+            const priority = { overdue: 0, invalid: 1, 'due-soon': 2, unscheduled: 3, scheduled: 4 };
+            const attention = readinessRows.filter(row =>
+                row.schedule.status !== 'scheduled' || !row.readiness.ready
+            ).sort((a, b) =>
+                (priority[a.schedule.status] ?? 5) - (priority[b.schedule.status] ?? 5)
+            ).slice(0, 6);
+
+            const metrics = [
+                { key: 'equipment', label: '在册设备', value: assets.length, note: '来自设备主台账', tone: 'neutral' },
+                { key: 'overdue', label: '维保已逾期', value: overdue, note: '需要安排维护', tone: overdue ? 'danger' : 'neutral' },
+                { key: 'due-soon', label: '30 天内维保到期', value: dueSoon, note: '提前安排窗口', tone: dueSoon ? 'warning' : 'neutral' },
+                { key: 'calibration', label: '校准未就绪', value: calibrationBlocked, note: '未记录 / 过期 / 不合格 / 待核验', tone: calibrationBlocked ? 'warning' : 'neutral' },
+                { key: 'active-experiments', label: '进行中实验', value: activeExperiments, note: plannedExperiments + ' 项计划待执行', tone: 'neutral' }
+            ];
+            const metricHtml = metrics.map(metric =>
+                '<article class="lab-readiness__metric lab-readiness__metric--' + metric.tone +
+                    '" data-readiness-metric="' + metric.key + '" data-value="' + metric.value + '">' +
+                    '<span>' + esc(metric.label) + '</span><strong>' + metric.value + '</strong>' +
+                    '<small>' + esc(metric.note) + '</small></article>'
+            ).join('');
+
+            const scheduleLabel = row => {
+                if (row.schedule.status === 'overdue') return '维保逾期 ' + Math.abs(row.schedule.daysUntil) + ' 天';
+                if (row.schedule.status === 'due-soon') return '维保 ' + row.schedule.daysUntil + ' 天后到期';
+                if (row.schedule.status === 'unscheduled') return '维保日期未设置';
+                if (row.schedule.status === 'invalid') return '维保日期异常';
+                return '维保计划正常';
+            };
+            const rowsHtml = attention.length ? attention.map(row =>
+                '<article class="lab-readiness__asset">' +
+                    '<div class="lab-readiness__asset-main"><strong>' + esc(row.asset.name || '未命名设备') +
+                    '</strong><small>' + esc(row.asset.category || '未分类') + ' · ' +
+                    esc(row.asset.location || '位置未填写') + '</small></div>' +
+                    '<div class="lab-readiness__asset-status">' +
+                    '<span class="lab-readiness__pill ' +
+                    (row.schedule.status === 'overdue' || row.schedule.status === 'invalid' ? 'is-danger' :
+                     row.schedule.status === 'scheduled' ? 'is-ok' : 'is-warning') + '">' +
+                    esc(scheduleLabel(row)) + '</span>' +
+                    '<span class="lab-readiness__pill ' + (row.readiness.ready ? 'is-ok' : 'is-warning') + '">' +
+                    esc(row.readiness.label) + '</span></div></article>'
+            ).join('') :
+                '<div class="lab-readiness__empty"><strong>当前未发现逾期维保或校准阻断</strong>' +
+                '<span>仍请按实际证书和现场设备状态复核；未设置的维护日期不会被当作已完成。</span></div>';
+
+            panel.innerHTML =
+                '<div class="lab-readiness__head"><div><span class="eyebrow">ASSET & EXPERIMENT READINESS</span>' +
+                '<h3>设备与实验就绪度</h3><p>从在册设备、维护计划和校准记录计算实验室准备状态；缺少证据时明确显示待核验。</p></div>' +
+                '<div class="lab-readiness__actions"><button type="button" onclick="switchTab(\'maintenance\', document.querySelector(\'.sidebar .nav-item[data-tab=maintenance]\'))">设备 / 校准台账 ↗</button>' +
+                '<button type="button" onclick="switchTab(\'experiments\', document.querySelector(\'.sidebar .nav-item[data-tab=experiments]\'))">实验计划 ↗</button></div></div>' +
+                '<div class="lab-readiness__metrics">' + metricHtml + '</div>' +
+                '<div class="lab-readiness__lower"><div class="lab-readiness__attention"><div class="lab-readiness__section-title">需要关注的设备 <small>最多显示 6 项 · 完整记录见设备台账</small></div>' +
+                rowsHtml + '</div><aside class="lab-readiness__calibration"><span>校准覆盖</span><strong>' + calibrated + ' / ' + assets.length + '</strong>' +
+                '<small>有效校准设备 / 在册设备</small><div class="lab-readiness__coverage"><i style="width:' +
+                (assets.length ? (calibrated / assets.length * 100).toFixed(1) : 0) + '%"></i></div>' +
+                '<p>' + calibrationBlocked + ' 台设备当前无法确认校准有效；未记录不等于合格。</p></aside></div>';
+            panel.dataset.loaded = 'true';
+            panel.dataset.equipmentCount = String(assets.length);
+            panel.dataset.activeExperimentCount = String(activeExperiments);
+            panel.setAttribute('aria-busy', 'false');
         }
 
         // ==================== 6. 气体记录 ====================
