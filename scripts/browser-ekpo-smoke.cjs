@@ -25,6 +25,26 @@ const { chromium } = require('playwright');
         labOperationsLayout.flexBasis !== '252px') {
       throw new Error('LIMS operations layout was not loaded/applied: ' + JSON.stringify(labOperationsLayout));
     }
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    const wideLab = await page.evaluate(() => {
+      const sidebar = document.querySelector('.sidebar');
+      const main = document.querySelector('.main-content');
+      const content = document.querySelector('.content-body');
+      const rect = node => {
+        const box = node.getBoundingClientRect();
+        return { left: box.left, right: box.right, width: box.width };
+      };
+      return {
+        sidebar: rect(sidebar), main: rect(main), content: rect(content),
+        marginLeft: getComputedStyle(main).marginLeft
+      };
+    });
+    if (wideLab.marginLeft !== '0px' ||
+        wideLab.main.left < wideLab.sidebar.right - 1 ||
+        wideLab.main.left > wideLab.sidebar.right + 2 ||
+        wideLab.content.width < wideLab.main.width * 0.88) {
+      throw new Error('EKPO operations content remains offset or constrained: ' + JSON.stringify(wideLab));
+    }
 
     const skipLink = page.locator('a.skip-link[href="#main-content"]');
     if (await skipLink.count() !== 1) throw new Error('Keyboard skip-navigation link is missing');
