@@ -69,6 +69,19 @@ const { chromium } = require('playwright');
         panel.querySelectorAll('[data-readiness-metric]').length === 5 &&
         panel.getAttribute('aria-busy') === 'false';
     }, undefined, { timeout: 15000 });
+    const dashboardPriority = await page.evaluate(() => {
+      const panel = document.getElementById('lab-readiness');
+      const charts = document.querySelector('#page-dashboard .charts-row');
+      return {
+        panelBeforeCharts: !!panel && !!charts && !!(panel.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING),
+        top: panel?.getBoundingClientRect().top ?? Infinity,
+        metrics: panel?.querySelectorAll('[data-readiness-metric]').length ?? 0
+      };
+    });
+    if (!dashboardPriority.panelBeforeCharts || dashboardPriority.metrics !== 5 ||
+        dashboardPriority.top > 720) {
+      throw new Error('Equipment readiness is not a primary dashboard workspace: ' + JSON.stringify(dashboardPriority));
+    }
     const readinessEvidence = await page.evaluate(() => {
       const panel = document.getElementById('lab-readiness');
       const value = key => panel?.querySelector('[data-readiness-metric="' + key + '"]')?.dataset.value;
