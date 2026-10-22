@@ -54,10 +54,16 @@ const { chromium } = require('playwright');
       throw new Error('EKPO operations content remains offset or constrained: ' + JSON.stringify(wideLab));
     }
 
-    await page.waitForSelector('#page-dashboard .lab-readiness');
-    const readinessBoard = await page.locator('#page-dashboard .lab-readiness').count();
-    if (readinessBoard !== 1 || !(await page.locator('.lab-readiness__metrics').count())) {
-      throw new Error('EKPO reference readiness board is not mounted');
+    const cockpitStylesheet = page.locator('link[rel="stylesheet"][href*="ekpo-operations-cockpit-v3.css"]');
+    const cockpitScript = page.locator('script[src*="ekpo-operations-cockpit-v3.js"]');
+    if (await cockpitStylesheet.count() !== 1 || await cockpitScript.count() !== 1) {
+      throw new Error('EKPO reference operations cockpit assets are not linked');
+    }
+    const cockpitCssResponse = await page.request.get(await cockpitStylesheet.evaluate(node => node.href));
+    const cockpitCss = await cockpitCssResponse.text();
+    if (!cockpitCssResponse.ok() || !cockpitCss.includes('--ekpo-bg:#071321') ||
+        !(await page.locator('#page-dashboard .ekpo-operations-cockpit').count())) {
+      throw new Error('EKPO reference cockpit did not load or mount');
     }
 
     const skipLink = page.locator('a.skip-link[href="#main-content"]');
@@ -102,53 +108,47 @@ const { chromium } = require('playwright');
       throw new Error('EKPO dashboard did not render its operating summary');
     }
 
-    await page.waitForFunction(() => {
-      const panel = document.getElementById('lab-readiness');
-      return panel && panel.dataset.loaded === 'true' &&
-        panel.querySelectorAll('[data-readiness-metric]').length === 5 &&
-        panel.getAttribute('aria-busy') === 'false';
-    }, undefined, { timeout: 15000 });
     const dashboardPriority = await page.evaluate(() => {
       const root = document.querySelector('#page-dashboard');
-      const panel = root?.querySelector('#lab-readiness');
-      const metrics = root?.querySelector('.metrics-grid');
-      const charts = root?.querySelector('.charts-row');
+      const cockpit = root?.querySelector('.ekpo-operations-cockpit');
       const note = document.querySelector('#labos-data-note [data-provenance-note]')?.textContent || '';
       return {
-        hasGenericLifecycleBoard: !!root?.querySelector('.labos-workflow-board'),
-        readinessBeforeMetrics: !!panel && !!metrics && !!(panel.compareDocumentPosition(metrics) & Node.DOCUMENT_POSITION_FOLLOWING),
-        readinessBeforeCharts: !!panel && !!charts && !!(panel.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING),
-        top: panel?.getBoundingClientRect().top ?? Infinity,
-        metricsCount: panel?.querySelectorAll('[data-readiness-metric]').length ?? 0,
+        cockpit: !!cockpit,
+        metrics: cockpit?.querySelectorAll('.ekpo-oc-metric').length || 0,
+        workflowSteps: cockpit?.querySelectorAll('.ekpo-oc-steps button').length || 0,
+        inspector: !!cockpit?.querySelector('.ekpo-oc-inspector'),
+        oldMetrics: !!root?.querySelector('.metrics-grid'),
+        oldCharts: !!root?.querySelector('.charts-row'),
+        oldLaunchpad: !!root?.querySelector('.labos-launchpad'),
+        oldReadinessBoard: !!root?.querySelector('.lab-readiness'),
         provenanceNote: note
       };
     });
-    if (dashboardPriority.hasGenericLifecycleBoard ||
-        !dashboardPriority.readinessBeforeMetrics ||
-        !dashboardPriority.readinessBeforeCharts ||
-        dashboardPriority.metricsCount !== 5 ||
-        dashboardPriority.top > 720 ||
-        !dashboardPriority.provenanceNote.includes('新建空台账')) {
-      throw new Error('EKPO dashboard must prioritize live readiness, remove duplicated static lifecycle cards, and disclose the demo ledger: ' +
+    if (!dashboardPriority.cockpit || dashboardPriority.metrics !== 5 ||
+        dashboardPriority.workflowSteps !== 4 || !dashboardPriority.inspector ||
+        dashboardPriority.oldMetrics || dashboardPriority.oldCharts ||
+        dashboardPriority.oldLaunchpad || dashboardPriority.oldReadinessBoard ||
+        !dashboardPriority.provenanceNote.includes('没有现场记录')) {
+      throw new Error('EKPO dashboard still contains replaced legacy summary/chart blocks or lacks the reference cockpit: ' +
         JSON.stringify(dashboardPriority));
     }
+
     const readinessEvidence = await page.evaluate(() => {
-      const panel = document.getElementById('lab-readiness');
-      const value = key => panel?.querySelector('[data-readiness-metric="' + key + '"]')?.dataset.value;
+      const root = document.querySelector('#page-dashboard .ekpo-operations-cockpit');
+      const value = key => Number(root?.querySelector('[data-ekpo-metric="' + key + '"]')?.dataset.value);
       return {
-        equipment: Number(value('equipment')),
-        activeExperiments: Number(value('active-experiments')),
-        labels: panel?.innerText || '',
-        actions: panel?.querySelectorAll('.lab-readiness__actions button').length || 0
+        equipment: value('equipment'),
+        activeExperiments: value('active-experiments'),
+        labels: root?.innerText || '',
+        actions: root?.querySelectorAll('.ekpo-oc-action').length || 0
       };
     });
-    if (readinessEvidence.equipment !== 0 ||
-        readinessEvidence.activeExperiments !== 0 ||
-        readinessEvidence.actions !== 2 ||
-        !readinessEvidence.labels.includes('设备与实验就绪度') ||
-        !readinessEvidence.labels.includes('校准覆盖') ||
-        !readinessEvidence.labels.includes('尚未导入设备台账')) {
-      throw new Error('An empty lab ledger must report readiness as unverified, not normal: ' +
+    if (readinessEvidence.equipment !== 0 || readinessEvidence.activeExperiments !== 0 ||
+        readinessEvidence.actions !== 4 ||
+        !readinessEvidence.labels.includes('实验室运营控制台') ||
+        !readinessEvidence.labels.includes('有效校准证据') ||
+        !readinessEvidence.labels.includes('等待第一批现场记录')) {
+      throw new Error('An empty lab ledger must render an actionable unverified cockpit, not fabricated status: ' +
         JSON.stringify(readinessEvidence));
     }
 
