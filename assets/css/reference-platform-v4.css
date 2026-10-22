@@ -1,0 +1,15 @@
+/* Reference platform v4: lab operations desk. */
+body[data-workspace="ekpo"]{background:#eef4f2;color:#173d42}
+body[data-workspace="ekpo"] .app{display:flex;min-height:100vh}
+body[data-workspace="ekpo"] .sidebar{width:254px;flex-basis:254px;position:sticky;top:0;height:100vh;background:#0f3b4b;border-right:1px solid #2b5b67}
+body[data-workspace="ekpo"] .main-content{margin-left:0!important;min-width:0;flex:1 1 0;background:#eef4f2}
+body[data-workspace="ekpo"] .topbar{height:64px;min-height:64px;padding:0 22px;background:#fff;border-bottom:1px solid #d5e3df}
+body[data-workspace="ekpo"] .labos-intro,
+body[data-workspace="ekpo"] .product-workflow,
+body[data-workspace="ekpo"] .labos-demo-note{display:none!important}
+body[data-workspace="ekpo"] .content-body{max-width:1600px;margin:0 auto;padding:14px 22px 32px}
+body[data-workspace="ekpo"] #page-dashboard{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px}
+body[data-workspace="ekpo"] #page-dashboard>.metrics-grid{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+body[data-workspace="ekpo"] #page-dashboard>.charts-row{grid-column:1/-1;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
+body[data-workspace="ekpo"] #page-dashboard>.section-card{border-radius:9px;border:1px solid #d5e3df;box-shadow:0 4px 15px rgba(20,58,65,.04)}
+@media(max-width:980px){body[data-workspace="ekpo"] .sidebar{width:76px;flex-basis:76px}body[data-workspace="ekpo"] .content-body{padding:12px}body[data-workspace="ekpo"] #page-dashboard>.charts-row{grid-template-columns:1fr}}
