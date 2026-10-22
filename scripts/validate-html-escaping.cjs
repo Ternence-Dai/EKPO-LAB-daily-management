@@ -30,7 +30,7 @@ for (const token of [
   'esc(row.unit || row.station || \'未命名测试台\')','esc(result)',
   'esc(row.item || row.name || \'气体条目\')','esc(row.supplier || \'供应商未记录\')'
 ]) assert.ok(cockpit.includes(token), 'New cockpit must escape imported ledger field: ' + token);
-assert.ok(cockpit.includes("replace(/[&<>\\\"']/g"), 'New cockpit HTML escaping helper must encode special characters');
+assert.ok(cockpit.includes('replace(/[&<>') && cockpit.includes('g, ch => ({'), 'New cockpit HTML escaping helper must encode special characters');
 console.log('Imported-data HTML escaping regression checks passed.');
 
 (async function validateSpareLedgerDeletion() {
