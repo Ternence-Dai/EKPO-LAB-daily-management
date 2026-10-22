@@ -128,3 +128,22 @@ body[data-workspace="ekpo"] .lab-readiness__unavailable{padding:15px;border:1px 
  body[data-workspace="ekpo"] .lab-readiness__asset{align-items:flex-start;flex-direction:column}
  body[data-workspace="ekpo"] .lab-readiness__asset-status{justify-content:flex-start}
 }
+
+body[data-workspace="ekpo"] .labos-workflow-board{margin:0 0 16px;padding:17px;border:1px solid #d4e4e4;border-radius:14px;background:linear-gradient(115deg,#fff,#f4faf9);box-shadow:0 10px 28px #103c4808}
+body[data-workspace="ekpo"] .labos-workflow-board__head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:13px}
+body[data-workspace="ekpo"] .labos-workflow-board__head .eyebrow{color:#237c7c;font-size:9px;font-weight:900;letter-spacing:.16em}
+body[data-workspace="ekpo"] .labos-workflow-board__head h3{margin:4px 0;color:#183f50;font-size:18px;font-weight:850;letter-spacing:-.03em}
+body[data-workspace="ekpo"] .labos-workflow-board__head p{margin:3px 0 0;color:#789096;font-size:10px;line-height:1.6}
+body[data-workspace="ekpo"] .labos-workflow-board__mode{padding:6px 8px;border:1px solid #d4e6e2;border-radius:5px;background:#f3faf7;color:#568478;font-size:8px;font-weight:850;white-space:nowrap}
+body[data-workspace="ekpo"] .labos-workflow-board__track{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+body[data-workspace="ekpo"] .labos-workflow-step{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;min-height:136px;padding:12px;border:1px solid #dbe8e8;border-top:3px solid #3c8c8b;border-radius:9px;background:#fff;text-align:left;cursor:pointer;transition:transform .16s,border-color .16s}
+body[data-workspace="ekpo"] .labos-workflow-step:hover{transform:translateY(-2px);border-color:#8abfba;background:#f8fcfb}
+body[data-workspace="ekpo"] .labos-workflow-step>span{color:#73969a;font-size:8px;font-weight:900;letter-spacing:.12em}
+body[data-workspace="ekpo"] .labos-workflow-step>strong{color:#214c5b;font-size:12px;font-weight:850}
+body[data-workspace="ekpo"] .labos-workflow-step>small{color:#8a9da0;font-size:9px;line-height:1.5}
+body[data-workspace="ekpo"] .labos-workflow-step>b{margin-top:auto;color:#1d7880;font-size:19px;font-weight:850;font-variant-numeric:tabular-nums}
+body[data-workspace="ekpo"] .labos-workflow-step>i{color:#3a9692;font-size:8px;font-style:normal;font-weight:850}
+body[data-workspace="ekpo"] .labos-workflow-board__foot{display:flex;gap:9px;margin-top:11px;padding-top:10px;border-top:1px solid #e5eeee;color:#829599;font-size:9px;line-height:1.6}
+body[data-workspace="ekpo"] .labos-workflow-board__foot strong{flex-shrink:0;color:#337f7b;font-size:9px}
+@media(max-width:1020px){body[data-workspace="ekpo"] .labos-workflow-board__track{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){body[data-workspace="ekpo"] .labos-workflow-board{padding:13px}body[data-workspace="ekpo"] .labos-workflow-board__head{flex-direction:column}body[data-workspace="ekpo"] .labos-workflow-board__track{grid-template-columns:1fr 1fr}body[data-workspace="ekpo"] .labos-workflow-step{min-height:120px;padding:9px}}
