@@ -54,6 +54,12 @@ const { chromium } = require('playwright');
       throw new Error('EKPO operations content remains offset or constrained: ' + JSON.stringify(wideLab));
     }
 
+    await page.waitForSelector('#page-dashboard .lab-readiness');
+    const readinessBoard = await page.locator('#page-dashboard .lab-readiness').count();
+    if (readinessBoard !== 1 || !(await page.locator('.lab-readiness__metrics').count())) {
+      throw new Error('EKPO reference readiness board is not mounted');
+    }
+
     const skipLink = page.locator('a.skip-link[href="#main-content"]');
     if (await skipLink.count() !== 1) throw new Error('Keyboard skip-navigation link is missing');
     await page.keyboard.press('Tab');
