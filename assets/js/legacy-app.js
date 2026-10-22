@@ -301,7 +301,8 @@
             const hasMaintenanceRecords = DB.maintLogs.length > 0;
             const hasSpareRecords = DB.spareParts.length > 0;
             const hasTestRecords = DB.testDiary.length > 0;
-            const emptyLedger = !hasGasRecords && DB.maintenance.length === 0 && !hasMaintenanceRecords &&
+            const emptyLedger = !storageRecoveryRequired && !labStorageConflictDetected &&
+                !hasGasRecords && DB.maintenance.length === 0 && !hasMaintenanceRecords &&
                 !hasSpareRecords && DB.calibrationLogs.length === 0 && DB.experiments.length === 0 && !hasTestRecords;
 
             if (provenanceNote) {
@@ -391,7 +392,9 @@
             if (spareAlerts > 0) alerts.push(`📦 有 ${spareAlerts} 项备件需要补货！`);
             if (testErrors > 0) alerts.push(`📅 测试台运行日志中存在 ${testErrors} 次故障记录`);
             let alertList = document.getElementById('alert-list');
-            alertList.innerHTML = alerts.length === 0 ? '<li>✅ 当前无待处理事项</li>' : alerts.map(a => `<li>${esc(a)}</li>`).join('');
+            alertList.innerHTML = emptyLedger
+                ? '<li>当前尚无导入的现场业务记录，待处理事项暂不可判定。</li>'
+                : alerts.length === 0 ? '<li>✅ 当前账本中未发现已登记的待处理事项</li>' : alerts.map(a => `<li>${esc(a)}</li>`).join('');
             renderLabReadiness().catch(error => {
                 console.error('实验室设备与实验就绪度汇总失败。', error);
                 const panel = document.getElementById('lab-readiness');
@@ -500,9 +503,11 @@
                     esc(scheduleLabel(row)) + '</span>' +
                     '<span class="lab-readiness__pill ' + (row.readiness.ready ? 'is-ok' : 'is-warning') + '">' +
                     esc(row.readiness.label) + '</span></div></article>'
-            ).join('') :
-                '<div class="lab-readiness__empty"><strong>当前未发现逾期维保或校准阻断</strong>' +
-                '<span>仍请按实际证书和现场设备状态复核；未设置的维护日期不会被当作已完成。</span></div>';
+            ).join('') : assets.length === 0
+                ? '<div class="lab-readiness__empty is-unverified"><strong>尚未导入设备台账，当前无法判断设备或校准是否就绪</strong>' +
+                  '<span>先登记带资产编号的现场设备，并录入有效校准证书；无记录不代表设备正常。</span></div>'
+                : '<div class="lab-readiness__empty"><strong>当前设备台账中未发现已登记的逾期维保或校准阻断</strong>' +
+                  '<span>仍须以现场设备状态和有效证书复核；未设置维护日期不会被视为已完成。</span></div>';
 
             panel.innerHTML =
                 '<div class="lab-readiness__head"><div><span class="eyebrow">ASSET & EXPERIMENT READINESS</span>' +
@@ -512,9 +517,9 @@
                 '<div class="lab-readiness__metrics">' + metricHtml + '</div>' +
                 '<div class="lab-readiness__lower"><div class="lab-readiness__attention"><div class="lab-readiness__section-title">需要关注的设备 <small>最多显示 6 项 · 完整记录见设备台账</small></div>' +
                 rowsHtml + '</div><aside class="lab-readiness__calibration"><span>校准覆盖</span><strong>' + calibrated + ' / ' + assets.length + '</strong>' +
-                '<small>有效校准设备 / 在册设备</small><div class="lab-readiness__coverage"><i style="width:' +
+                '<small>' + (assets.length ? '有效校准设备 / 在册设备' : '尚无在册设备 · 覆盖率无法计算') + '</small><div class="lab-readiness__coverage"><i style="width:' +
                 (assets.length ? (calibrated / assets.length * 100).toFixed(1) : 0) + '%"></i></div>' +
-                '<p>' + calibrationBlocked + ' 台设备当前无法确认校准有效；未记录不等于合格。</p></aside></div>';
+                '<p>' + (assets.length ? calibrationBlocked + ' 台设备当前无法确认校准有效；未记录不等于合格。' : '请先导入设备与证书记录；当前不作设备已校准或已就绪的判断。') + '</p></aside></div>';
             panel.dataset.loaded = 'true';
             panel.dataset.equipmentCount = String(assets.length);
             panel.dataset.activeExperimentCount = String(activeExperiments);
