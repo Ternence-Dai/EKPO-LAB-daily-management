@@ -54,7 +54,7 @@ const { chromium } = require('playwright');
     await gasModal.locator('#g-cost').fill('-1');
     await gasModal.locator('#g-rent').fill('0');
     await gasModal.locator('#g-freight').fill('0');
-    await gasModal.locator('#modal-gas button[onclick="saveGas()"]').click();
+    await gasModal.locator('button[onclick="saveGas()"]').click();
     await page.waitForFunction(() => document.getElementById('toast')?.textContent.includes('不能为负数或非数字'));
     let labCache = await page.evaluate(() => JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}'));
     if ((labCache.gases || []).some(row => row.batch === 'PW-GAS-001')) {
@@ -62,7 +62,7 @@ const { chromium } = require('playwright');
     }
 
     await gasModal.locator('#g-cost').fill('120');
-    await gasModal.locator('#modal-gas button[onclick="saveGas()"]').click();
+    await gasModal.locator('button[onclick="saveGas()"]').click();
     await page.waitForFunction(() => document.getElementById('modal-gas')?.style.display === 'none');
     await page.waitForFunction(() => {
       const db = JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}');
