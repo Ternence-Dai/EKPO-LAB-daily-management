@@ -63,6 +63,20 @@ const { chromium } = require('playwright');
       throw new Error('EKPO dashboard did not render its operating summary');
     }
 
+    const lifecycleBoard = await page.evaluate(() => {
+      const board = document.querySelector('#page-dashboard .labos-workflow-board');
+      const counts = [...(board?.querySelectorAll('[data-labos-count]') || [])].map(node => ({
+        key:node.dataset.labosCount,value:node.textContent.trim()
+      }));
+      return {present:!!board,steps:board?.querySelectorAll('.labos-workflow-step').length || 0,counts,
+        readiness:board?.innerText || ''};
+    });
+    if (!lifecycleBoard.present || lifecycleBoard.steps !== 4 ||
+        lifecycleBoard.counts.length !== 4 || lifecycleBoard.counts.some(item => !/^\\d+$/.test(item.value)) ||
+        !lifecycleBoard.readiness.includes('未就绪') && !lifecycleBoard.readiness.includes('待核验')) {
+      throw new Error('EKPO lab lifecycle board did not render all four record-backed stages: ' + JSON.stringify(lifecycleBoard));
+    }
+
     await page.waitForFunction(() => {
       const panel = document.getElementById('lab-readiness');
       return panel && panel.dataset.loaded === 'true' &&
