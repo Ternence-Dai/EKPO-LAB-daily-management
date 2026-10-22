@@ -128,7 +128,16 @@ const { chromium } = require('playwright');
         return active?.dataset.tab === expected && page && !page.classList.contains('hidden') &&
           page.textContent.trim().length > 20;
       }, tab);
-      await page.waitForSelector('#page-' + tab + ' > .w5-module-context');
+      const expectedTitles = {
+        gases: '气体使用记录', maintenance: '设备维保管理',
+        spareParts: '备件库存管理', testDiary: '测试台运行日志',
+        experiments: '实验计划与生命周期', yearly: '年度综合统计', system: '系统全量设置'
+      };
+      const title = (await page.locator('#pageTitle').innerText()).trim();
+      if (title !== expectedTitles[tab]) {
+        throw new Error('EKPO navigation title did not follow the selected operational ledger: ' +
+          JSON.stringify({tab, title, expected:expectedTitles[tab]}));
+      }
       const text = await page.locator('#page-' + tab).innerText();
       if (!text.trim() || text.includes('页面不存在')) {
         throw new Error('EKPO module failed to render: ' + tab);
