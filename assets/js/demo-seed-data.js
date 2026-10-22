@@ -29,3 +29,20 @@ const defaultData = {
                 { id: 1, start: "2026-01-11", end: "2026-01-12", duration: 2, unit: "示例测试台架 01", operator: "示例操作员", sap: "Ok", result: "Ok", cycle: "210923_PHT_V07.04", error: "DP Air inlet&outlet too low", errorDesc: "气动阀组故障" }
             ]
         };
+
+
+/* A first-run account starts with no operational assertions.
+   Demo fixtures remain available for explicit demonstration/import workflows. */
+function createEmptyLabLedger() {
+    const data = JSON.parse(JSON.stringify(defaultData));
+    data.dataProvenance = 'empty-ledger';
+    data.gases = [];
+    data.maintenance = [];
+    data.maintLogs = [];
+    data.spareParts = [];
+    data.spareLogs = [];
+    data.calibrationLogs = [];
+    data.experiments = [];
+    data.testDiary = [];
+    return data;
+}
