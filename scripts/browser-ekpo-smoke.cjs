@@ -133,6 +133,27 @@ const { chromium } = require('playwright');
         JSON.stringify(readinessEvidence));
     }
 
+    const dashboardPriority = await page.evaluate(() => {
+      const root = document.querySelector('#page-dashboard');
+      const readiness = root?.querySelector('#lab-readiness');
+      const metrics = root?.querySelector('.metrics-grid');
+      const charts = root?.querySelector('.charts-row');
+      const note = document.querySelector('#labos-data-note [data-provenance-note]')?.textContent || '';
+      return {
+        hasGenericLifecycleBoard: !!root?.querySelector('.labos-workflow-board'),
+        readinessBeforeMetrics: !!readiness && !!metrics && readiness.compareDocumentPosition(metrics) & Node.DOCUMENT_POSITION_FOLLOWING,
+        readinessBeforeCharts: !!readiness && !!charts && readiness.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING,
+        provenanceNote: note
+      };
+    });
+    if (dashboardPriority.hasGenericLifecycleBoard ||
+        !dashboardPriority.readinessBeforeMetrics ||
+        !dashboardPriority.readinessBeforeCharts ||
+        !dashboardPriority.provenanceNote.includes('示例账本')) {
+      throw new Error('EKPO home must prioritize live equipment readiness and disclose demo-ledger provenance: ' +
+        JSON.stringify(dashboardPriority));
+    }
+
     const tabs = ['gases', 'maintenance', 'spareParts', 'testDiary', 'experiments', 'yearly', 'system'];
     for (const tab of tabs) {
       await page.locator('.sidebar .nav-item[data-tab="' + tab + '"]').click();
