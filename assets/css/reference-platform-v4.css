@@ -1,4 +1,5 @@
 /* Reference platform v4: lab operations desk. */
+:root{--ref-line:#d5e3df}
 body[data-workspace="ekpo"]{background:#eef4f2;color:#173d42}
 body[data-workspace="ekpo"] .app{display:flex;min-height:100vh}
 body[data-workspace="ekpo"] .sidebar{width:254px;flex-basis:254px;position:sticky;top:0;height:100vh;background:#0f3b4b;border-right:1px solid #2b5b67}
