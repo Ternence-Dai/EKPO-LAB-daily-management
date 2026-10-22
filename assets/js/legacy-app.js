@@ -26,7 +26,7 @@
         try {
             cachedLabRaw = localStorage.getItem('lab_management_db_v9');
             lastKnownLabStorageValue = cachedLabRaw;
-            DB = cachedLabRaw ? JSON.parse(cachedLabRaw) : JSON.parse(JSON.stringify(defaultData));
+            DB = cachedLabRaw ? JSON.parse(cachedLabRaw) : createEmptyLabLedger();
             if (!DB || !Array.isArray(DB.gases) || !Array.isArray(DB.maintenance) ||
                 !Array.isArray(DB.spareParts) || !Array.isArray(DB.testDiary) ||
                 (DB.calibrationLogs !== undefined && !Array.isArray(DB.calibrationLogs)) ||
@@ -44,7 +44,7 @@
                 }
             }
             console.warn('本地缓存不可用或结构异常，已载入内置演示数据。请检查浏览器存储并恢复备份。', storageError);
-            DB = JSON.parse(JSON.stringify(defaultData));
+            DB = createEmptyLabLedger();
             storageWarning = true;
             storageRecoveryRequired = true;
         }
