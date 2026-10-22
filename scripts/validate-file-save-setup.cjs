@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 
 const source = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const start = source.indexOf('async function enableLocalRealTimeSave() {');
-const end = source.indexOf('// ==================== 5. 仪表盘渲染', start);
+const end = source.indexOf('// ==================== 5. Reference operations cockpit', start);
 assert.ok(start >= 0 && end > start, 'file-save setup function must exist');
 const functionSource = source.slice(start, end);
 
