@@ -74,6 +74,50 @@
             }
         });
 
+        // Remove only byte-for-byte unchanged built-in demo rows from an old demo-seed ledger.
+        // User-edited or user-added rows are retained. The original cache is archived first.
+        let demoSeedMigrationNotice = '';
+        function migrateUnmodifiedDemoRows() {
+            if (storageRecoveryRequired || !cachedLabRaw || !DB || DB.dataProvenance !== 'demo-seed') return;
+            const tableKeys = ['gases','maintenance','maintLogs','spareParts','spareLogs','calibrationLogs','experiments','testDiary'];
+            const migrated = JSON.parse(JSON.stringify(DB));
+            let removed = 0;
+            for (const key of tableKeys) {
+                const seedRows = new Set((Array.isArray(defaultData[key]) ? defaultData[key] : []).map(row => JSON.stringify(row)));
+                migrated[key] = (Array.isArray(migrated[key]) ? migrated[key] : []).filter(row => {
+                    const fingerprint = JSON.stringify(row);
+                    if (!seedRows.has(fingerprint)) return true;
+                    seedRows.delete(fingerprint);
+                    removed += 1;
+                    return false;
+                });
+            }
+            if (!removed) return;
+            const noOperationalRows = tableKeys.every(key => migrated[key].length === 0);
+            if (noOperationalRows) migrated.dataProvenance = 'empty-ledger';
+            const recoveryKey = 'lab_management_db_v9_demo_archive_' + Date.now();
+            try {
+                if (localStorage.getItem('lab_management_db_v9') !== cachedLabRaw) {
+                    labStorageConflictDetected = true;
+                    console.warn('演示样本清理前检测到缓存已变化；保留最新账本，不执行迁移。');
+                    return;
+                }
+                localStorage.setItem(recoveryKey, cachedLabRaw);
+                const nextRaw = JSON.stringify(migrated);
+                localStorage.setItem('lab_management_db_v9', nextRaw);
+                DB = migrated;
+                cachedLabRaw = nextRaw;
+                lastKnownLabStorageValue = nextRaw;
+                demoSeedMigrationNotice = recoveryKey;
+                console.info('已清理 ' + removed + ' 条未修改的内置演示记录；原始样本已归档：' + recoveryKey);
+            } catch (migrationError) {
+                storageWarning = true;
+                storageRecoveryRequired = true;
+                console.error('演示样本迁移失败；已保留内存中的原账本并锁定写入。', migrationError);
+            }
+        }
+        migrateUnmodifiedDemoRows();
+
         let fileHandle = null;
 
         window.addEventListener('storage', event => {
@@ -1932,6 +1976,9 @@
                 }
             }
             renderDashboard();
+            if (demoSeedMigrationNotice) {
+                showToast('旧版未修改的内置演示记录已清理；原数据已另存恢复备份。请导入经核验的现场台账。');
+            }
             if (storageWarning) showToast('本地缓存损坏或不可用，当前为演示数据；请勿覆盖原始备份', 'error');
         };
     
