@@ -1,0 +1,25 @@
+/* EKPO LabOS — LIMS/eLabFTW operations and quality workspace */
+body[data-workspace="ekpo"]{--lims-ink:#193f50;--lims-muted:#718b94;--lims-line:#d8e6e7;--lims-teal:#1b8683;--lims-bg:#eff5f5}
+body[data-workspace="ekpo"]{background:var(--lims-bg)}
+body[data-workspace="ekpo"] .sidebar{position:sticky;top:0;height:100vh;min-height:100vh;width:252px;padding:21px 15px;background:linear-gradient(180deg,#123c4d,#103344 68%,#0b2b3a);border-right:1px solid #2b5868;box-shadow:10px 0 30px #143c4a12}
+body[data-workspace="ekpo"] .sidebar-header{padding:8px 9px 22px;border-bottom:1px solid #ffffff20;color:#effcfc;font-weight:850;letter-spacing:.02em}
+body[data-workspace="ekpo"] .sidebar nav{padding-top:17px!important}
+body[data-workspace="ekpo"] .nav-item{margin:3px 0;border:1px solid transparent;border-radius:9px;padding:11px 12px;color:#b6ced0;transition:background .15s,border-color .15s}
+body[data-workspace="ekpo"] .nav-item.active{border-color:#4a898b;background:#1b5861;color:#fff;box-shadow:inset 3px 0 #65d6c3}
+body[data-workspace="ekpo"] .main-content{min-width:0;background:radial-gradient(ellipse at 90% 0,#2d99920c,transparent 36%),#f1f6f5}
+body[data-workspace="ekpo"] .topbar{position:sticky;top:0;z-index:30;min-height:66px;padding:12px 28px;background:#ffffffed;border-bottom:1px solid var(--lims-line);backdrop-filter:blur(16px)}
+body[data-workspace="ekpo"] .labos-intro{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:190px;margin:24px 28px 16px;padding:28px 32px;border:1px solid #d0e2e2;border-radius:17px;background:radial-gradient(circle at 85% 20%,#52aaa91c,transparent 24%),linear-gradient(115deg,#fff,#eff8f7 70%,#e4f2f0);box-shadow:0 16px 38px #184e4c0d}
+body[data-workspace="ekpo"] .labos-intro h2{font-size:clamp(28px,3vw,40px);letter-spacing:-.035em;color:#194654}
+body[data-workspace="ekpo"] .labos-intro p{max-width:760px;color:#648088;line-height:1.8}
+body[data-workspace="ekpo"] .labos-stamp{width:90px;height:90px;display:grid;place-items:center;border:1px solid #c7e0dc;border-radius:22px;background:#fff;color:#277f79;font-size:28px;box-shadow:0 12px 28px #1c6e6812}
+body[data-workspace="ekpo"] .product-workflow{margin:0 28px 16px;padding:17px 19px;border:1px solid var(--lims-line);border-radius:15px;background:#fff;box-shadow:0 9px 25px #174b4b08}
+body[data-workspace="ekpo"] .product-workflow__item{min-height:124px;border-radius:11px;background:linear-gradient(150deg,#fff,#f5faf9)}
+body[data-workspace="ekpo"] .content-body{max-width:1800px;margin:auto;padding:10px 28px 42px}
+body[data-workspace="ekpo"] .content-body .metrics-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+body[data-workspace="ekpo"] .content-body .card{border:1px solid #dce8e8;border-radius:12px;background:#fff;box-shadow:0 7px 22px #1b4e500a}
+body[data-workspace="ekpo"] .content-body .card-value{color:#1a6870;font-variant-numeric:tabular-nums}
+body[data-workspace="ekpo"] .content-body :is(table,th,td){border-color:#e1ebea}
+body[data-workspace="ekpo"] .content-body :is(input,select,textarea){min-height:39px;border:1px solid #d0e0e0;border-radius:8px;background:#fbfdfd;color:#224754}
+@media(max-width:920px){body[data-workspace="ekpo"] .sidebar{width:76px;padding:17px 8px}body[data-workspace="ekpo"] .sidebar-header{font-size:0;text-align:center;padding:8px 0 17px}body[data-workspace="ekpo"] .sidebar nav .nav-item{font-size:0;text-align:center;padding:12px 3px}body[data-workspace="ekpo"] .labos-intro,body[data-workspace="ekpo"] .product-workflow,body[data-workspace="ekpo"] .content-body{margin-left:14px;margin-right:14px;padding-left:0;padding-right:0}}
+@media(max-width:640px){body[data-workspace="ekpo"] .sidebar{position:relative;width:auto;height:auto;min-height:0;padding:9px 12px;border:0;border-bottom:1px solid #2b5868}body[data-workspace="ekpo"] .sidebar-header{display:none}body[data-workspace="ekpo"] .sidebar nav{display:flex;gap:4px;overflow:auto;padding:0!important}body[data-workspace="ekpo"] .sidebar nav .nav-item{flex:0 0 auto;font-size:11px;white-space:nowrap;padding:9px 11px}body[data-workspace="ekpo"] .labos-intro{margin:13px;padding:20px}.labos-stamp{display:none}body[data-workspace="ekpo"] .topbar{padding:10px 14px}body[data-workspace="ekpo"] .product-workflow{margin:0 13px 13px}body[data-workspace="ekpo"] .content-body{padding:8px 12px 28px}}
+@media(prefers-reduced-motion:reduce){body[data-workspace="ekpo"] *{transition:none!important}}
