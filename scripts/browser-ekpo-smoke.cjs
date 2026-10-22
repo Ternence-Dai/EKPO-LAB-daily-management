@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
 
   try {
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
-    const seedResponse = await page.request.get('http://127.0.0.1:4173/assets/js/demo-seed-data.js?v=20261022-demo-provenance-v2');
+    const seedResponse = await page.request.get('http://127.0.0.1:4173/assets/js/demo-seed-data.js?v=20261022-empty-ledger-v1');
     const seedSource = await seedResponse.text();
     if (!seedResponse.ok() || !seedSource.includes("dataProvenance: 'demo-seed'") ||
         seedSource.includes('戴煜') || seedSource.includes('Terrence') ||
@@ -64,15 +64,32 @@ const { chromium } = require('playwright');
     await page.waitForFunction(() => document.activeElement?.id === 'main-content');
     const appScript = await page.locator('script[src*="assets/js/legacy-app.js"]').getAttribute('src');
     const workspaceScript = await page.locator('script[src*="assets/js/workspace-v5.js"]').getAttribute('src');
-    if (!appScript || !appScript.includes('v=20261020-ekpo-record-id-v6') ||
+    if (!appScript || !appScript.includes('v=20261022-empty-ledger-v1') ||
         !workspaceScript || !workspaceScript.includes('v=20261019-v5') ||
         !(await page.locator('.sidebar .nav-item[data-tab="gases"]').count())) {
       throw new Error('EKPO active app, workspace and lifecycle navigation are not loaded');
     }
-    const demoDisclosure = page.locator('#labos-data-note');
-    if (!(await demoDisclosure.isVisible()) ||
-        !(await demoDisclosure.locator('[data-provenance-note]').innerText()).includes('示例账本')) {
-      throw new Error('The active laboratory ledger provenance must be visible on the dashboard');
+    const ledgerDisclosure = page.locator('#labos-data-note');
+    if (!(await ledgerDisclosure.isVisible()) ||
+        !(await ledgerDisclosure.locator('[data-provenance-note]').innerText()).includes('新建空台账')) {
+      throw new Error('A new EKPO account must disclose that it starts with an empty, unverified ledger');
+    }
+    const firstRunLedger = await page.evaluate(() => {
+      const db = JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}');
+      return {
+        provenance: db.dataProvenance,
+        gases: db.gases?.length ?? -1,
+        maintenance: db.maintenance?.length ?? -1,
+        maintenanceLogs: db.maintLogs?.length ?? -1,
+        spares: db.spareParts?.length ?? -1,
+        calibrations: db.calibrationLogs?.length ?? -1,
+        experiments: db.experiments?.length ?? -1,
+        diary: db.testDiary?.length ?? -1
+      };
+    });
+    if (firstRunLedger.provenance !== 'empty-ledger' ||
+        Object.entries(firstRunLedger).some(([key,value]) => key !== 'provenance' && value !== 0)) {
+      throw new Error('A new EKPO installation must not seed synthetic operational records: ' + JSON.stringify(firstRunLedger));
     }
     await page.waitForSelector('#page-dashboard:not(.hidden)');
     if (!(await page.locator('#page-dashboard').innerText()).trim()) {
@@ -105,7 +122,7 @@ const { chromium } = require('playwright');
         !dashboardPriority.readinessBeforeCharts ||
         dashboardPriority.metricsCount !== 5 ||
         dashboardPriority.top > 720 ||
-        !dashboardPriority.provenanceNote.includes('示例账本')) {
+        !dashboardPriority.provenanceNote.includes('新建空台账')) {
       throw new Error('EKPO dashboard must prioritize live readiness, remove duplicated static lifecycle cards, and disclose the demo ledger: ' +
         JSON.stringify(dashboardPriority));
     }
@@ -119,13 +136,13 @@ const { chromium } = require('playwright');
         actions: panel?.querySelectorAll('.lab-readiness__actions button').length || 0
       };
     });
-    if (!Number.isFinite(readinessEvidence.equipment) ||
-        !Number.isFinite(readinessEvidence.activeExperiments) ||
+    if (readinessEvidence.equipment !== 0 ||
+        readinessEvidence.activeExperiments !== 0 ||
         readinessEvidence.actions !== 2 ||
         !readinessEvidence.labels.includes('设备与实验就绪度') ||
-        !readinessEvidence.labels.includes('校准未就绪') ||
-        !readinessEvidence.labels.includes('需要关注的设备')) {
-      throw new Error('EKPO dashboard readiness panel did not expose its live operational metrics: ' +
+        !readinessEvidence.labels.includes('校准覆盖') ||
+        !readinessEvidence.labels.includes('尚未导入设备台账')) {
+      throw new Error('An empty lab ledger must report readiness as unverified, not normal: ' +
         JSON.stringify(readinessEvidence));
     }
 
@@ -153,11 +170,9 @@ const { chromium } = require('playwright');
         throw new Error('EKPO module failed to render: ' + tab);
       }
       if (tab === 'maintenance') {
-        await page.waitForFunction(() => document.querySelectorAll('#table-maintenance tbody tr').length > 0,
-          undefined, { timeout: 10000 });
         const equipmentRows = await page.locator('#table-maintenance tbody tr').count();
         if (equipmentRows !== readinessEvidence.equipment) {
-          throw new Error('Dashboard equipment total does not match the equipment register view: ' +
+          throw new Error('Empty dashboard equipment total must match the empty equipment register: ' +
             JSON.stringify({ dashboard: readinessEvidence.equipment, registerRows: equipmentRows }));
         }
       }
@@ -213,6 +228,30 @@ const { chromium } = require('playwright');
         !(await page.locator('#table-gases tbody').innerText()).includes('Synthetic test supplier')) {
       throw new Error('Valid gas usage record was not persisted exactly once and rendered in the table');
     }
+
+    // Seed one synthetic asset only in this isolated Playwright browser so the
+    // real calibration workflow can be exercised without fabricating live records.
+    await page.locator('.sidebar .nav-item[data-tab="maintenance"]').click();
+    await page.waitForSelector('#page-maintenance:not(.hidden)');
+    await page.locator('#page-maintenance .action-bar button.btn-primary').click();
+    const maintenanceModal = page.locator('#modal-maint');
+    await maintenanceModal.waitFor({ state: 'visible' });
+    await maintenanceModal.locator('#m-name').fill('PW Synthetic test bench');
+    await maintenanceModal.locator('#m-category').fill('Acceptance fixture');
+    await maintenanceModal.locator('#m-location').fill('Isolated browser context');
+    await maintenanceModal.locator('#m-qty').fill('1');
+    await maintenanceModal.locator('#m-cycle').selectOption({ label: '一级保养' });
+    await maintenanceModal.locator('#m-freq').fill('年度');
+    await maintenanceModal.locator('#m-last').fill('2026-01-01');
+    await maintenanceModal.locator('#m-next').fill('2027-01-01');
+    await maintenanceModal.locator('#m-responsible').fill('Playwright only');
+    await maintenanceModal.locator('#m-record').fill('Synthetic fixture; not a live lab asset');
+    await maintenanceModal.locator('button[onclick="saveMaint()"]').click();
+    await page.waitForFunction(() => document.getElementById('modal-maint')?.style.display === 'none');
+    await page.waitForFunction(() => {
+      const db = JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}');
+      return (db.maintenance || []).some(row => row.name === 'PW Synthetic test bench');
+    }, undefined, { timeout: 10000 });
 
     // Exercise the calibration certificate workflow and append-only provenance ledger.
     await page.locator('.sidebar .nav-item[data-tab="maintenance"]').click();
