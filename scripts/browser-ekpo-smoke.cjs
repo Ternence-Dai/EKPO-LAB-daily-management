@@ -28,6 +28,32 @@ const { chromium } = require('playwright');
       throw new Error('EKPO dashboard did not render its operating summary');
     }
 
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('lab-readiness');
+      return panel && panel.dataset.loaded === 'true' &&
+        panel.querySelectorAll('[data-readiness-metric]').length === 5 &&
+        panel.getAttribute('aria-busy') === 'false';
+    }, undefined, { timeout: 15000 });
+    const readinessEvidence = await page.evaluate(() => {
+      const panel = document.getElementById('lab-readiness');
+      const value = key => panel?.querySelector('[data-readiness-metric="' + key + '"]')?.dataset.value;
+      return {
+        equipment: Number(value('equipment')),
+        activeExperiments: Number(value('active-experiments')),
+        labels: panel?.innerText || '',
+        actions: panel?.querySelectorAll('.lab-readiness__actions button').length || 0
+      };
+    });
+    if (!Number.isFinite(readinessEvidence.equipment) ||
+        !Number.isFinite(readinessEvidence.activeExperiments) ||
+        readinessEvidence.actions !== 2 ||
+        !readinessEvidence.labels.includes('设备与实验就绪度') ||
+        !readinessEvidence.labels.includes('校准未就绪') ||
+        !readinessEvidence.labels.includes('需要关注的设备')) {
+      throw new Error('EKPO dashboard readiness panel did not expose its live operational metrics: ' +
+        JSON.stringify(readinessEvidence));
+    }
+
     const tabs = ['gases', 'maintenance', 'spareParts', 'testDiary', 'experiments', 'yearly', 'system'];
     for (const tab of tabs) {
       await page.locator('.sidebar .nav-item[data-tab="' + tab + '"]').click();
@@ -41,6 +67,26 @@ const { chromium } = require('playwright');
       const text = await page.locator('#page-' + tab).innerText();
       if (!text.trim() || text.includes('页面不存在')) {
         throw new Error('EKPO module failed to render: ' + tab);
+      }
+      if (tab === 'maintenance') {
+        await page.waitForFunction(() => document.querySelectorAll('#table-maintenance tbody tr').length > 0,
+          undefined, { timeout: 10000 });
+        const equipmentRows = await page.locator('#table-maintenance tbody tr').count();
+        if (equipmentRows !== readinessEvidence.equipment) {
+          throw new Error('Dashboard equipment total does not match the equipment register view: ' +
+            JSON.stringify({ dashboard: readinessEvidence.equipment, registerRows: equipmentRows }));
+        }
+      }
+      if (tab === 'experiments') {
+        await page.waitForFunction(() => {
+          const count = document.getElementById('experiment-count-active');
+          return !!count && count.textContent.trim() !== '';
+        }, undefined, { timeout: 10000 });
+        const activeCount = Number((await page.locator('#experiment-count-active').innerText()).trim());
+        if (activeCount !== readinessEvidence.activeExperiments) {
+          throw new Error('Dashboard active-experiment metric does not match experiment lifecycle summary: ' +
+            JSON.stringify({ dashboard: readinessEvidence.activeExperiments, experimentSummary: activeCount }));
+        }
       }
     }
 
