@@ -28,6 +28,36 @@ const { chromium } = require('playwright');
       throw new Error('EKPO dashboard did not render its operating summary');
     }
 
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('lab-readiness');
+      return panel && panel.dataset.loaded === 'true' &&
+        panel.querySelectorAll('[data-readiness-metric]').length === 5 &&
+        panel.getAttribute('aria-busy') === 'false';
+    }, undefined, { timeout: 15000 });
+    const readinessEvidence = await page.evaluate(() => {
+      const db = JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}');
+      const panel = document.getElementById('lab-readiness');
+      const value = key => panel?.querySelector('[data-readiness-metric="' + key + '"]')?.dataset.value;
+      return {
+        equipment: { expected: (db.maintenance || []).length, actual: Number(value('equipment')) },
+        activeExperiments: {
+          expected: (db.experiments || []).filter(row => row.status === 'in-progress').length,
+          actual: Number(value('active-experiments'))
+        },
+        labels: panel?.innerText || '',
+        actions: panel?.querySelectorAll('.lab-readiness__actions button').length || 0
+      };
+    });
+    if (readinessEvidence.equipment.expected !== readinessEvidence.equipment.actual ||
+        readinessEvidence.activeExperiments.expected !== readinessEvidence.activeExperiments.actual ||
+        readinessEvidence.actions !== 2 ||
+        !readinessEvidence.labels.includes('设备与实验就绪度') ||
+        !readinessEvidence.labels.includes('校准未就绪') ||
+        !readinessEvidence.labels.includes('需要关注的设备')) {
+      throw new Error('EKPO dashboard readiness panel did not reflect current equipment and experiment ledgers: ' +
+        JSON.stringify(readinessEvidence));
+    }
+
     const tabs = ['gases', 'maintenance', 'spareParts', 'testDiary', 'experiments', 'yearly', 'system'];
     for (const tab of tabs) {
       await page.locator('.sidebar .nav-item[data-tab="' + tab + '"]').click();
