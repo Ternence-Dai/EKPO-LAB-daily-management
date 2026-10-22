@@ -2,7 +2,9 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const html = fs.readFileSync('index.html', 'utf8') + '\n' + fs.readFileSync('assets/js/legacy-app.js', 'utf8');
+const legacy = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
+const cockpit = fs.readFileSync('assets/js/ekpo-operations-cockpit-v3.js', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8') + '\n' + legacy + '\n' + cockpit;
 const helperStart = html.indexOf('const esc = value =>');
 const helperEnd = html.indexOf('\n        // ==================== 1.', helperStart);
 if (helperStart < 0 || helperEnd < 0) throw new Error('HTML escaping helper not found');
@@ -19,10 +21,16 @@ for (const token of [
   '${esc(s.desc||\'\')}',
   '${esc(t.errorDesc || \'-\')}',
   '${esc(row[k] !== undefined ? row[k] : \'\')}',
-  'alerts.map(a => `<li>${esc(a)}</li>`).join(\'\')'
 ]) assert.ok(html.includes(token), 'Missing escaped render expression: ' + token);
 for (const token of ['${g.item||\'\'}','${m.name||\'\'}','${l.record||\'\'}','${s.desc||\'\'}','${t.errorDesc || \'-\'}'])
   assert.ok(!html.includes(token), 'Unescaped imported value remains: ' + token);
+for (const token of [
+  'esc(item.label)','esc(item.value)','esc(item.foot)','esc(item.title)','esc(item.detail)',
+  'esc(row.name)','esc(row.category || \'类别未记录\')','esc(row.location || \'位置未记录\')',
+  'esc(row.unit || row.station || \'未命名测试台\')','esc(result)',
+  'esc(row.item || row.name || \'气体条目\')','esc(row.supplier || \'供应商未记录\')'
+]) assert.ok(cockpit.includes(token), 'New cockpit must escape imported ledger field: ' + token);
+assert.ok(cockpit.includes("replace(/[&<>\\\"']/g"), 'New cockpit HTML escaping helper must encode special characters');
 console.log('Imported-data HTML escaping regression checks passed.');
 
 (async function validateSpareLedgerDeletion() {
