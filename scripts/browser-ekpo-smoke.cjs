@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
 
   try {
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
-    const referenceStylesheet = page.locator('link[rel="stylesheet"][href*="lims-operations-console-v2.css"]');
+    const referenceStylesheet = page.locator('link[rel="stylesheet"][href*="reference-platform-v4.css"]');
     if (await referenceStylesheet.count() !== 1) throw new Error('LIMS operations console stylesheet is not linked');
     const referenceCssResponse = await page.request.get(await referenceStylesheet.evaluate(node => node.href));
     const referenceCssText = await referenceCssResponse.text();
