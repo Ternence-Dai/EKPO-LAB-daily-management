@@ -11,6 +11,19 @@ const { chromium } = require('playwright');
 
   try {
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
+    const referenceStylesheet = page.locator('link[rel="stylesheet"][href*="lims-operations-console-v2.css"]');
+    if (await referenceStylesheet.count() !== 1) throw new Error('LIMS operations console stylesheet is not linked');
+    const referenceCssResponse = await page.request.get(await referenceStylesheet.evaluate(node => node.href));
+    const referenceCssText = await referenceCssResponse.text();
+    const labOperationsLayout = await page.locator('.sidebar').evaluate(node => ({
+      position: getComputedStyle(node).position,
+      width: getComputedStyle(node).width
+    }));
+    if (!referenceCssResponse.ok() || !referenceCssText.includes('--lims-teal:#1b8683') ||
+        labOperationsLayout.position !== 'sticky' || labOperationsLayout.width !== '252px') {
+      throw new Error('LIMS operations layout was not loaded/applied: ' + JSON.stringify(labOperationsLayout));
+    }
+
     const skipLink = page.locator('a.skip-link[href="#main-content"]');
     if (await skipLink.count() !== 1) throw new Error('Keyboard skip-navigation link is missing');
     await page.keyboard.press('Tab');
