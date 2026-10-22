@@ -147,3 +147,16 @@ body[data-workspace="ekpo"] .labos-workflow-board__foot{display:flex;gap:9px;mar
 body[data-workspace="ekpo"] .labos-workflow-board__foot strong{flex-shrink:0;color:#337f7b;font-size:9px}
 @media(max-width:1020px){body[data-workspace="ekpo"] .labos-workflow-board__track{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){body[data-workspace="ekpo"] .labos-workflow-board{padding:13px}body[data-workspace="ekpo"] .labos-workflow-board__head{flex-direction:column}body[data-workspace="ekpo"] .labos-workflow-board__track{grid-template-columns:1fr 1fr}body[data-workspace="ekpo"] .labos-workflow-step{min-height:120px;padding:9px}}
+
+
+/* First-run ledger onboarding: no synthetic KPI totals or readiness claims. */
+body[data-workspace="ekpo"] .labos-first-run{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:12px 0 16px;padding:20px 22px;border:1px solid #badbd4;border-left:4px solid #18877f;border-radius:14px;background:linear-gradient(110deg,#f3fbf8,#eaf5f2 70%,#f7fbfa)}
+body[data-workspace="ekpo"] .labos-first-run h3{margin:5px 0;color:#174b48;font-size:19px}
+body[data-workspace="ekpo"] .labos-first-run p{max-width:760px;color:#5d7b77;font-size:12px;line-height:1.8}
+body[data-workspace="ekpo"] .labos-first-run__actions{display:flex;gap:8px;flex-wrap:wrap}
+body[data-workspace="ekpo"] .labos-first-run__actions button{min-height:38px;padding:9px 13px;border:1px solid #bcded7;border-radius:8px;background:#fff;color:#176c67;font-size:11px;font-weight:750;cursor:pointer}
+body[data-workspace="ekpo"] .labos-first-run__actions button:hover{border-color:#18877f;background:#f6fffc}
+body[data-workspace="ekpo"] .lab-readiness__empty.is-unverified{border:1px dashed #d4b66c;background:#fffaf0}
+body[data-workspace="ekpo"] .lab-readiness__empty.is-unverified strong{color:#80602a}
+body[data-workspace="ekpo"] .lab-readiness__empty.is-unverified span{color:#8d774f}
+@media(max-width:760px){body[data-workspace="ekpo"] .labos-first-run{align-items:flex-start;flex-direction:column;padding:16px 14px}body[data-workspace="ekpo"] .labos-first-run__actions{width:100%}body[data-workspace="ekpo"] .labos-first-run__actions button{flex:1 1 140px}}
