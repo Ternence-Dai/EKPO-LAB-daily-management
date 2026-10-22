@@ -344,6 +344,12 @@
 
         // ==================== 5. 仪表盘渲染 ====================
         function renderDashboard() {
+            // The reference cockpit replaces the legacy dashboard body. All other
+            // ledger views and mutation workflows remain in this application module.
+            if (typeof window.renderEkpoOperationsCockpit === 'function') {
+                window.renderEkpoOperationsCockpit();
+                return;
+            }
             const provenance = DB.dataProvenance || DB.settings?.dataProvenance || 'unknown';
             const provenanceNote = document.querySelector('#labos-data-note [data-provenance-note]');
             let totalGasCost = DB.gases.reduce((sum, g) => sum + (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0), 0);
