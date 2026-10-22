@@ -293,22 +293,53 @@
         function renderDashboard() {
             const provenance = DB.dataProvenance || DB.settings?.dataProvenance || 'unknown';
             const provenanceNote = document.querySelector('#labos-data-note [data-provenance-note]');
-            if (provenanceNote) {
-                provenanceNote.textContent = provenance === 'demo-seed'
-                    ? '当前显示程序内置示例账本。气体批次、供应商、费用、设备、校准和测试记录均为演示样本；请导入现场原始台账并核验后，再用于运营判断。'
-                    : provenance === 'unknown'
-                        ? '当前账本来源未标记。请在数据设置中核对导入来源、责任人和更新时间；未经核验的数据不视为真实现场记录。'
-                        : '当前使用本机账本数据（来源标记：' + String(provenance) + '）。请继续核对原始凭证、更新时间和记录责任人；本应用不会将本机数据视为外部实时数据。';
-            }
             let totalGasCost = DB.gases.reduce((sum, g) => sum + (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0), 0);
             let totalMaintCost = DB.maintLogs.reduce((sum, m) => sum + (Number(m.cost) || 0), 0);
             let totalSpareCost = DB.spareParts.reduce((sum, s) => sum + ((Number(s.qty) || 0) * (Number(s.price) || 0)), 0);
             let testErrors = DB.testDiary.filter(t => t.error && t.error.trim() !== '').length;
+            const hasGasRecords = DB.gases.length > 0;
+            const hasMaintenanceRecords = DB.maintLogs.length > 0;
+            const hasSpareRecords = DB.spareParts.length > 0;
+            const hasTestRecords = DB.testDiary.length > 0;
+            const emptyLedger = !hasGasRecords && DB.maintenance.length === 0 && !hasMaintenanceRecords &&
+                !hasSpareRecords && DB.calibrationLogs.length === 0 && DB.experiments.length === 0 && !hasTestRecords;
 
-            document.getElementById('dash-gas').innerText = '¥' + totalGasCost.toLocaleString();
-            document.getElementById('dash-maint-cost').innerText = '¥' + totalMaintCost.toLocaleString();
-            document.getElementById('dash-spare-cost').innerText = '¥' + totalSpareCost.toLocaleString();
-            document.getElementById('dash-test').innerText = testErrors + ' 次';
+            if (provenanceNote) {
+                provenanceNote.textContent = provenance === 'demo-seed'
+                    ? '当前显示程序内置演示样本，不代表现场台账。气体费用、设备、备件和测试记录不可用于采购、财务结算或安全判断。'
+                    : emptyLedger && provenance === 'empty-ledger'
+                        ? '当前为新建空台账。尚未导入现场气体批次、设备资产、备件、校准或测试记录；所有费用与趋势保持空白，不会用虚构数字填充。'
+                        : provenance === 'unknown'
+                            ? '当前账本来源未标记。请核对导入来源、责任人和更新时间；未经核验的数据不视为真实现场记录。'
+                            : '当前显示本机账本记录（来源标记：' + String(provenance) + '）。请核对原始凭证、更新时间和记录责任人；本应用不会把本机数据冒充外部实时数据。';
+            }
+
+            document.getElementById('dash-gas').innerText = hasGasRecords ? '¥' + totalGasCost.toLocaleString() : '—';
+            document.getElementById('dash-maint-cost').innerText = hasMaintenanceRecords ? '¥' + totalMaintCost.toLocaleString() : '—';
+            document.getElementById('dash-spare-cost').innerText = hasSpareRecords ? '¥' + totalSpareCost.toLocaleString() : '—';
+            document.getElementById('dash-test').innerText = hasTestRecords ? testErrors + ' 次' : '—';
+
+            const dashboard = document.getElementById('page-dashboard');
+            let firstRun = document.getElementById('labos-first-run');
+            if (emptyLedger) {
+                if (!firstRun) {
+                    firstRun = document.createElement('section');
+                    firstRun.id = 'labos-first-run';
+                    firstRun.className = 'labos-first-run';
+                    firstRun.setAttribute('aria-label', '新建实验室台账');
+                    const metrics = dashboard.querySelector('.metrics-grid');
+                    if (metrics) metrics.insertAdjacentElement('beforebegin', firstRun);
+                    else dashboard.appendChild(firstRun);
+                }
+                firstRun.innerHTML = '<div><span class="eyebrow">NEW LAB / VERIFIED RECORDS ONLY</span><h3>建立第一份现场台账</h3>' +
+                    '<p>当前没有已导入记录。请从现场原始凭证、设备铭牌、校准证书与测试日志开始登记；未填写的费用、批次和设备不会被虚构。</p></div>' +
+                    '<div class="labos-first-run__actions">' +
+                    '<button type="button" onclick="switchTab(\'gases\')">登记气体批次</button>' +
+                    '<button type="button" onclick="switchTab(\'maintenance\')">登记设备与校准</button>' +
+                    '<button type="button" onclick="switchTab(\'testDiary\')">录入测试日志</button></div>';
+            } else if (firstRun) {
+                firstRun.remove();
+            }
             const lifecycleCounts = {
                 gases: Array.isArray(DB.gases) ? DB.gases.length : 0,
                 maintenance: Array.isArray(DB.maintenance) ? DB.maintenance.length : 0,
@@ -327,9 +358,8 @@
                     series: [{
                         type: 'treemap', roam: false, nodeClick: false, breadcrumb: { show: false },
                         data: [
-                            { name: '气体费用', value: totalGasCost || 1 },
-                            { name: '维保费用', value: totalMaintCost || 1 },
-                            
+                            { name: '气体费用', value: totalGasCost },
+                            { name: '维保费用', value: totalMaintCost }
                         ],
                         label: { formatter: '{b}\n¥{c}' },
                         itemStyle: { borderColor: '#fff' }
