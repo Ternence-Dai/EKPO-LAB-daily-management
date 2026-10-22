@@ -20,9 +20,9 @@ const { chromium } = require('playwright');
       width: getComputedStyle(node).width,
       flexBasis: getComputedStyle(node).flexBasis
     }));
-    if (!referenceCssResponse.ok() || !referenceCssText.includes('--lims-teal:#1b8683') ||
-        labOperationsLayout.position !== 'sticky' || labOperationsLayout.width !== '252px' ||
-        labOperationsLayout.flexBasis !== '252px') {
+    if (!referenceCssResponse.ok() || !referenceCssText.includes('--ref-line:#d5e3df') ||
+        labOperationsLayout.position !== 'sticky' || labOperationsLayout.width !== '254px' ||
+        labOperationsLayout.flexBasis !== '254px') {
       throw new Error('LIMS operations layout was not loaded/applied: ' + JSON.stringify(labOperationsLayout));
     }
     await page.setViewportSize({ width: 1920, height: 1080 });
