@@ -300,6 +300,16 @@
             document.getElementById('dash-maint-cost').innerText = '¥' + totalMaintCost.toLocaleString();
             document.getElementById('dash-spare-cost').innerText = '¥' + totalSpareCost.toLocaleString();
             document.getElementById('dash-test').innerText = testErrors + ' 次';
+            const lifecycleCounts = {
+                gases: Array.isArray(DB.gases) ? DB.gases.length : 0,
+                maintenance: Array.isArray(DB.maintenance) ? DB.maintenance.length : 0,
+                experiments: Array.isArray(DB.experiments) ? DB.experiments.length : 0,
+                testDiary: Array.isArray(DB.testDiary) ? DB.testDiary.length : 0
+            };
+            document.querySelectorAll('[data-labos-count]').forEach(node => {
+                const key = node.dataset.labosCount;
+                node.textContent = Object.prototype.hasOwnProperty.call(lifecycleCounts,key) ? lifecycleCounts[key] : '—';
+            });
 
             let treemapChart = initChart('chart-dash-treemap');
             if(treemapChart) {
