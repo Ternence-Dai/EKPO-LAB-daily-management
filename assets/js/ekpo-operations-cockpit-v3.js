@@ -56,7 +56,13 @@
     const experiments = rows('experiments');
     const diary = rows('testDiary');
     const provenance = DB.dataProvenance || DB.settings?.dataProvenance || 'unknown';
-    const source = provenanceInfo(provenance);
+    const recoveryLocked = (typeof storageRecoveryRequired !== 'undefined' && storageRecoveryRequired) ||
+      (typeof labStorageConflictDetected !== 'undefined' && labStorageConflictDetected);
+    const source = recoveryLocked
+      ? {label:'数据恢复保护',tone:'warning',note:'检测到无法确认的缓存或跨标签冲突。当前界面只读；请先导出恢复副本并核对原账本，不能把空白回退数据当作新账本。'}
+      : provenanceInfo(provenance);
+    const provenanceNote = $('#labos-data-note [data-provenance-note]');
+    if (provenanceNote) provenanceNote.textContent = source.note;
     const validCalibrations = calibrations.filter(row =>
       /valid|有效|通过|ok/i.test(String(row.status || row.result || ''))
     );
@@ -66,7 +72,7 @@
     const overdue = equipment.filter(row => validDate(row.next) && row.next < today());
     const failedTests = diary.filter(row => String(row.error || '').trim());
     const replenishment = spares.filter(row => /^(?:y|yes|是|低|replenish)$/i.test(String(row.replenish || row.status || '').trim()));
-    const empty = provenance === 'empty-ledger' &&
+    const empty = !recoveryLocked && provenance === 'empty-ledger' &&
       !gases.length && !equipment.length && !maintenanceLogs.length &&
       !spares.length && !calibrations.length && !experiments.length && !diary.length;
 
