@@ -84,6 +84,53 @@ const { chromium } = require('playwright');
       throw new Error('Valid gas usage record was not persisted exactly once and rendered in the table');
     }
 
+    // Exercise the calibration certificate workflow and append-only provenance ledger.
+    await page.locator('.sidebar .nav-item[data-tab="maintenance"]').click();
+    await page.waitForSelector('#page-maintenance:not(.hidden)');
+    await page.locator('#tab-maint-calibration').click();
+    await page.waitForFunction(() =>
+      document.querySelector('#maint-calibration-view') &&
+      !document.querySelector('#maint-calibration-view').classList.contains('hidden') &&
+      document.querySelectorAll('#cal-asset option').length > 1
+    , undefined, { timeout: 10000 });
+    await page.locator('#cal-asset').selectOption({ index: 1 });
+    await page.locator('#cal-date').fill('2026-10-22');
+    await page.locator('#cal-valid-days').fill('365');
+    await page.locator('#cal-certificate').fill('PW-CAL-001');
+    await page.locator('#cal-organization').fill('Synthetic Calibration Lab');
+    await page.locator('#cal-operator').fill('Playwright acceptance');
+    await page.locator('#cal-result').selectOption('pass');
+    await page.locator('#cal-notes').fill('Synthetic browser fixture; not a real calibration certificate');
+    await page.locator('#maint-calibration-view button[onclick="saveCalibration()"]').click();
+    await page.waitForFunction(() =>
+      document.querySelector('#table-calibration tbody')?.textContent.includes('PW-CAL-001')
+    , undefined, { timeout: 10000 });
+    let calibrationDB = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}'));
+    const calibrationRows = calibrationDB.calibrationLogs || [];
+    const calibration = calibrationRows.find(row => row.certificateNo === 'PW-CAL-001');
+    if (!calibration || calibration.result !== 'pass' ||
+        calibration.validForDays !== 365 ||
+        !String(calibration.assetId).trim() ||
+        calibration.organization !== 'Synthetic Calibration Lab' ||
+        calibration.operator !== 'Playwright acceptance') {
+      throw new Error('Calibration evidence record was not persisted with its equipment identity, certificate, organization and operator');
+    }
+
+    // Re-submitting an identical equipment / organization / certificate tuple must be blocked.
+    await page.locator('#cal-certificate').fill('PW-CAL-001');
+    await page.locator('#cal-organization').fill('Synthetic Calibration Lab');
+    await page.locator('#cal-operator').fill('Playwright acceptance');
+    await page.locator('#maint-calibration-view button[onclick="saveCalibration()"]').click();
+    await page.waitForFunction(() =>
+      document.getElementById('toast')?.textContent.includes('相同机构与证书编号')
+    , undefined, { timeout: 10000 });
+    calibrationDB = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}'));
+    if ((calibrationDB.calibrationLogs || []).filter(row => row.certificateNo === 'PW-CAL-001').length !== 1) {
+      throw new Error('Duplicate calibration certificate was appended to the history ledger');
+    }
+
     await page.setViewportSize({ width: 390, height: 844 });
     const mobile = await page.evaluate(() => {
       const nav = document.getElementById('mobileNav');
