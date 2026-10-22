@@ -89,14 +89,15 @@
     }));
 
     const metrics = [
-      {label:'气体资源记录',value:count(gases.length),foot:gases.length ? '本机已登记批次' : '尚未导入气体批次',icon:'H₂',key:'gases'},
-      {label:'设备资产',value:count(equipment.length),foot:equipment.length ? '本机设备台账条目' : '尚未导入设备资产',icon:'EQ',key:'maintenance'},
-      {label:'校准证据',value:equipment.length ? (calibratedEquipment + ' / ' + equipment.length) : '—',foot:equipment.length ? '仅统计明确标记为有效的记录' : '设备和证书均未导入',icon:'QA',key:'maintenance'},
-      {label:'测试运行日志',value:count(diary.length),foot:diary.length ? (failedTests.length + ' 条含异常描述') : '尚无测试原始日志',icon:'RUN',key:'testDiary'}
+      {metric:'gas-records',label:'气体资源记录',value:count(gases.length),numeric:gases.length,foot:gases.length ? '本机已登记批次' : '尚未导入气体批次',icon:'H₂',key:'gases'},
+      {metric:'equipment',label:'设备资产',value:count(equipment.length),numeric:equipment.length,foot:equipment.length ? '本机设备台账条目' : '尚未导入设备资产',icon:'EQ',key:'maintenance'},
+      {metric:'calibration',label:'有效校准证据',value:equipment.length ? (calibratedEquipment + ' / ' + equipment.length) : '—',numeric:calibratedEquipment,foot:equipment.length ? '仅统计明确标记为有效的记录' : '设备和证书均未导入',icon:'QA',key:'maintenance'},
+      {metric:'test-records',label:'测试运行日志',value:count(diary.length),numeric:diary.length,foot:diary.length ? (failedTests.length + ' 条含异常描述') : '尚无测试原始日志',icon:'RUN',key:'testDiary'},
+      {metric:'active-experiments',label:'实验计划',value:count(experiments.length),numeric:experiments.length,foot:experiments.length ? '本机已登记实验任务' : '尚未登记实验计划',icon:'EXP',key:'experiments'}
     ];
 
     const metricHtml = metrics.map((item,index) =>
-      '<button type="button" class="ekpo-oc-metric ekpo-oc-metric--' + index + '" data-ekpo-open="' + item.key + '">' +
+      '<button type="button" class="ekpo-oc-metric ekpo-oc-metric--' + index + '" data-ekpo-open="' + item.key + '" data-ekpo-metric="' + item.metric + '" data-value="' + item.numeric + '">' +
         '<span class="ekpo-oc-metric__top"><small>' + esc(item.label) + '</small><i>' + esc(item.icon) + '</i></span>' +
         '<strong>' + esc(item.value) + '</strong><span class="ekpo-oc-metric__foot">' + esc(item.foot) + '</span>' +
       '</button>'
