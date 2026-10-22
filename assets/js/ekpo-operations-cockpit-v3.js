@@ -27,7 +27,7 @@
   const provenanceInfo = provenance => {
     if (provenance === 'empty-ledger') return {
       label: '新建空台账', tone: 'empty',
-      note: '没有现场记录；未录入的费用、库存、校准与运行状态保持未知。'
+      note: '新建空台账：没有现场记录；未录入的费用、库存、校准与运行状态保持未知。'
     };
     if (provenance === 'demo-seed') return {
       label: '演示样本', tone: 'demo',
