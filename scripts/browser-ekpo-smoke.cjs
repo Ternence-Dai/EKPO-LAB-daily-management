@@ -11,6 +11,14 @@ const { chromium } = require('playwright');
 
   try {
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
+    const seedResponse = await page.request.get('http://127.0.0.1:4173/assets/js/demo-seed-data.js?v=20261022-demo-provenance-v2');
+    const seedSource = await seedResponse.text();
+    if (!seedResponse.ok() || !seedSource.includes("dataProvenance: 'demo-seed'") ||
+        seedSource.includes('戴煜') || seedSource.includes('Terrence') ||
+        seedSource.includes('林德气体') || seedSource.includes('Moewald')) {
+      throw new Error('EKPO sample records must not carry unverified people, suppliers or maintenance organizations');
+    }
+
     const referenceStylesheet = page.locator('link[rel="stylesheet"][href*="reference-platform-v4.css"]');
     if (await referenceStylesheet.count() !== 1) throw new Error('LIMS operations console stylesheet is not linked');
     const referenceCssResponse = await page.request.get(await referenceStylesheet.evaluate(node => node.href));
