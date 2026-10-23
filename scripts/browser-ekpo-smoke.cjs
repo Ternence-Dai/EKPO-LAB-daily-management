@@ -1,6 +1,7 @@
 'use strict';
 
 const { chromium } = require('playwright');
+const fs = require('node:fs');
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -305,6 +306,96 @@ const { chromium } = require('playwright');
     if ((calibrationDB.calibrationLogs || []).filter(row => row.certificateNo === 'PW-CAL-001').length !== 1) {
       throw new Error('Duplicate calibration certificate was appended to the history ledger');
     }
+
+    // Isolated synthetic asset with overdue maintenance and no calibration certificate.
+    const dateWindow = await page.evaluate(() => {
+      const base = new Date(); base.setUTCHours(0,0,0,0);
+      const yesterday = new Date(base); yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      const tomorrow = new Date(base); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      return { yesterday:yesterday.toISOString().slice(0,10), tomorrow:tomorrow.toISOString().slice(0,10) };
+    });
+    await page.locator('.sidebar .nav-item[data-tab="maintenance"]').click();
+    await page.waitForSelector('#page-maintenance:not(.hidden)');
+    await page.locator('#page-maintenance .action-bar button.btn-primary').click();
+    const overdueModal = page.locator('#modal-maint');
+    await overdueModal.waitFor({ state: 'visible' });
+    await overdueModal.locator('#m-name').fill('PW Overdue synthetic bench');
+    await overdueModal.locator('#m-category').fill('Acceptance fixture');
+    await overdueModal.locator('#m-location').fill('Isolated browser context');
+    await overdueModal.locator('#m-qty').fill('1');
+    await overdueModal.locator('#m-cycle').selectOption({ label: '一级保养' });
+    await overdueModal.locator('#m-freq').fill('年度');
+    await overdueModal.locator('#m-last').fill('2025-01-01');
+    await overdueModal.locator('#m-next').fill(dateWindow.yesterday);
+    await overdueModal.locator('#m-responsible').fill('Playwright only');
+    await overdueModal.locator('#m-record').fill('Synthetic overdue asset fixture; not a live lab asset');
+    await overdueModal.locator('button[onclick="saveMaint()"]').click();
+    await page.waitForFunction(() => document.getElementById('modal-maint')?.style.display === 'none');
+    await page.waitForFunction(() => (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').maintenance || [])
+      .some(row => row.name === 'PW Overdue synthetic bench'), undefined, { timeout:10000 });
+
+    await page.locator('.sidebar .nav-item[data-tab="experiments"]').click();
+    await page.waitForSelector('#page-experiments:not(.hidden)');
+    await page.waitForFunction(() => !!document.querySelector('#experiment-asset option[value]'));
+    const equipmentIds = await page.locator('#experiment-asset').evaluate(select => ({
+      calibrated:[...select.options].find(option => option.textContent.includes('PW Synthetic test bench'))?.value || '',
+      overdue:[...select.options].find(option => option.textContent.includes('PW Overdue synthetic bench'))?.value || ''
+    }));
+    if (!equipmentIds.calibrated || !equipmentIds.overdue) {
+      throw new Error('Synthetic preflight assets are missing from the experiment selector: ' + JSON.stringify(equipmentIds));
+    }
+    const fillPlan = async (title, assetId) => {
+      await page.locator('#experiment-title').fill(title);
+      await page.locator('#experiment-asset').selectOption(assetId);
+      await page.locator('#experiment-planned-date').fill(dateWindow.tomorrow);
+      await page.locator('#experiment-owner').fill('Playwright acceptance');
+      await page.locator('#experiment-creator').fill('Playwright acceptance');
+      await page.locator('#experiment-purpose').fill('Synthetic browser preflight fixture; no measurements were performed.');
+    };
+    await fillPlan('PW Preflight ready plan', equipmentIds.calibrated);
+    await page.waitForFunction(() => document.querySelector('#experiment-preflight-preview .ekpo-preflight-preview__state.is-ready'),
+      undefined, { timeout:10000 });
+    await page.locator('#experiment-create-button').click();
+    await page.waitForFunction(title => (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').experiments || [])
+      .some(record => record.title === title), 'PW Preflight ready plan', { timeout:10000 });
+
+    await fillPlan('PW Preflight blocked plan', equipmentIds.overdue);
+    await page.waitForFunction(() => {
+      const preview = document.querySelector('#experiment-preflight-preview .ekpo-preflight-preview__state');
+      return !!preview && preview.classList.contains('is-blocked') && preview.textContent.includes('维护已逾期');
+    }, undefined, { timeout:10000 });
+    await page.locator('#experiment-create-button').click();
+    await page.waitForFunction(title => (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').experiments || [])
+      .some(record => record.title === title), 'PW Preflight blocked plan', { timeout:10000 });
+
+    const preflightEvidence = await page.evaluate(() => {
+      const panel = document.querySelector('.ekpo-preflight');
+      const cards = [...(panel?.querySelectorAll('.ekpo-preflight-card') || [])];
+      const ready = cards.find(card => card.querySelector('.ekpo-preflight-card__top strong')?.textContent === 'PW Preflight ready plan');
+      const blocked = cards.find(card => card.querySelector('.ekpo-preflight-card__top strong')?.textContent === 'PW Preflight blocked plan');
+      const rows = [...document.querySelectorAll('#experiments-table tbody tr')];
+      const readyRow = rows.find(row => row.innerText.includes('PW Preflight ready plan'));
+      const blockedRow = rows.find(row => row.innerText.includes('PW Preflight blocked plan'));
+      return {
+        present:!!panel,readyText:ready?.innerText || '',blockedText:blocked?.innerText || '',
+        readyStartDisabled:!!readyRow?.querySelector('[data-experiment-action="start"]')?.disabled,
+        blockedStartDisabled:!!blockedRow?.querySelector('[data-experiment-action="start"]')?.disabled,
+        metrics:[...(panel?.querySelectorAll('.ekpo-preflight__metrics strong') || [])].map(node=>node.textContent),
+        boundary:panel?.querySelector('.ekpo-preflight__limits')?.textContent || ''
+      };
+    });
+    if (!preflightEvidence.present ||
+        !preflightEvidence.readyText.includes('设备条件通过') ||
+        !preflightEvidence.blockedText.includes('阻止启动') ||
+        !preflightEvidence.blockedText.includes('维护已逾期') ||
+        preflightEvidence.readyStartDisabled || !preflightEvidence.blockedStartDisabled ||
+        preflightEvidence.metrics.slice(0,3).join(',') !== '2,1,1' ||
+        !preflightEvidence.boundary.includes('未关联结构化耗材需求')) {
+      throw new Error('Experiment preflight failed to distinguish ready/blocked equipment and disclose the consumables boundary: ' +
+        JSON.stringify(preflightEvidence));
+    }
+    fs.mkdirSync('artifacts', { recursive:true });
+    await page.locator('.ekpo-preflight').screenshot({ path:'artifacts/ekpo-experiment-preflight-desktop.png' });
 
     await page.setViewportSize({ width: 390, height: 844 });
     const mobile = await page.evaluate(() => {
