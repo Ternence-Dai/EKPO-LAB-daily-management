@@ -434,7 +434,15 @@ const fs = require('node:fs');
       throw new Error('Mobile experiment preflight is clipped or not a single-column readiness list: ' +
         JSON.stringify(mobilePreflight));
     }
+    await page.evaluate(() => {
+      document.activeElement?.blur();
+      window.scrollTo(0, 0);
+    });
+    const cleanPreflightEvidence = await page.addStyleTag({
+      content: '.topbar,#mobileNav,.bottomnav,.sidebar,#toastRoot,.toast,.toast-container{display:none!important}'
+    });
     await page.locator('.ekpo-preflight').screenshot({ path:'artifacts/ekpo-experiment-preflight-mobile.png' });
+    await cleanPreflightEvidence.evaluate(node => node.remove());
     await page.setViewportSize({ width:1440, height:960 });
     await page.locator('#experiment-action-actor').fill('Playwright acceptance');
     await page.locator('#experiments-table tbody tr').filter({hasText:'PW Preflight ready plan'})
