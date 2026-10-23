@@ -420,9 +420,11 @@ const fs = require('node:fs');
     const startDialogPromise = page.waitForEvent('dialog', { timeout:10000 });
     await readyRow.locator('[data-experiment-action="start"]').click();
     const startDialog = await startDialogPromise;
-    if (startDialog.type !== 'prompt') {
+    if (startDialog.type() !== 'prompt') {
+      const dialogType = startDialog.type();
+      const dialogMessage = startDialog.message();
       await startDialog.dismiss();
-      throw new Error('Experiment start expected a prompt but received ' + startDialog.type + ': ' + startDialog.message);
+      throw new Error('Experiment start expected a prompt but received ' + dialogType + ': ' + dialogMessage);
     }
     await startDialog.accept('SOP FC-TEST-04; batch B-PW-01; remaining quantity verified; expiry covers planned date');
     await page.waitForFunction(() => {
