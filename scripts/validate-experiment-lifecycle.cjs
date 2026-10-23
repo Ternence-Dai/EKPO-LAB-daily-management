@@ -60,6 +60,10 @@ assert.ok(create.includes('domain.createExperimentRecord') &&
           create.includes('commitLabMutation(') &&
           create.includes('form.checkValidity()'),
   'experiment creation must validate fields and use transactional persistence');
+assert.ok(transition.includes('window.prompt(') &&
+          transition.includes('consumablesCheckNote') &&
+          transition.includes('domain.transitionExperiment('),
+  'experiment start must collect and persist explicit SOP/consumables attestation');
 assert.ok(transition.includes('domain.validateExperimentRecord(DB.experiments[index])') &&
           transition.includes('domain.transitionExperiment(') &&
           transition.includes('domain.validateExperimentRecord(updated)') &&
