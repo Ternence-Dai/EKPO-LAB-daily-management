@@ -441,17 +441,10 @@ const fs = require('node:fs');
     await page.addStyleTag({
       content: '.topbar,#mobileNav,.bottomnav,.sidebar,#toastRoot,.toast,.toast-container{display:none!important}'
     });
-    const mobileShotRect = await page.locator('.ekpo-preflight').evaluate(node => {
-      const rect = node.getBoundingClientRect();
-      return { x:Math.max(0,rect.x), y:Math.max(0,rect.y),
-        width:Math.min(rect.width,innerWidth-Math.max(0,rect.x)),
-        height:Math.min(rect.height,innerHeight-Math.max(0,rect.y)) };
-    });
-    if (mobileShotRect.width < 340 || mobileShotRect.height < 120) {
-      throw new Error('Mobile preflight screenshot target has invalid geometry: ' + JSON.stringify(mobileShotRect));
-    }
+    // The preflight panel is below the full experiment form on the mobile page.
+    // Capture the full document rather than clipping a below-the-fold element to the viewport.
     await page.screenshot({ path:'artifacts/ekpo-experiment-preflight-mobile.png',
-      clip:mobileShotRect, animations:'disabled' });
+      fullPage:true, animations:'disabled' });
     await page.setViewportSize({ width:1440, height:960 });
     await page.locator('#experiment-action-actor').fill('Playwright acceptance');
     await page.locator('#experiments-table tbody tr').filter({hasText:'PW Preflight ready plan'})
