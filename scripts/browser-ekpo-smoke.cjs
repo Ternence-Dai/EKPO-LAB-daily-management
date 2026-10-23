@@ -431,6 +431,9 @@ const fs = require('node:fs');
     if (!mobile.visible || mobile.tabs < 8) {
       throw new Error('EKPO mobile navigation is incomplete: ' + JSON.stringify(mobile));
     }
+    await page.locator('#mobileNav button[data-tab="dashboard"]').click();
+    await page.waitForFunction(() => document.querySelector('#page-dashboard:not(.hidden)') &&
+      document.querySelector('#mobileNav button.active')?.dataset.tab === 'dashboard');
     const mobileMetricColumns = await page.locator('#page-dashboard .ekpo-oc-metrics').evaluate(node =>
       getComputedStyle(node).gridTemplateColumns.split(' ').filter(Boolean).length
     );
