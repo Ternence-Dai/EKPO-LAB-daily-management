@@ -416,11 +416,14 @@ const fs = require('node:fs');
         JSON.stringify(preflightEvidence));
     }
     const readyRow = page.locator('#experiments-table tbody tr').filter({ hasText:'PW Preflight ready plan' });
-    page.once('dialog', async dialog => {
-      if (dialog.type !== 'prompt') throw new Error('Experiment start must request an explicit SOP attestation');
-      await dialog.accept('SOP FC-TEST-04; batch B-PW-01; remaining quantity verified; expiry covers planned date');
-    });
+    const startDialogPromise = page.waitForEvent('dialog', { timeout:10000 });
     await readyRow.locator('[data-experiment-action="start"]').click();
+    const startDialog = await startDialogPromise;
+    if (startDialog.type !== 'prompt') {
+      await startDialog.dismiss();
+      throw new Error('Experiment start must request an explicit SOP attestation');
+    }
+    await startDialog.accept('SOP FC-TEST-04; batch B-PW-01; remaining quantity verified; expiry covers planned date');
     await page.waitForFunction(() => {
       const record = (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').experiments || [])
         .find(item => item.title === 'PW Preflight ready plan');
