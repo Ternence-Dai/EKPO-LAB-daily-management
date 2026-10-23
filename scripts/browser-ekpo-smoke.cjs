@@ -470,8 +470,22 @@ const fs = require('node:fs');
     if (mobileMetricColumns !== 2) {
       throw new Error('EKPO mobile KPI grid must use two columns: ' + mobileMetricColumns);
     }
-    await page.locator('#page-dashboard .ekpo-oc-metrics').screenshot({
-      path:'artifacts/ekpo-dashboard-five-kpi-mobile.png'
+    const mobileMetricClip = await page.locator('#page-dashboard .ekpo-oc-metrics').evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return {
+        x: Math.max(0, rect.x),
+        y: Math.max(0, rect.y),
+        width: Math.min(rect.width, innerWidth - Math.max(0, rect.x)),
+        height: Math.min(rect.height, innerHeight - Math.max(0, rect.y))
+      };
+    });
+    if (mobileMetricClip.width < 200 || mobileMetricClip.height < 40) {
+      throw new Error('EKPO mobile KPI evidence is outside the viewport: ' + JSON.stringify(mobileMetricClip));
+    }
+    await page.screenshot({
+      path:'artifacts/ekpo-dashboard-five-kpi-mobile.png',
+      clip:mobileMetricClip,
+      animations:'disabled'
     });
     await page.locator('#mobileNav button[data-tab="experiments"]').click();
     await page.waitForFunction(() =>
