@@ -434,17 +434,31 @@ const fs = require('node:fs');
       throw new Error('Mobile experiment preflight is clipped or not a single-column readiness list: ' +
         JSON.stringify(mobilePreflight));
     }
-    await page.evaluate(() => {
-      document.activeElement?.blur();
-      window.scrollTo(0, 0);
-    });
-    await page.addStyleTag({
+    await page.evaluate(() => document.activeElement?.blur());
+    const cleanPreflightEvidence = await page.addStyleTag({
       content: '.topbar,#mobileNav,.bottomnav,.sidebar,#toastRoot,.toast,.toast-container{display:none!important}'
     });
-    // The preflight panel is below the full experiment form on the mobile page.
-    // Capture the full document rather than clipping a below-the-fold element to the viewport.
-    await page.screenshot({ path:'artifacts/ekpo-experiment-preflight-mobile.png',
-      fullPage:true, animations:'disabled' });
+    await page.evaluate(() => {
+      document.querySelector('.ekpo-preflight')?.scrollIntoView({block:'start',behavior:'instant'});
+    });
+    await page.waitForFunction(() => {
+      const rect = document.querySelector('.ekpo-preflight')?.getBoundingClientRect();
+      return !!rect && rect.top >= 0 && rect.top < 100 && rect.height > 200;
+    }, undefined, { timeout:5000 });
+    const preflightClip = await page.locator('.ekpo-preflight').evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return {x:Math.max(0,rect.x),y:Math.max(0,rect.y),
+        width:Math.min(rect.width,innerWidth-Math.max(0,rect.x)),
+        height:Math.min(rect.height,innerHeight-Math.max(0,rect.y))};
+    });
+    if (preflightClip.width < 340 || preflightClip.height < 200 ||
+        preflightClip.x < 0 || preflightClip.y < 0 ||
+        preflightClip.x + preflightClip.width > 391 ||
+        preflightClip.y + preflightClip.height > 1201) {
+      throw new Error('Mobile experiment preflight crop is outside the viewport: ' + JSON.stringify(preflightClip));
+    }
+    await page.screenshot({path:'artifacts/ekpo-experiment-preflight-mobile.png',clip:preflightClip,animations:'disabled'});
+    await cleanPreflightEvidence.evaluate(node => node.remove());
     await page.setViewportSize({ width:1440, height:960 });
     await page.locator('#experiment-action-actor').fill('Playwright acceptance');
     await page.locator('#experiments-table tbody tr').filter({hasText:'PW Preflight ready plan'})
