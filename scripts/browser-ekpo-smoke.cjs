@@ -416,6 +416,7 @@ const fs = require('node:fs');
         JSON.stringify(preflightEvidence));
     }
     const readyRow = page.locator('#experiments-table tbody tr').filter({ hasText:'PW Preflight ready plan' });
+    await page.locator('#experiment-action-actor').fill('Playwright acceptance');
     const startDialogPromise = page.waitForEvent('dialog', { timeout:10000 });
     await readyRow.locator('[data-experiment-action="start"]').click();
     const startDialog = await startDialogPromise;
