@@ -436,8 +436,9 @@ const fs = require('node:fs');
         .find(item => item.title === 'PW Preflight ready plan');
       return record?.audit?.find(event => event.to === 'in-progress') || null;
     });
+    const renderedAuditText = await readyRow.locator('.experiment-audit').evaluate(node => node.textContent || '');
     if (!startAudit || !startAudit.consumablesCheckNote.includes('batch B-PW-01') ||
-        !(await readyRow.locator('.experiment-audit').innerText()).includes('SOP FC-TEST-04')) {
+        !renderedAuditText.includes('SOP FC-TEST-04')) {
       throw new Error('Experiment start did not persist and display consumables/SOP evidence in the lifecycle audit');
     }
 
