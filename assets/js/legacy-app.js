@@ -748,7 +748,7 @@
             tbody.innerHTML = '';
             let domain;
             try {
-                domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
             } catch (error) {
                 tbody.innerHTML = '<tr><td colspan="8">校准规则模块不可用，当前无法计算有效期状态。</td></tr>';
                 showToast('校准规则模块加载失败，请刷新页面后重试', 'error');
@@ -796,7 +796,7 @@
             let calibratedAt;
             try {
                 calibratedAt = calibrationDateToIso(document.getElementById('cal-date').value);
-                const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                 const duplicate = DB.calibrationLogs.some(row =>
                     sameLabId(row.assetId, assetId) &&
                     row.certificateNo === certificateNo &&
@@ -1041,7 +1041,7 @@
                 errorDesc: document.getElementById('t-errorDesc').value
             };
             try {
-                const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                 Object.assign(data, domain.validateTestDiaryEntry(data));
             } catch (error) {
                 showToast('测试记录未保存：' + error.message, 'error');
@@ -1080,7 +1080,7 @@
             const container = document.getElementById('experiments-table');
             let domain;
             try {
-                domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
             } catch (error) {
                 if (container) container.innerHTML = '<div class="experiment-empty"><strong>校准状态模块不可用</strong><span>为避免在无法核验设备状态时错误安排实验，当前设备就绪情况暂不可用；请刷新页面后重试。</span></div>';
                 showToast('设备校准状态模块加载失败，请刷新页面后重试', 'error');
@@ -1296,7 +1296,7 @@
                 if (!DB.maintenance.some(asset => String(asset.id) === String(assetId))) {
                     throw new Error('请选择当前设备台账中的有效设备');
                 }
-                const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                 const record = domain.createExperimentRecord({
                     id: 'EXP-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
                     title: document.getElementById('experiment-title').value,
@@ -1351,7 +1351,7 @@
                 return;
             }
             try {
-                const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                 const current = domain.validateExperimentRecord(DB.experiments[index]);
                 if (nextStatus === 'in-progress') {
                     const readiness = domain.getExperimentPreflightReadiness({
@@ -1748,7 +1748,7 @@
                     if (!imported.spareLogs) imported.spareLogs = [];
                     if (!imported.calibrationLogs) imported.calibrationLogs = [];
                     if (!imported.experiments) imported.experiments = [];
-                    const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                    const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                     // Backup restoration is a write boundary too: normalize and
                     // validate every equipment master before it can replace live data.
                     imported.maintenance = imported.maintenance.map(asset => ({
@@ -1790,7 +1790,7 @@
         window.onload = async () => {
             if (!storageRecoveryRequired && Array.isArray(DB.calibrationLogs) && DB.calibrationLogs.length) {
                 try {
-                    const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                    const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                     const assetIds = new Set(DB.maintenance.map(asset => labIdKey(asset.id)));
                     const validated = DB.calibrationLogs.map(row => domain.createCalibrationRecord(row));
                     if (validated.some(row => !assetIds.has(labIdKey(row.assetId)))) {
@@ -1823,7 +1823,7 @@
             }
             if (!storageRecoveryRequired && Array.isArray(DB.experiments) && DB.experiments.length) {
                 try {
-                    const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                    const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                     const assetIds = new Set(DB.maintenance.map(asset => String(asset.id)));
                     const experimentIds = new Set();
                     DB.experiments = DB.experiments.map(record => {
