@@ -314,9 +314,16 @@ export function getExperimentPreflightReadiness({
   // A planned experiment is only operationally eligible when calibration and
   // the scheduled maintenance window both cover its planned execution date.
   const normalizedPlannedDate = parseExperimentDate(plannedDate);
-  const calibration = getExperimentEquipmentReadiness({
+  // Keep two independent gates: evidence must already exist now, and remain
+  // valid through the complete planned calendar day (the form has no time field).
+  const currentCalibration = getExperimentEquipmentReadiness({
     assetId, equipment, calibrationRecords, at
   });
+  const plannedDateEnd = new Date(normalizedPlannedDate + "T23:59:59.999Z");
+  const plannedCalibration = getExperimentEquipmentReadiness({
+    assetId, equipment, calibrationRecords, at:plannedDateEnd
+  });
+  const calibration = currentCalibration.ready ? plannedCalibration : currentCalibration;
   const normalizedAssetId = String(assetId).trim();
   const matchingAssets = equipment.filter(item => item &&
     (typeof item.id === "string" || Number.isSafeInteger(item.id)) &&
@@ -364,10 +371,15 @@ export function getExperimentPreflightReadiness({
       " 天后到期维护；实验计划早于维护日期，但需按 SOP 确认窗口";
   }
 
-  const calibrationReady = calibration.ready;
+  const calibrationReady = currentCalibration.ready && plannedCalibration.ready;
+  const calibrationMessage = !currentCalibration.ready
+    ? currentCalibration.message
+    : !plannedCalibration.ready && plannedCalibration.status === "expired"
+      ? "当前校准证据仍有效，但有效期不能覆盖计划日期 " + normalizedPlannedDate + " 的全天；请更新校准或调整计划日期"
+      : plannedCalibration.message;
   const ready = calibrationReady && maintenanceReady;
   const warnings = [];
-  if (!calibrationReady) warnings.push(calibration.message);
+  if (!calibrationReady) warnings.push(calibrationMessage);
   if (maintenanceMessage) warnings.push(maintenanceMessage);
   const label = !calibrationReady ? calibration.label
     : !maintenanceReady ? (maintenance.status === "overdue" ? "维护已逾期" :
@@ -377,6 +389,9 @@ export function getExperimentPreflightReadiness({
   return Object.freeze({
     ...calibration,
     calibrationReady,
+    calibrationStatusAsOfNow: currentCalibration.status,
+    calibrationStatusOnPlannedDate: plannedCalibration.status,
+    calibrationMessage,
     maintenanceReady,
     maintenanceStatus: maintenance.status,
     maintenanceNextDate: maintenance.nextDate,
