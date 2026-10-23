@@ -433,8 +433,9 @@ const fs = require('node:fs');
         .find(item => item.title === 'PW Preflight ready plan');
       return record?.audit?.find(event => event.to === 'in-progress') || null;
     });
-    if (!startAudit || !startAudit.consumablesCheckNote.includes('batch B-PW-01')) {
-      throw new Error('Experiment start did not persist consumables/SOP evidence in the lifecycle audit');
+    if (!startAudit || !startAudit.consumablesCheckNote.includes('batch B-PW-01') ||
+        !(await readyRow.locator('.experiment-audit').innerText()).includes('SOP FC-TEST-04')) {
+      throw new Error('Experiment start did not persist and display consumables/SOP evidence in the lifecycle audit');
     }
 
     fs.mkdirSync('artifacts', { recursive:true });
