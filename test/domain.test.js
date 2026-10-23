@@ -196,6 +196,25 @@ test("equipment calibration readiness blocks missing failed expired future and a
  assert.throws(()=>getAssetCalibrationStatus({},7,at),TypeError);
  assert.throws(()=>getAssetCalibrationStatus([],7,new Date("invalid")),TypeError);
 });
+test("rejects RFC 3339 unknown offset for calibration and experiment timestamps",()=>{
+ const at=new Date("2026-01-15T00:00:00Z");
+ assert.throws(()=>isCalibrationCurrent({
+  calibratedAt:"2026-01-01T00:00:00-00:00",validForDays:30
+ },at),TypeError);
+ assert.throws(()=>createCalibrationRecord({
+  id:1002,assetId:2,calibratedAt:"2026-01-01T00:00:00-00:00",
+  validForDays:365,certificateNo:"CERT-UNKNOWN",organization:"Metrology Lab",
+  operator:"Operator A",result:"pass"
+ }),TypeError);
+ assert.throws(()=>createExperimentRecord({
+  id:"EXP-UNKNOWN-TZ",title:"Unknown timezone",assetId:2,
+  plannedDate:"2026-01-02",owner:"Operator",purpose:"Timestamp semantics",
+  actor:"operator-1",createdAt:"2026-01-01T00:00:00-00:00"
+ }),TypeError);
+ assert.equal(isCalibrationCurrent({
+  calibratedAt:"2026-01-01T00:00:00+00:00",validForDays:30
+ },at),true);
+});
 test("calibration timestamps require an explicit timezone and real calendar date",()=>{
  const at=new Date("2026-01-15T00:00:00Z");
  assert.throws(()=>isCalibrationCurrent({calibratedAt:"2026-01-01T00:00:00",validForDays:30},at),TypeError);
