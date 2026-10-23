@@ -47,7 +47,8 @@ const render = app.slice(renderStart, createStart);
 const create = app.slice(createStart, transitionStart);
 const transition = app.slice(transitionStart, bindStart);
 const binding = app.slice(bindStart, yearlyStart);
-assert.ok(render.includes('record.audit.map') && render.includes('data-experiment-action') &&
+assert.ok(render.includes('record.audit.map') && render.includes('experiment-audit__evidence') &&
+          render.includes('data-experiment-action') &&
           render.includes('record.owner') && render.includes('record.plannedDate') && render.includes('record.purpose'),
   'experiment table must display owners, planned dates, permitted actions and audit history');
 assert.ok(render.includes('domain.getExperimentPreflightReadiness(') &&
@@ -62,7 +63,6 @@ assert.ok(create.includes('domain.createExperimentRecord') &&
   'experiment creation must validate fields and use transactional persistence');
 assert.ok(transition.includes('window.prompt(') &&
           transition.includes('consumablesCheckNote') &&
-          transition.includes('experiment-audit__evidence') &&
           transition.includes('domain.transitionExperiment('),
   'experiment start must collect and persist explicit SOP/consumables attestation');
 assert.ok(transition.includes('domain.validateExperimentRecord(DB.experiments[index])') &&
