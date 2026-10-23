@@ -438,11 +438,20 @@ const fs = require('node:fs');
       document.activeElement?.blur();
       window.scrollTo(0, 0);
     });
-    const cleanPreflightEvidence = await page.addStyleTag({
+    await page.addStyleTag({
       content: '.topbar,#mobileNav,.bottomnav,.sidebar,#toastRoot,.toast,.toast-container{display:none!important}'
     });
-    await page.locator('.ekpo-preflight').screenshot({ path:'artifacts/ekpo-experiment-preflight-mobile.png' });
-    await cleanPreflightEvidence.evaluate(node => node.remove());
+    const mobileShotRect = await page.locator('.ekpo-preflight').evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return { x:Math.max(0,rect.x), y:Math.max(0,rect.y),
+        width:Math.min(rect.width,innerWidth-Math.max(0,rect.x)),
+        height:Math.min(rect.height,innerHeight-Math.max(0,rect.y)) };
+    });
+    if (mobileShotRect.width < 340 || mobileShotRect.height < 120) {
+      throw new Error('Mobile preflight screenshot target has invalid geometry: ' + JSON.stringify(mobileShotRect));
+    }
+    await page.screenshot({ path:'artifacts/ekpo-experiment-preflight-mobile.png',
+      clip:mobileShotRect, animations:'disabled' });
     await page.setViewportSize({ width:1440, height:960 });
     await page.locator('#experiment-action-actor').fill('Playwright acceptance');
     await page.locator('#experiments-table tbody tr').filter({hasText:'PW Preflight ready plan'})
