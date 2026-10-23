@@ -1114,6 +1114,38 @@
                 }
             }
 
+            const preflightPreview = document.getElementById('experiment-preflight-preview');
+            const updateDraftPreflight = () => {
+                if (!preflightPreview) return;
+                const selectedAssetId = assetSelect?.value || '';
+                const plannedDate = plannedDateInput?.value || '';
+                if (!selectedAssetId || !plannedDate) {
+                    preflightPreview.innerHTML = '<div class="ekpo-preflight-preview__empty">选择在册设备和计划日期后，将检查校准证据与维保日期覆盖。耗材批次、余量和有效期目前不纳入自动判定，须按适用 SOP 核对。</div>';
+                    return;
+                }
+                const readiness = domain.getExperimentPreflightReadiness({
+                    assetId: selectedAssetId,
+                    plannedDate,
+                    equipment: DB.maintenance,
+                    calibrationRecords: DB.calibrationLogs,
+                    at: new Date()
+                });
+                preflightPreview.innerHTML =
+                    '<div class="ekpo-preflight-preview__state ' + (readiness.ready ? 'is-ready' : 'is-blocked') + '">' +
+                    '<strong>' + esc(readiness.label) + '</strong><span>' + esc(readiness.message) + '</span></div>' +
+                    (readiness.warning ? '<p class="ekpo-preflight-preview__warning">' + esc(readiness.warning) + '</p>' : '') +
+                    '<p class="ekpo-preflight-preview__boundary">自动检查：设备身份、校准有效期、计划期间的维护覆盖。未检查：实验耗材批次、余量、有效期及现场 SOP 条件。</p>';
+            };
+            if (assetSelect && assetSelect.dataset.preflightPreviewBound !== 'true') {
+                assetSelect.dataset.preflightPreviewBound = 'true';
+                assetSelect.addEventListener('change', () => renderExperiments());
+            }
+            if (plannedDateInput && plannedDateInput.dataset.preflightPreviewBound !== 'true') {
+                plannedDateInput.dataset.preflightPreviewBound = 'true';
+                plannedDateInput.addEventListener('change', () => renderExperiments());
+            }
+            updateDraftPreflight();
+
             const counts = { planned: 0, 'in-progress': 0, completed: 0, cancelled: 0 };
             DB.experiments.forEach(record => { if (Object.hasOwn(counts, record.status)) counts[record.status] += 1; });
             document.getElementById('experiment-count-planned').textContent = counts.planned;
