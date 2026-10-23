@@ -12,7 +12,7 @@ const masterEnd = html.indexOf('async function saveSpareLog()', masterStart);
 if (masterStart < 0 || masterEnd <= masterStart) throw new Error('saveSpare source not found');
 const masterSource = html.slice(masterStart, masterEnd);
 
-async function run(action, qty, stock, saveAllowed = true, selectedPartId = '1', storedPartId = 1, date = '2026-10-17', existingLogs = []) {
+async function run(action, qty, stock, saveAllowed = true, selectedPartId = '1', storedPartId = 1, date = '2026-10-22', existingLogs = []) {
   const values = {'sl-part':String(selectedPartId),'sl-action':action,'sl-qty':String(qty),'sl-date':date,'sl-operator':'test','sl-note':''};
   const messages = [];
   const document = {getElementById(id) {
@@ -22,7 +22,8 @@ async function run(action, qty, stock, saveAllowed = true, selectedPartId = '1',
   const context = {document,DB:{spareParts:[{id:storedPartId,qty:stock}],spareLogs:JSON.parse(JSON.stringify(existingLogs))},
     sameLabId:(a,b)=>{const key=v=>typeof v==='string'?v.trim():Number.isSafeInteger(v)?String(v):'';const left=key(a);return left!==''&&left===key(b);},
     labIdKey:value=>typeof value==='string'?value.trim():Number.isSafeInteger(value)?String(value):'',
-    isValidDateOnly:value=>/^\d{4}-\d{2}-\d{2}$/.test(value),
+    isValidDateOnly:value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;const date=new Date(value+'T00:00:00.000Z');return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value;},
+    getToday:()=> '2026-10-23',
     showToast:message=>messages.push(message),saveToLocal:async()=>saveAllowed,closeModal:()=>{},
     renderSpareParts:()=>{},renderSpareLogs:()=>{},console:{error(){}}};
   vm.runInNewContext(source,context);
@@ -76,12 +77,12 @@ assert.equal(result.logs.length,1);
 
 // Current stock is a live balance: future-dated and backdated entries must not
 // mutate it because this ledger has no historical balance reconstruction.
-result=await run('入库',2,5,true,'1',1,'2026-10-19');
+result=await run('入库',2,5,true,'1',1,'2026-10-24');
 assert.equal(result.stock,5,'future-dated movements must not change current stock');
 assert.equal(result.logs.length,0,'future-dated movements must not be recorded');
 assert.ok(result.messages.some(message=>message.includes('不能晚于今天')));
-result=await run('入库',2,5,true,'1',1,'2026-10-16',[
-  {id:10,partId:1,date:'2026-10-17',action:'入库',qty:1}
+result=await run('入库',2,5,true,'1',1,'2026-10-21',[
+  {id:10,partId:1,date:'2026-10-22',action:'入库',qty:1}
 ]);
 assert.equal(result.stock,5,'backdated movements must not change current stock');
 assert.equal(result.logs.length,1,'backdated movements must not be appended');
