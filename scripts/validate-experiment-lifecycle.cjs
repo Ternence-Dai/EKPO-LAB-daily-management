@@ -6,7 +6,7 @@ const html = fs.readFileSync('index.html', 'utf8');
 const app = fs.readFileSync('assets/js/legacy-app.js', 'utf8');
 const domain = fs.readFileSync('src/domain/index.js', 'utf8');
 const css = fs.readFileSync('assets/css/product-system.css', 'utf8');
-const workspaceCss = fs.readFileSync('assets/css/workspace-v5.css', 'utf8');
+const workspaceCss = fs.readFileSync('assets/css/workspace-v5.css', 'utf8') + '\n' + fs.readFileSync('assets/css/experiment-preflight-v1.css', 'utf8');
 const seed = fs.readFileSync('assets/js/demo-seed-data.js', 'utf8');
 
 assert.ok(html.includes('product-system.css?v=20261019-v8'),
@@ -15,7 +15,7 @@ for (const id of [
   'page-experiments', 'experiment-create-form', 'experiment-title',
   'experiment-asset', 'experiment-planned-date', 'experiment-owner',
   'experiment-creator', 'experiment-purpose', 'experiment-action-actor',
-  'experiments-table', 'search-experiments', 'experiment-count-planned',
+  'experiments-table', 'search-experiments', 'experiment-preflight-preview', 'experiment-count-planned',
   'experiment-count-active', 'experiment-count-completed', 'experiment-count-cancelled'
 ]) assert.ok(html.includes('id="' + id + '"'),
   'experiment lifecycle UI must expose ' + id);
@@ -50,7 +50,7 @@ const binding = app.slice(bindStart, yearlyStart);
 assert.ok(render.includes('record.audit.map') && render.includes('data-experiment-action') &&
           render.includes('record.owner') && render.includes('record.plannedDate') && render.includes('record.purpose'),
   'experiment table must display owners, planned dates, permitted actions and audit history');
-assert.ok(render.includes('domain.getExperimentEquipmentReadiness(') &&
+assert.ok(render.includes('domain.getExperimentPreflightReadiness(') &&
           render.includes('readiness.label') && render.includes('readiness.ready ?') &&
           render.includes('disabled aria-disabled="true"'),
   'experiment workspace must show each equipment calibration state and disable unsafe planned starts');
@@ -74,18 +74,22 @@ assert.ok(saveMaintSource.includes('sameLabId(item.id, newRecordId)'),
 
 assert.ok(domain.includes('export function getAssetCalibrationStatus(') &&
           domain.includes('export function getExperimentEquipmentReadiness(') &&
-          transition.includes('domain.getExperimentEquipmentReadiness(') &&
+          domain.includes('export function getExperimentPreflightReadiness(') &&
+          transition.includes('domain.getExperimentPreflightReadiness(') &&
           transition.includes("nextStatus === 'in-progress'") &&
           transition.includes('!readiness.ready') &&
           transition.indexOf('domain.getExperimentEquipmentReadiness(') < transition.indexOf('domain.transitionExperiment('),
-  'experiment start must be blocked unless the centralized equipment-readiness gate confirms a current passing calibration');
+  'experiment start must be revalidated against calibration and planned-date maintenance coverage');
 for (const status of ['not-recorded', 'future-dated', 'failed', 'expired', 'ambiguous', 'not-registered']) {
   assert.ok(domain.includes(JSON.stringify(status)),
     'domain equipment-readiness gate must explain the calibration failure state: ' + status);
 }
 assert.ok(workspaceCss.includes('.experiment-calibration-ready') &&
-          workspaceCss.includes('.experiment-calibration-blocked'),
-  'experiment table must visually distinguish equipment with current vs blocked calibration');
+          workspaceCss.includes('.experiment-calibration-blocked') &&
+          workspaceCss.includes('.ekpo-preflight__metrics') &&
+          workspaceCss.includes('.ekpo-preflight-card.is-blocked') &&
+          workspaceCss.includes('.ekpo-preflight-preview__state'),
+  'experiment UI must visually distinguish ready/blocked equipment and expose the planned-date readiness gate');
 
 assert.ok(transition.includes('experiment-action-actor') &&
           transition.includes('storageRecoveryRequired'),

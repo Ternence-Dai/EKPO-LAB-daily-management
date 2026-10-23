@@ -308,6 +308,105 @@ export function getAssetCalibrationStatus(records, assetId, at = new Date()) {
   return isCalibrationCurrent(latest, at) ? "current" : "expired";
 }
 
+export function getExperimentPreflightReadiness({
+  assetId, plannedDate, equipment, calibrationRecords, at = new Date(), dueSoonDays = 30
+} = {}) {
+  // A planned experiment is only operationally eligible when calibration and
+  // the scheduled maintenance window both cover its planned execution date.
+  const normalizedPlannedDate = parseExperimentDate(plannedDate);
+  // Keep two independent gates: evidence must already exist now, and remain
+  // valid through the complete planned calendar day (the form has no time field).
+  const currentCalibration = getExperimentEquipmentReadiness({
+    assetId, equipment, calibrationRecords, at
+  });
+  const plannedDateEnd = new Date(normalizedPlannedDate + "T23:59:59.999Z");
+  const plannedCalibration = getExperimentEquipmentReadiness({
+    assetId, equipment, calibrationRecords, at:plannedDateEnd
+  });
+  const calibration = currentCalibration.ready ? plannedCalibration : currentCalibration;
+  const normalizedAssetId = String(assetId).trim();
+  const matchingAssets = equipment.filter(item => item &&
+    (typeof item.id === "string" || Number.isSafeInteger(item.id)) &&
+    String(item.id).trim() === normalizedAssetId);
+  if (!calibration.assetExists || matchingAssets.length !== 1) {
+    return Object.freeze({
+      ...calibration,
+      calibrationReady: false,
+      maintenanceReady: false,
+      maintenanceStatus: "unverified",
+      maintenanceNextDate: "",
+      maintenanceDaysUntil: null,
+      plannedDate: normalizedPlannedDate,
+      consumablesStatus: "not-assessed",
+      consumablesMessage: "实验计划未关联结构化耗材清单；开始前仍须按适用 SOP 核对批次、余量和有效期。",
+      ready: false,
+      preflightStatus: "blocked",
+      warning: ""
+    });
+  }
+
+  let maintenance;
+  try {
+    maintenance = getMaintenanceScheduleStatus(matchingAssets[0].next || "", at, dueSoonDays);
+  } catch (error) {
+    maintenance = Object.freeze({status:"invalid", daysUntil:null, nextDate:""});
+  }
+
+  let maintenanceReady = true;
+  let maintenanceMessage = "";
+  if (maintenance.status === "unscheduled") {
+    maintenanceReady = false;
+    maintenanceMessage = "设备未记录下次维护日期，无法确认计划期间的维护覆盖";
+  } else if (maintenance.status === "overdue") {
+    maintenanceReady = false;
+    maintenanceMessage = "设备维护已逾期，完成维护并更新台账前不能开始实验";
+  } else if (maintenance.status === "invalid") {
+    maintenanceReady = false;
+    maintenanceMessage = "设备下次维护日期格式无效，需先核对设备台账";
+  } else if (normalizedPlannedDate >= maintenance.nextDate) {
+    maintenanceReady = false;
+    maintenanceMessage = "计划日期达到或晚于下次维护日期，请先安排维护";
+  } else if (maintenance.status === "due-soon") {
+    maintenanceMessage = "设备将在 " + maintenance.daysUntil +
+      " 天后到期维护；实验计划早于维护日期，但需按 SOP 确认窗口";
+  }
+
+  const calibrationReady = currentCalibration.ready && plannedCalibration.ready;
+  const calibrationMessage = !currentCalibration.ready
+    ? currentCalibration.message
+    : !plannedCalibration.ready && plannedCalibration.status === "expired"
+      ? "当前校准证据仍有效，但有效期不能覆盖计划日期 " + normalizedPlannedDate + " 的全天；请更新校准或调整计划日期"
+      : plannedCalibration.message;
+  const ready = calibrationReady && maintenanceReady;
+  const warnings = [];
+  if (!calibrationReady) warnings.push(calibrationMessage);
+  if (maintenanceMessage) warnings.push(maintenanceMessage);
+  const label = !calibrationReady ? calibration.label
+    : !maintenanceReady ? (maintenance.status === "overdue" ? "维护已逾期" :
+      maintenance.status === "unscheduled" ? "维护日期未记录" : "维护窗口待核验")
+    : maintenance.status === "due-soon" ? "可安排 · 维护将到期" : "设备准备条件通过";
+
+  return Object.freeze({
+    ...calibration,
+    calibrationReady,
+    calibrationStatusAsOfNow: currentCalibration.status,
+    calibrationStatusOnPlannedDate: plannedCalibration.status,
+    calibrationMessage,
+    maintenanceReady,
+    maintenanceStatus: maintenance.status,
+    maintenanceNextDate: maintenance.nextDate,
+    maintenanceDaysUntil: maintenance.daysUntil,
+    plannedDate: normalizedPlannedDate,
+    consumablesStatus: "not-assessed",
+    consumablesMessage: "实验计划未关联结构化耗材清单；开始前仍须按适用 SOP 核对批次、余量和有效期。",
+    ready,
+    preflightStatus: ready ? (maintenance.status === "due-soon" ? "ready-with-warning" : "ready") : "blocked",
+    label,
+    message: warnings.join("；") || "设备校准与计划维护日期覆盖当前计划日期",
+    warning: ready && maintenance.status === "due-soon" ? maintenanceMessage : ""
+  });
+}
+
 export function createCalibrationRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("calibration record must be an object");
