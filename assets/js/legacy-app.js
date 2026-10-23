@@ -1152,7 +1152,7 @@
                     '<div class="ekpo-preflight-preview__state ' + (readiness.ready ? 'is-ready' : 'is-blocked') + '">' +
                     '<strong>' + esc(readiness.label) + '</strong><span>' + esc(readiness.message) + '</span></div>' +
                     (readiness.warning ? '<p class="ekpo-preflight-preview__warning">' + esc(readiness.warning) + '</p>' : '') +
-                    '<p class="ekpo-preflight-preview__boundary">自动检查：设备身份、校准有效期、计划期间的维护覆盖。未检查：实验耗材批次、余量、有效期及现场 SOP 条件。</p>';
+                    '<p class="ekpo-preflight-preview__boundary">自动检查：设备身份、校准有效期、计划期间的维护覆盖。未自动检查：实验耗材批次、余量、有效期及现场 SOP 条件；启动时必须录入人工核验记录。</p>';
             };
             if (assetSelect && assetSelect.dataset.preflightPreviewBound !== 'true') {
                 assetSelect.dataset.preflightPreviewBound = 'true';
@@ -1235,7 +1235,7 @@
                     esc(calText) + '</span><span class="' + (readiness.maintenanceReady ? 'is-ok' : 'is-no') + '">' +
                     esc(maintenanceText) + '</span></div>' +
                     (readiness.warning ? '<p class="ekpo-preflight-card__warning">' + esc(readiness.warning) + '</p>' : '') +
-                    '<p class="ekpo-preflight-card__consumables">耗材核验 · 未纳入自动判定；开始前按 SOP 核对批次、余量与有效期。</p>' +
+                    '<p class="ekpo-preflight-card__consumables">耗材核验 · 未纳入自动判定；启动时必须填写 SOP、批次、余量和有效期核验记录。</p>' +
                     '</article>';
             }).join('');
             const preflightPanel = '<section class="ekpo-preflight" aria-label="实验准备度概览">' +
@@ -1252,7 +1252,7 @@
                 '<div class="ekpo-preflight__cards">' + (preflightCards ||
                   '<div class="ekpo-preflight-empty">当前没有处于计划中的实验。</div>') + '</div>' +
                 '<div class="ekpo-preflight__limits"><strong>耗材与 SOP 检查边界</strong>' +
-                '<p>本版本可核对设备唯一身份、校准状态与计划期间的维护日期；实验记录尚未关联结构化耗材需求，因此耗材批次、库存余量及有效期不参与自动放行，必须按适用 SOP 现场核对。</p></div>' +
+                '<p>本版本可核对设备唯一身份、校准状态与计划期间的维护日期；实验记录尚未关联结构化耗材需求，因此耗材批次、库存余量及有效期不参与自动放行；启动时必须按适用 SOP 核验，并将结果写入不可变审计历史。</p></div>' +
                 '</section>';
 
             const rows = records.map(record => {
@@ -1279,7 +1279,10 @@
                     actions = '<span class="experiment-terminal">终态 · 不可继续变更</span>';
                 }
                 const audit = record.audit.map(event =>
-                    '<li><span>' + esc(auditLabel(event)) + '</span><b>' + esc(event.actor) + '</b><time>' + esc(event.at) + '</time></li>'
+                    '<li><span>' + esc(auditLabel(event)) + '</span><b>' + esc(event.actor) + '</b><time>' + esc(event.at) + '</time>' +
+                    (event.consumablesCheckNote
+                        ? '<small class="experiment-audit__evidence">耗材 / SOP 核验：' + esc(event.consumablesCheckNote) + '</small>'
+                        : '') + '</li>'
                 ).join('');
                 return '<tr>' +
                     '<td><strong>' + esc(record.title) + '</strong><small>' + esc(record.id) + '</small><details class="experiment-purpose"><summary>查看目的与说明</summary><p>' + esc(record.purpose) + '</p></details></td>' +
