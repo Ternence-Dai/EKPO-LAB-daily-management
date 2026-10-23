@@ -1205,7 +1205,9 @@
                             ? '维护已逾期 ' + readiness.maintenanceNextDate
                             : readiness.maintenanceStatus === 'unscheduled'
                                 ? '未记录下次维护日期' : '维护日期待核验';
-                const calText = readiness.calibrationReady ? '校准证据有效' : readiness.message;
+                const calText = readiness.calibrationReady
+                    ? '校准证据覆盖计划日（' + readiness.plannedDate + '）'
+                    : (readiness.calibrationMessage || readiness.message);
                 return '<article class="ekpo-preflight-card ' + stateClass + '" data-preflight-experiment="' + esc(record.id) + '">' +
                     '<div class="ekpo-preflight-card__top"><strong>' + esc(record.title) + '</strong>' +
                     '<span>' + (readiness.ready ? '设备条件通过' : '阻止启动') + '</span></div>' +
