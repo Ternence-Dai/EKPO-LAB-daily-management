@@ -508,7 +508,7 @@
             today.setHours(0, 0, 0, 0);
             let calibrationDomain = null;
             try {
-                calibrationDomain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                calibrationDomain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
             } catch (error) {
                 console.error('设备校准状态模块不可用。', error);
             }
@@ -632,7 +632,7 @@
             };
             let validated;
             try {
-                const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
+                const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                 validated = domain.validateMaintenanceAsset(data);
             } catch (error) {
                 showToast('设备台账未保存：' + (error && error.message ? error.message : '字段校验失败'), 'error');
@@ -1092,19 +1092,19 @@
             const plannedDateInput = document.getElementById('experiment-planned-date');
             if (plannedDateInput && !plannedDateInput.value) plannedDateInput.value = getToday();
             const now = new Date();
-            const assetReadiness = new Map();
             const assetSelect = document.getElementById('experiment-asset');
             if (assetSelect) {
                 const selected = assetSelect.value;
+                const plannedDate = plannedDateInput?.value || getToday();
                 assetSelect.innerHTML = '<option value="">请选择在册设备</option>' +
                     DB.maintenance.map(asset => {
-                        const readiness = domain.getExperimentEquipmentReadiness({
+                        const readiness = domain.getExperimentPreflightReadiness({
                             assetId: asset.id,
+                            plannedDate,
                             equipment: DB.maintenance,
                             calibrationRecords: DB.calibrationLogs,
                             at: now
                         });
-                        assetReadiness.set(String(asset.id).trim(), readiness);
                         return '<option value="' + esc(asset.id) + '">' +
                             esc(asset.name) + '（' + esc(asset.category || '未分类') + ' · ' +
                             esc(asset.location || '未填写位置') + ' · ' + esc(readiness.label) + '）</option>';
@@ -1132,7 +1132,12 @@
             });
             if (!container) return;
             if (!records.length) {
-                container.innerHTML = '<div class="experiment-empty"><strong>当前没有匹配的实验计划</strong><span>创建计划后，开始、完成或取消操作都会留下不可直接编辑的审计记录。设备校准状态会在安排和启动前核验。</span></div>';
+                container.innerHTML = '<section class="ekpo-preflight" aria-label="实验准备度概览">' +
+                    '<div class="ekpo-preflight__head"><div><span>EXPERIMENT PREFLIGHT</span><h3>实验准备度检查台</h3>' +
+                    '<p>开始前核对校准证据与计划期间的维护覆盖。</p></div><b class="is-empty">尚无实验计划</b></div>' +
+                    '<div class="ekpo-preflight__limits"><strong>耗材状态：未纳入自动判定</strong>' +
+                    '<p>当前实验计划没有结构化耗材清单关联。开始前请按适用 SOP 核对耗材批次、余量和有效期。</p></div></section>' +
+                    '<div class="experiment-empty"><strong>当前没有匹配的实验计划</strong><span>创建计划后，系统会在计划与启动阶段核验设备校准和维护窗口；每次状态变更仍保留审计记录。</span></div>';
                 return;
             }
 
@@ -1140,10 +1145,69 @@
                 if (event.from === 'new' && event.to === 'planned') return '创建计划';
                 return (experimentStatusLabels[event.from] || event.from) + ' → ' + (experimentStatusLabels[event.to] || event.to);
             };
+            const plannedPreflight = records.filter(record => record.status === 'planned').map(record => {
+                const readiness = domain.getExperimentPreflightReadiness({
+                    assetId: record.assetId,
+                    plannedDate: record.plannedDate,
+                    equipment: DB.maintenance,
+                    calibrationRecords: DB.calibrationLogs,
+                    at: now
+                });
+                const asset = DB.maintenance.find(item => String(item.id).trim() === String(record.assetId).trim());
+                return {record, readiness, asset};
+            });
+            const readyCount = plannedPreflight.filter(item => item.readiness.ready).length;
+            const blockedCount = plannedPreflight.length - readyCount;
+            const dueSoonCount = plannedPreflight.filter(item =>
+                item.readiness.maintenanceStatus === 'due-soon'
+            ).length;
+            const preflightCards = plannedPreflight.map(item => {
+                const record = item.record;
+                const readiness = item.readiness;
+                const stateClass = readiness.ready ? 'is-ready' : 'is-blocked';
+                const maintenanceText = readiness.maintenanceStatus === 'due-soon'
+                    ? '维护将于 ' + readiness.maintenanceNextDate + ' 到期'
+                    : readiness.maintenanceStatus === 'scheduled'
+                        ? '维护日期 ' + readiness.maintenanceNextDate
+                        : readiness.maintenanceStatus === 'overdue'
+                            ? '维护已逾期 ' + readiness.maintenanceNextDate
+                            : readiness.maintenanceStatus === 'unscheduled'
+                                ? '未记录下次维护日期' : '维护日期待核验';
+                const calText = readiness.calibrationReady ? '校准证据有效' : readiness.message;
+                return '<article class="ekpo-preflight-card ' + stateClass + '" data-preflight-experiment="' + esc(record.id) + '">' +
+                    '<div class="ekpo-preflight-card__top"><strong>' + esc(record.title) + '</strong>' +
+                    '<span>' + (readiness.ready ? '设备条件通过' : '阻止启动') + '</span></div>' +
+                    '<div class="ekpo-preflight-card__meta"><span>设备 · ' + esc(item.asset?.name || ('编号 ' + record.assetId)) + '</span>' +
+                    '<span>计划 · ' + esc(record.plannedDate) + '</span></div>' +
+                    '<div class="ekpo-preflight-card__checks"><span class="' + (readiness.calibrationReady ? 'is-ok' : 'is-no') + '">' +
+                    esc(calText) + '</span><span class="' + (readiness.maintenanceReady ? 'is-ok' : 'is-no') + '">' +
+                    esc(maintenanceText) + '</span></div>' +
+                    (readiness.warning ? '<p class="ekpo-preflight-card__warning">' + esc(readiness.warning) + '</p>' : '') +
+                    '<p class="ekpo-preflight-card__consumables">耗材核验 · 未纳入自动判定；开始前按 SOP 核对批次、余量与有效期。</p>' +
+                    '</article>';
+            }).join('');
+            const preflightPanel = '<section class="ekpo-preflight" aria-label="实验准备度概览">' +
+                '<div class="ekpo-preflight__head"><div><span>EXPERIMENT PREFLIGHT / READINESS GATE</span>' +
+                '<h3>实验准备度检查台</h3><p>计划日期需落在设备校准有效期和维护覆盖窗口内；任何未知证据都不会默认为通过。</p></div>' +
+                '<b class="' + (blockedCount ? 'is-blocked' : 'is-ready') + '">' +
+                (blockedCount ? blockedCount + ' 项阻止启动' : '设备条件已通过') + '</b></div>' +
+                '<div class="ekpo-preflight__metrics">' +
+                  '<article><small>待启动计划</small><strong>' + plannedPreflight.length + '</strong></article>' +
+                  '<article><small>设备条件通过</small><strong>' + readyCount + '</strong></article>' +
+                  '<article><small>阻止启动</small><strong>' + blockedCount + '</strong></article>' +
+                  '<article><small>维护将到期</small><strong>' + dueSoonCount + '</strong></article>' +
+                '</div>' +
+                '<div class="ekpo-preflight__cards">' + (preflightCards ||
+                  '<div class="ekpo-preflight-empty">当前没有处于计划中的实验。</div>') + '</div>' +
+                '<div class="ekpo-preflight__limits"><strong>耗材与 SOP 检查边界</strong>' +
+                '<p>本版本可核对设备唯一身份、校准状态与计划期间的维护日期；实验记录尚未关联结构化耗材需求，因此耗材批次、库存余量及有效期不参与自动放行，必须按适用 SOP 现场核对。</p></div>' +
+                '</section>';
+
             const rows = records.map(record => {
                 const asset = DB.maintenance.find(item => String(item.id).trim() === String(record.assetId).trim());
-                const readiness = domain.getExperimentEquipmentReadiness({
+                const readiness = domain.getExperimentPreflightReadiness({
                     assetId: record.assetId,
+                    plannedDate: record.plannedDate,
                     equipment: DB.maintenance,
                     calibrationRecords: DB.calibrationLogs,
                     at: now
@@ -1175,7 +1239,7 @@
                     '<td class="experiment-actions">' + actions + '</td>' +
                     '</tr>';
             }).join('');
-            container.innerHTML = '<div class="table-scroll"><table class="experiment-table"><thead><tr>' +
+            container.innerHTML = preflightPanel + '<div class="table-scroll"><table class="experiment-table"><thead><tr>' +
                 '<th>实验计划</th><th>设备 / 校准就绪</th><th>计划日期</th><th>负责人</th><th>当前状态</th><th>审计历史</th><th>允许操作</th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>';
         }
@@ -1258,8 +1322,9 @@
                 const domain = await import('../../src/domain/index.js?v=20261019-ekpo-readiness-v2');
                 const current = domain.validateExperimentRecord(DB.experiments[index]);
                 if (nextStatus === 'in-progress') {
-                    const readiness = domain.getExperimentEquipmentReadiness({
+                    const readiness = domain.getExperimentPreflightReadiness({
                         assetId: current.assetId,
+                        plannedDate: current.plannedDate,
                         equipment: DB.maintenance,
                         calibrationRecords: DB.calibrationLogs || [],
                         at: new Date()
