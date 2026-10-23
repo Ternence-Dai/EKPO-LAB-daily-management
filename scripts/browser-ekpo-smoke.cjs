@@ -422,7 +422,7 @@ const fs = require('node:fs');
     const startDialog = await startDialogPromise;
     if (startDialog.type !== 'prompt') {
       await startDialog.dismiss();
-      throw new Error('Experiment start must request an explicit SOP attestation');
+      throw new Error('Experiment start expected a prompt but received ' + startDialog.type + ': ' + startDialog.message);
     }
     await startDialog.accept('SOP FC-TEST-04; batch B-PW-01; remaining quantity verified; expiry covers planned date');
     await page.waitForFunction(() => {
