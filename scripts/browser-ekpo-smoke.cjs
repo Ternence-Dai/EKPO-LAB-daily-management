@@ -415,6 +415,28 @@ const fs = require('node:fs');
       throw new Error('Experiment preflight failed to distinguish ready/blocked equipment and disclose the consumables boundary: ' +
         JSON.stringify(preflightEvidence));
     }
+    const readyRow = page.locator('#experiments-table tbody tr').filter({ hasText:'PW Preflight ready plan' });
+    page.once('dialog', async dialog => {
+      if (dialog.type !== 'prompt') throw new Error('Experiment start must request an explicit SOP attestation');
+      await dialog.accept('SOP FC-TEST-04; batch B-PW-01; remaining quantity verified; expiry covers planned date');
+    });
+    await readyRow.locator('[data-experiment-action="start"]').click();
+    await page.waitForFunction(() => {
+      const record = (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').experiments || [])
+        .find(item => item.title === 'PW Preflight ready plan');
+      return record?.status === 'in-progress' &&
+        record.audit?.some(event => event.to === 'in-progress' &&
+          event.consumablesCheckNote?.includes('SOP FC-TEST-04'));
+    }, undefined, { timeout:10000 });
+    const startAudit = await page.evaluate(() => {
+      const record = (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').experiments || [])
+        .find(item => item.title === 'PW Preflight ready plan');
+      return record?.audit?.find(event => event.to === 'in-progress') || null;
+    });
+    if (!startAudit || !startAudit.consumablesCheckNote.includes('batch B-PW-01')) {
+      throw new Error('Experiment start did not persist consumables/SOP evidence in the lifecycle audit');
+    }
+
     fs.mkdirSync('artifacts', { recursive:true });
     await page.locator('.ekpo-preflight').screenshot({ path:'artifacts/ekpo-experiment-preflight-desktop.png' });
 
