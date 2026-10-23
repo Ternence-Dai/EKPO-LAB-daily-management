@@ -290,8 +290,9 @@ function parseCalibrationInstant(value) {
   }
   if (zone !== "Z") {
     const offsetHour = Number(offsetHourText), offsetMinute = Number(offsetMinuteText);
-    if (offsetMinute > 59 || offsetHour > 14 || (offsetHour === 14 && offsetMinute !== 0)) {
-      throw new TypeError("calibratedAt contains an invalid timezone offset");
+    if (offsetMinute > 59 || offsetHour > 14 || (offsetHour === 14 && offsetMinute !== 0) ||
+        (match[8] === "-" && offsetHour === 0 && offsetMinute === 0)) {
+      throw new TypeError("calibratedAt contains an invalid or unknown timezone offset");
     }
   }
   const timestamp = Date.parse(value);
