@@ -414,8 +414,35 @@ const fs = require('node:fs');
     await page.waitForFunction(() =>
       document.querySelector('#page-experiments:not(.hidden)') &&
       document.querySelector('#mobileNav button.active')?.dataset.tab === 'experiments');
+    const mobilePreflight = await page.locator('.ekpo-preflight').evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const cards = node.querySelector('.ekpo-preflight__cards');
+      return {
+        left:rect.left,right:rect.right,width:rect.width,
+        contentWidth:document.querySelector('.main-content')?.getBoundingClientRect().width,
+        columns:cards ? getComputedStyle(cards).gridTemplateColumns.split(' ').filter(Boolean).length : 0
+      };
+    });
+    if (!mobilePreflight.width || mobilePreflight.width < 340 ||
+        mobilePreflight.left < 0 || mobilePreflight.right > 391 ||
+        !mobilePreflight.contentWidth || mobilePreflight.contentWidth < 360 ||
+        mobilePreflight.columns !== 1) {
+      throw new Error('Mobile experiment preflight is clipped or not a single-column readiness list: ' +
+        JSON.stringify(mobilePreflight));
+    }
+    await page.locator('.ekpo-preflight').screenshot({ path:'artifacts/ekpo-experiment-preflight-mobile.png' });
+    await page.setViewportSize({ width:1440, height:960 });
+    await page.locator('#experiment-action-actor').fill('Playwright acceptance');
+    await page.locator('#experiments-table tbody tr').filter({hasText:'PW Preflight ready plan'})
+      .locator('[data-experiment-action="start"]').click();
+    await page.waitForFunction(() => {
+      const db = JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}');
+      return (db.experiments || []).some(record =>
+        record.title === 'PW Preflight ready plan' && record.status === 'in-progress' && record.audit?.length === 2
+      );
+    }, undefined, { timeout:10000 });
     if (pageErrors.length) throw new Error('EKPO browser runtime errors: ' + pageErrors.join(' | '));
-    console.log('EKPO LabOS browser acceptance passed: dashboard, seven operational modules, contextual headers, gas-usage validation and persistence, and eight mobile navigation entries passed.');
+    console.log('EKPO LabOS browser acceptance passed: dashboard, seven modules, calibration ledger, maintenance-aware experiment preflight, blocked start and responsive visual evidence passed.');
   } finally {
     await browser.close();
   }
