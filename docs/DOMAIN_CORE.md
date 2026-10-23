@@ -31,6 +31,14 @@ Every transition requires a non-empty actor and appends an ISO timestamped audit
 
 The browser UI exposes experiment planning, equipment association, responsible owner, creator attribution, status transitions, and expandable audit history. Status changes and plan creation use the same persistence rollback path as other lab mutations. Legacy caches and JSON backups without an `experiments` table migrate to an empty list; no plans or runs are fabricated. Existing experiment rows are validated at startup and during backup import, including equipment references and audit chronology. The operator name is user-entered attribution, not authenticated identity; a completed lifecycle state is not equivalent to reviewed/approved scientific results.
 
+## Experiment-start SOP and consumables attestation
+
+A transition from `planned` to `in-progress` requires a non-empty `consumablesCheckNote` of at most 500 characters. The note is trimmed and rejects control characters. It is accepted only on the start event; it is not a free-form field for unrelated lifecycle transitions.
+
+The browser start flow asks the operator to record the applicable SOP identifier, consumables batch, remaining-quantity check, and whether the expiry covers the planned date. The note is displayed in the experiment audit history and is persisted with the start event. `validateExperimentRecord(entry)` also rejects an imported `in-progress` start event that omits the attestation, so import/restore cannot bypass the same rule. Historical records are not backfilled with invented evidence.
+
+**Important verification boundary:** this is a manually entered attestation, not a structured consumables inventory system. The application does not automatically resolve a reagent/consumables lot, calculate available stock, validate a batch against a lot master, or independently compare expiry dates with the planned experiment date. Those capabilities require structured lot master data and controlled inventory workflows. The operator field remains self-reported attribution, not authenticated identity or approval.
+
 ## Calibration records and validity
 
 `createCalibrationRecord(entry)` creates an immutable, normalized calibration record. It requires a unique record ID, a reference to an existing maintenance asset, a timezone-qualified calibration timestamp, a positive safe-integer validity period, certificate/report number, calibration organization, operator, and a `pass` or `fail` result. Optional notes must be text. The domain function validates the record shape; the application verifies that the referenced asset exists and that certificate references are not duplicated.
@@ -44,18 +52,18 @@ The browser UI treats the date-picker value as a calendar date and stores it at 
 `validateTestDiaryEntry(entry)` requires valid start/end values, a positive finite duration within the safe numeric range, a non-empty unit, and a non-empty operator.
 
 - Date-only values use `YYYY-MM-DD` calendar semantics and remain date-only.
-- Timed values require an explicit timezone and are normalized to UTC; the normalized UTC year must remain in the supported four-digit range so the saved value can be parsed again.
+- Timed values require an explicit timezone and are normalized to UTC; the normalized UTC year must remain in the supported four-digit year range so the saved value can be parsed again.
 - The end time cannot precede the start time.
 
 The module validates the declared duration value but does not infer its unit or recompute it from timestamps; the caller must keep duration and unit semantics consistent.
 
 ## Current application wiring
 
-The current browser application calls `validateMaintenanceAsset` from the maintenance save flow, `validateTestDiaryEntry` from the test-diary save flow, `createCalibrationRecord`/`isCalibrationCurrent` from the equipment calibration workflow, and `createExperimentRecord`/`validateExperimentRecord`/`transitionExperiment` from the experiment page. Experiment plans can be created against an in-register asset, moved through permitted states, and inspected with immutable, chronological audit history. Creation and transition writes use snapshot/commit rollback; startup and import validate the audit chain and asset reference. The operator field is self-reported and does not enforce identity or permissions. The Excel workbook exports experiment-plan metadata and a separate flattened status-audit sheet.
+The current browser application calls `validateMaintenanceAsset` from the maintenance save flow, `validateTestDiaryEntry` from the test-diary save flow, `createCalibrationRecord`/`isCalibrationCurrent` from the equipment calibration workflow, and `createExperimentRecord`/`validateExperimentRecord`/`transitionExperiment` from the experiment page. Experiment plans can be created against an in-register asset, moved through permitted states, and inspected with immutable, chronological audit history. Creation and transition writes use snapshot/commit rollback; startup and import validate the audit chain and asset reference. The start-event SOP/consumables attestation is persisted and revalidated on import. The operator field is self-reported and does not enforce identity or permissions. The Excel workbook exports experiment-plan metadata and a separate flattened status-audit sheet.
 
 ## Verification boundary
 
-`test/domain.test.js` covers lifecycle transitions, immutable audit history, calibration dates and expiry, diary ordering/duration, and maintenance data. The application validators cover persistence rollback, local-cache recovery, maintenance scheduling, inventory rollback, calibration UI and backup compatibility. These checks do not replace access control or a durable transactional database.
+`test/domain.test.js` covers lifecycle transitions, immutable audit history, calibration dates and expiry, diary ordering/duration, maintenance data, and the required start-event attestation including imported records. The application validators cover persistence rollback, local-cache recovery, maintenance scheduling, inventory rollback, calibration UI and backup compatibility. These checks do not replace access control, structured consumables inventory, or a durable transactional database.
 
 ## Open-source laboratory-system references
 
