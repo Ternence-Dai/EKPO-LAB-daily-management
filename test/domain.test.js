@@ -452,6 +452,33 @@ test("experiment preflight requires current calibration and maintenance coverage
  assert.equal(dueSoonButBeforeMaintenance.preflightStatus,"ready-with-warning");
  assert.ok(dueSoonButBeforeMaintenance.warning.includes("11 天后"));
 
+ const expiresBeforePlan=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-11-01",equipment,
+  calibrationRecords:[createCalibrationRecord({
+   id:"CAL-EXPIRING",assetId:"BENCH-1",calibratedAt:"2026-01-01T00:00:00Z",
+   validForDays:300,certificateNo:"CERT-EXPIRING",organization:"Metrology Lab",
+   operator:"Operator",result:"pass"
+  })],at
+ });
+ assert.equal(expiresBeforePlan.calibrationStatusAsOfNow,"current",
+  "a certificate can be valid today before expiring before the planned experiment");
+ assert.equal(expiresBeforePlan.calibrationStatusOnPlannedDate,"expired");
+ assert.equal(expiresBeforePlan.calibrationReady,false);
+ assert.equal(expiresBeforePlan.ready,false);
+ assert.ok(expiresBeforePlan.calibrationMessage.includes("2026-11-01"));
+
+ const futureCalibration=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-10-30",equipment,
+  calibrationRecords:[createCalibrationRecord({
+   id:"CAL-FUTURE",assetId:"BENCH-1",calibratedAt:"2026-10-25T00:00:00Z",
+   validForDays:365,certificateNo:"CERT-FUTURE",organization:"Metrology Lab",
+   operator:"Operator",result:"pass"
+  })],at
+ });
+ assert.equal(futureCalibration.calibrationStatusAsOfNow,"future-dated");
+ assert.equal(futureCalibration.calibrationReady,false,
+  "a future-dated certificate must not count as evidence already completed");
+
  const failedCalibration=getExperimentPreflightReadiness({
   assetId:"BENCH-1",plannedDate:"2026-10-25",equipment,
   calibrationRecords:[createCalibrationRecord({
