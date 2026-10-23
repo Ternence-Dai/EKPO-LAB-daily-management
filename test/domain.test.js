@@ -600,3 +600,25 @@ test("starting an experiment requires a recorded manual SOP and consumables atte
   audit:[started.audit[0],{...started.audit[1],consumablesCheckNote:"x".repeat(501)}]
  }),/consumables SOP attestation must be bounded non-empty text/);
 });
+
+
+test("rejects imported experiment start events that omit the consumables SOP attestation",()=>{
+ const created=createExperimentRecord({
+  id:"EXP-ATTEST-IMPORT",title:"Imported experiment",assetId:2,
+  plannedDate:"2026-10-23",owner:"Operator",purpose:"Validate imported audit integrity",
+  actor:"operator-1",createdAt:"2026-10-23T01:00:00.000Z"
+ });
+ const forgedStart={
+  from:"planned",to:"in-progress",actor:"operator-2",at:"2026-10-23T01:01:00.000Z"
+ };
+ assert.throws(()=>validateExperimentRecord({
+  ...created,status:"in-progress",audit:[...created.audit,forgedStart]
+ }),/must include its consumables SOP attestation/);
+ const validStart={
+  ...forgedStart,
+  consumablesCheckNote:"SOP FC-01; batch B-01; quantity and expiry verified"
+ };
+ assert.equal(validateExperimentRecord({
+  ...created,status:"in-progress",audit:[...created.audit,validStart]
+ }).status,"in-progress");
+});
