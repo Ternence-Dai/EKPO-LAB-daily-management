@@ -195,6 +195,9 @@ export function validateExperimentRecord(entry) {
         throw new TypeError("consumables SOP attestation must be bounded non-empty text on the experiment start event");
       }
     }
+    if (record.to === "in-progress" && !Object.hasOwn(record, "consumablesCheckNote")) {
+      throw new TypeError("experiment start audit event must include its consumables SOP attestation");
+    }
     if (typeof record.actor !== "string" || !record.actor.trim() ||
         record.actor.trim().length > 120 || [...record.actor].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
       throw new TypeError("experiment audit actor is required, bounded and free of control characters");
