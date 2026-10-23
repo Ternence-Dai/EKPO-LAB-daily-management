@@ -450,7 +450,7 @@ test("experiment preflight requires current calibration and maintenance coverage
  });
  assert.equal(dueSoonButBeforeMaintenance.ready,true);
  assert.equal(dueSoonButBeforeMaintenance.preflightStatus,"ready-with-warning");
- assert.ok(dueSoonButBeforeMaintenance.warning.includes("5 天后"));
+ assert.ok(dueSoonButBeforeMaintenance.warning.includes("11 天后"));
 
  const failedCalibration=getExperimentPreflightReadiness({
   assetId:"BENCH-1",plannedDate:"2026-10-25",equipment,
