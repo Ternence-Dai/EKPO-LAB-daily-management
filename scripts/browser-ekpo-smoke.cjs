@@ -415,6 +415,36 @@ const fs = require('node:fs');
       throw new Error('Experiment preflight failed to distinguish ready/blocked equipment and disclose the consumables boundary: ' +
         JSON.stringify(preflightEvidence));
     }
+    const readyRow = page.locator('#experiments-table tbody tr').filter({ hasText:'PW Preflight ready plan' });
+    await page.locator('#experiment-action-actor').fill('Playwright acceptance');
+    const startDialogPromise = page.waitForEvent('dialog', { timeout:10000 });
+    await readyRow.locator('[data-experiment-action="start"]').click();
+    const startDialog = await startDialogPromise;
+    if (startDialog.type() !== 'prompt') {
+      const dialogType = startDialog.type();
+      const dialogMessage = startDialog.message();
+      await startDialog.dismiss();
+      throw new Error('Experiment start expected a prompt but received ' + dialogType + ': ' + dialogMessage);
+    }
+    await startDialog.accept('SOP FC-TEST-04; batch B-PW-01; remaining quantity verified; expiry covers planned date');
+    await page.waitForFunction(() => {
+      const record = (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').experiments || [])
+        .find(item => item.title === 'PW Preflight ready plan');
+      return record?.status === 'in-progress' &&
+        record.audit?.some(event => event.to === 'in-progress' &&
+          event.consumablesCheckNote?.includes('SOP FC-TEST-04'));
+    }, undefined, { timeout:10000 });
+    const startAudit = await page.evaluate(() => {
+      const record = (JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}').experiments || [])
+        .find(item => item.title === 'PW Preflight ready plan');
+      return record?.audit?.find(event => event.to === 'in-progress') || null;
+    });
+    const renderedAuditText = await readyRow.locator('.experiment-audit').evaluate(node => node.textContent || '');
+    if (!startAudit || !startAudit.consumablesCheckNote.includes('batch B-PW-01') ||
+        !renderedAuditText.includes('SOP FC-TEST-04')) {
+      throw new Error('Experiment start did not persist and display consumables/SOP evidence in the lifecycle audit');
+    }
+
     fs.mkdirSync('artifacts', { recursive:true });
     await page.locator('.ekpo-preflight').screenshot({ path:'artifacts/ekpo-experiment-preflight-desktop.png' });
 
@@ -489,14 +519,12 @@ const fs = require('node:fs');
     await page.screenshot({path:'artifacts/ekpo-experiment-preflight-mobile.png',clip:preflightClip,animations:'disabled'});
     await cleanPreflightEvidence.evaluate(node => node.remove());
     await page.setViewportSize({ width:1440, height:960 });
-    await page.locator('#experiment-action-actor').fill('Playwright acceptance');
-    await page.locator('#experiments-table tbody tr').filter({hasText:'PW Preflight ready plan'})
-      .locator('[data-experiment-action="start"]').click();
     await page.waitForFunction(() => {
       const db = JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}');
-      return (db.experiments || []).some(record =>
-        record.title === 'PW Preflight ready plan' && record.status === 'in-progress' && record.audit?.length === 2
-      );
+      const record = (db.experiments || []).find(item => item.title === 'PW Preflight ready plan');
+      return record?.status === 'in-progress' &&
+        record.audit?.some(event => event.to === 'in-progress' &&
+          event.consumablesCheckNote?.includes('SOP FC-TEST-04'));
     }, undefined, { timeout:10000 });
     if (pageErrors.length) throw new Error('EKPO browser runtime errors: ' + pageErrors.join(' | '));
     console.log('EKPO LabOS browser acceptance passed: dashboard, seven modules, calibration ledger, maintenance-aware experiment preflight, blocked start and responsive visual evidence passed.');
