@@ -149,7 +149,7 @@ body[data-workspace="ekpo"] .ekpo-oc-status strong { color:#e8f4fa;font-size:12p
 body[data-workspace="ekpo"] .ekpo-oc-status small { color:#7897ad;font-size:8px;letter-spacing:.1em; }
 body[data-workspace="ekpo"] .ekpo-oc-metrics {
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   gap:10px;
 }
 body[data-workspace="ekpo"] .ekpo-oc-metric {
@@ -296,6 +296,7 @@ body[data-workspace="ekpo"] .ekpo-oc-inspector button:focus-visible {
 @media(max-width:1280px) {
   body[data-workspace="ekpo"] .ekpo-oc-layout { grid-template-columns:minmax(0,1fr) 290px; }
   body[data-workspace="ekpo"] .ekpo-oc-panels { grid-template-columns:1fr; }
+  body[data-workspace="ekpo"] .ekpo-oc-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 @media(max-width:980px) {
   body[data-workspace="ekpo"] .content-body { padding:14px!important; }

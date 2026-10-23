@@ -116,6 +116,8 @@ const fs = require('node:fs');
       return {
         cockpit: !!cockpit,
         metrics: cockpit?.querySelectorAll('.ekpo-oc-metric').length || 0,
+        metricColumns:cockpit ? getComputedStyle(cockpit.querySelector('.ekpo-oc-metrics')).gridTemplateColumns.split(' ').filter(Boolean).length : 0,
+        metricTopOffsets:[...(cockpit?.querySelectorAll('.ekpo-oc-metric') || [])].map(node => node.getBoundingClientRect().top),
         workflowSteps: cockpit?.querySelectorAll('.ekpo-oc-steps button').length || 0,
         inspector: !!cockpit?.querySelector('.ekpo-oc-inspector'),
         oldMetrics: !!root?.querySelector('.metrics-grid'),
@@ -126,6 +128,8 @@ const fs = require('node:fs');
       };
     });
     if (!dashboardPriority.cockpit || dashboardPriority.metrics !== 5 ||
+        dashboardPriority.metricColumns !== 5 ||
+        dashboardPriority.metricTopOffsets.some(value => Math.abs(value - dashboardPriority.metricTopOffsets[0]) > 2) ||
         dashboardPriority.workflowSteps !== 4 || !dashboardPriority.inspector ||
         dashboardPriority.oldMetrics || dashboardPriority.oldCharts ||
         dashboardPriority.oldLaunchpad || dashboardPriority.oldReadinessBoard ||
@@ -133,6 +137,19 @@ const fs = require('node:fs');
       throw new Error('EKPO dashboard still contains replaced legacy summary/chart blocks or lacks the reference cockpit: ' +
         JSON.stringify(dashboardPriority));
     }
+
+    fs.mkdirSync('artifacts', { recursive:true });
+    await page.locator('#page-dashboard .ekpo-oc-metrics').screenshot({
+      path:'artifacts/ekpo-dashboard-five-kpi-desktop.png'
+    });
+    await page.setViewportSize({ width:1024, height:900 });
+    const tabletMetricColumns = await page.locator('#page-dashboard .ekpo-oc-metrics').evaluate(node =>
+      getComputedStyle(node).gridTemplateColumns.split(' ').filter(Boolean).length
+    );
+    if (tabletMetricColumns !== 3) {
+      throw new Error('EKPO tablet KPI grid must use three columns: ' + tabletMetricColumns);
+    }
+    await page.setViewportSize({ width:1440, height:960 });
 
     const readinessEvidence = await page.evaluate(() => {
       const root = document.querySelector('#page-dashboard .ekpo-operations-cockpit');
@@ -414,6 +431,18 @@ const fs = require('node:fs');
     if (!mobile.visible || mobile.tabs < 8) {
       throw new Error('EKPO mobile navigation is incomplete: ' + JSON.stringify(mobile));
     }
+    await page.locator('#mobileNav button[data-tab="dashboard"]').click();
+    await page.waitForFunction(() => document.querySelector('#page-dashboard:not(.hidden)') &&
+      document.querySelector('#mobileNav button.active')?.dataset.tab === 'dashboard');
+    const mobileMetricColumns = await page.locator('#page-dashboard .ekpo-oc-metrics').evaluate(node =>
+      getComputedStyle(node).gridTemplateColumns.split(' ').filter(Boolean).length
+    );
+    if (mobileMetricColumns !== 2) {
+      throw new Error('EKPO mobile KPI grid must use two columns: ' + mobileMetricColumns);
+    }
+    await page.locator('#page-dashboard .ekpo-oc-metrics').screenshot({
+      path:'artifacts/ekpo-dashboard-five-kpi-mobile.png'
+    });
     await page.locator('#mobileNav button[data-tab="experiments"]').click();
     await page.waitForFunction(() =>
       document.querySelector('#page-experiments:not(.hidden)') &&
