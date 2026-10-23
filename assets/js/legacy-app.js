@@ -1385,7 +1385,23 @@
                         throw new Error(readiness.message + '，不能启动实验');
                     }
                 }
-                const updated = domain.transitionExperiment(current, nextStatus, actor, new Date().toISOString());
+                let consumablesCheckNote;
+                if (nextStatus === 'in-progress') {
+                    consumablesCheckNote = window.prompt(
+                        '启动前必须按适用 SOP 完成人工耗材核验。请记录 SOP 编号、耗材批次、剩余量核对结果及有效期是否覆盖计划日期（最多 500 字）。此记录将写入不可变启动审计。',
+                        ''
+                    );
+                    if (consumablesCheckNote === null) {
+                        showToast('已取消启动；实验状态未变更。');
+                        return;
+                    }
+                    if (!consumablesCheckNote.trim()) {
+                        throw new Error('必须填写 SOP 编号、批次、余量和有效期核验记录后才能启动实验');
+                    }
+                }
+                const updated = domain.transitionExperiment(
+                    current, nextStatus, actor, new Date().toISOString(), consumablesCheckNote
+                );
                 domain.validateExperimentRecord(updated);
                 const previousDB = snapshotLabDB();
                 DB.experiments[index] = updated;
