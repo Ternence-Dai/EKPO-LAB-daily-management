@@ -62,6 +62,7 @@ assert.ok(create.includes('domain.createExperimentRecord') &&
   'experiment creation must validate fields and use transactional persistence');
 assert.ok(transition.includes('window.prompt(') &&
           transition.includes('consumablesCheckNote') &&
+          transition.includes('experiment-audit__evidence') &&
           transition.includes('domain.transitionExperiment('),
   'experiment start must collect and persist explicit SOP/consumables attestation');
 assert.ok(transition.includes('domain.validateExperimentRecord(DB.experiments[index])') &&
