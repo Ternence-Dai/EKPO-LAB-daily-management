@@ -182,10 +182,18 @@ export function validateExperimentRecord(entry) {
         Object.values(record).some(value => typeof value !== "string")) {
       throw new TypeError("experiment audit entries must contain only string fields");
     }
-    const auditFields = ["from", "to", "actor", "at"];
+    const auditFields = ["from", "to", "actor", "at", "consumablesCheckNote"];
+    const requiredAuditFields = ["from", "to", "actor", "at"];
     if (Object.keys(record).some(field => !auditFields.includes(field)) ||
-        auditFields.some(field => typeof record[field] !== "string")) {
+        requiredAuditFields.some(field => typeof record[field] !== "string")) {
       throw new TypeError("experiment audit entries must use the immutable lifecycle schema");
+    }
+    if (Object.hasOwn(record, "consumablesCheckNote")) {
+      if (record.to !== "in-progress" || typeof record.consumablesCheckNote !== "string" ||
+          !record.consumablesCheckNote.trim() || record.consumablesCheckNote.trim().length > 500 ||
+          [...record.consumablesCheckNote].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
+        throw new TypeError("consumables SOP attestation must be bounded non-empty text on the experiment start event");
+      }
     }
     if (typeof record.actor !== "string" || !record.actor.trim() ||
         record.actor.trim().length > 120 || [...record.actor].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
@@ -205,7 +213,14 @@ export function validateExperimentRecord(entry) {
       }
     }
     expectedStatus = record.to;
-    return Object.freeze({ ...record, actor: record.actor.trim(), at });
+    return Object.freeze({
+      ...record,
+      actor: record.actor.trim(),
+      at,
+      ...(Object.hasOwn(record, "consumablesCheckNote")
+        ? {consumablesCheckNote:record.consumablesCheckNote.trim()}
+        : {})
+    });
   });
   if (expectedStatus !== entry.status) {
     throw new RangeError("experiment status does not match its audit history");
@@ -223,7 +238,7 @@ export function validateExperimentRecord(entry) {
     audit: Object.freeze(audit)
   });
 }
-export function transitionExperiment(experiment, nextStatus, actor, at = new Date().toISOString()) {
+export function transitionExperiment(experiment, nextStatus, actor, at = new Date().toISOString(), consumablesCheckNote) {
   // A transition is only valid from a complete, traceable record. Do not let
   // callers append an audit event to a status-only or otherwise corrupt object.
   const current = validateExperimentRecord(experiment);
@@ -237,9 +252,25 @@ export function transitionExperiment(experiment, nextStatus, actor, at = new Dat
   if (Date.parse(normalizedAt) < previousAt) {
     throw new RangeError("experiment audit timestamps must be chronological");
   }
+  let normalizedConsumablesCheckNote;
+  if (nextStatus === "in-progress") {
+    if (typeof consumablesCheckNote !== "string" || !consumablesCheckNote.trim()) {
+      throw new TypeError("consumables SOP attestation is required before starting an experiment");
+    }
+    normalizedConsumablesCheckNote = consumablesCheckNote.trim();
+    if (normalizedConsumablesCheckNote.length > 500 ||
+        [...normalizedConsumablesCheckNote].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
+      throw new RangeError("consumables SOP attestation must be at most 500 characters and contain no control characters");
+    }
+  } else if (consumablesCheckNote !== undefined) {
+    throw new TypeError("consumables SOP attestation is only accepted when starting an experiment");
+  }
+  const startEvidence = nextStatus === "in-progress"
+    ? {consumablesCheckNote:normalizedConsumablesCheckNote}
+    : {};
   const audit = [
     ...current.audit,
-    Object.freeze({ from:current.status, to:nextStatus, actor:actor.trim(), at:normalizedAt })
+    Object.freeze({ from:current.status, to:nextStatus, actor:actor.trim(), at:normalizedAt, ...startEvidence })
   ];
   return validateExperimentRecord({ ...current, status:nextStatus, audit });
 }
