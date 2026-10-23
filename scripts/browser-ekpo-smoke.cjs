@@ -519,14 +519,12 @@ const fs = require('node:fs');
     await page.screenshot({path:'artifacts/ekpo-experiment-preflight-mobile.png',clip:preflightClip,animations:'disabled'});
     await cleanPreflightEvidence.evaluate(node => node.remove());
     await page.setViewportSize({ width:1440, height:960 });
-    await page.locator('#experiment-action-actor').fill('Playwright acceptance');
-    await page.locator('#experiments-table tbody tr').filter({hasText:'PW Preflight ready plan'})
-      .locator('[data-experiment-action="start"]').click();
     await page.waitForFunction(() => {
       const db = JSON.parse(localStorage.getItem('lab_management_db_v9') || '{}');
-      return (db.experiments || []).some(record =>
-        record.title === 'PW Preflight ready plan' && record.status === 'in-progress' && record.audit?.length === 2
-      );
+      const record = (db.experiments || []).find(item => item.title === 'PW Preflight ready plan');
+      return record?.status === 'in-progress' &&
+        record.audit?.some(event => event.to === 'in-progress' &&
+          event.consumablesCheckNote?.includes('SOP FC-TEST-04'));
     }, undefined, { timeout:10000 });
     if (pageErrors.length) throw new Error('EKPO browser runtime errors: ' + pageErrors.join(' | '));
     console.log('EKPO LabOS browser acceptance passed: dashboard, seven modules, calibration ledger, maintenance-aware experiment preflight, blocked start and responsive visual evidence passed.');
