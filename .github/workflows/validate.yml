@@ -83,3 +83,11 @@ jobs:
           exit 1
       - name: Verify operations modules and mobile navigation
         run: node scripts/browser-ekpo-smoke.cjs
+      - name: Upload desktop and mobile experiment preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekpo-experiment-preflight-ui
+          path: artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7
