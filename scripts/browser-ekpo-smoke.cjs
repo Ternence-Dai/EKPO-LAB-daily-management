@@ -336,7 +336,11 @@ const fs = require('node:fs');
 
     await page.locator('.sidebar .nav-item[data-tab="experiments"]').click();
     await page.waitForSelector('#page-experiments:not(.hidden)');
-    await page.waitForFunction(() => !!document.querySelector('#experiment-asset option[value]'));
+    await page.waitForFunction(() => {
+      const labels = [...(document.querySelector('#experiment-asset')?.options || [])].map(option => option.textContent);
+      return labels.some(label => label.includes('PW Synthetic test bench')) &&
+        labels.some(label => label.includes('PW Overdue synthetic bench'));
+    }, undefined, { timeout:10000 });
     const equipmentIds = await page.locator('#experiment-asset').evaluate(select => ({
       calibrated:[...select.options].find(option => option.textContent.includes('PW Synthetic test bench'))?.value || '',
       overdue:[...select.options].find(option => option.textContent.includes('PW Overdue synthetic bench'))?.value || ''
