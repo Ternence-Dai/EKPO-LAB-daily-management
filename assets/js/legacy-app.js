@@ -936,6 +936,24 @@
             if (!['入库', '出库'].includes(action)) { showToast('请选择有效的出入库类型', 'error'); return; }
             if (!Number.isFinite(qty) || qty <= 0) { showToast('出入库数量必须是大于 0 的有效数字', 'error'); return; }
             if (!isValidDateOnly(date)) { showToast('出入库日期无效', 'error'); return; }
+            // The ledger stores a current balance, not a replayable historical balance.
+            // Reject future and backdated movements so a late entry cannot silently
+            // rewrite the apparent stock position for an already elapsed period.
+            const today = getToday();
+            if (date > today) {
+                showToast('出入库日期不能晚于今天；未来收发货请先按实际发生日期登记', 'error');
+                return;
+            }
+            const latestMovement = DB.spareLogs
+                .filter(item => sameLabId(item.partId, part.id))
+                .reduce((latest, item) => {
+                    if (!isValidDateOnly(item.date)) return latest;
+                    return !latest || item.date > latest ? item.date : latest;
+                }, '');
+            if (latestMovement && date < latestMovement) {
+                showToast('出入库日期早于该物料最近一笔流水；为保持库存余额可追溯，请按时间顺序补录', 'error');
+                return;
+            }
             const currentQty = Number(part.qty);
             if (!Number.isFinite(currentQty) || currentQty < 0) { showToast('当前库存数据异常，请先核对库存台账', 'error'); return; }
             if (action === '出库' && qty > currentQty) {
