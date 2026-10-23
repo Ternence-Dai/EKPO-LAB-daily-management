@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, getAssetCalibrationStatus, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset, getMaintenanceScheduleStatus, getExperimentEquipmentReadiness } from "../src/domain/index.js";
+import { createExperimentRecord, validateExperimentRecord, transitionExperiment, isCalibrationCurrent, getAssetCalibrationStatus, createCalibrationRecord, validateTestDiaryEntry, validateMaintenanceAsset, getMaintenanceScheduleStatus, getExperimentEquipmentReadiness, getExperimentPreflightReadiness } from "../src/domain/index.js";
 test("creates a traceable planned experiment record with immutable creation audit",()=>{
  const record=createExperimentRecord({
   id:"EXP-20261018-001",title:"Fuel-cell polarization sweep",assetId:2,
@@ -401,6 +401,71 @@ test("experiment equipment readiness explains missing or invalid calibration bef
  assert.throws(()=>getExperimentEquipmentReadiness({assetId:7,equipment:{},calibrationRecords:[],at}),TypeError);
 });
 
+
+test("experiment preflight requires current calibration and maintenance coverage through the planned date",()=>{
+ const at=new Date("2026-10-19T09:00:00.000Z");
+ const equipment=[{id:"BENCH-1",name:"Synthetic bench",next:"2026-11-19"}];
+ const calibrationRecords=[createCalibrationRecord({
+  id:"CAL-1",assetId:"BENCH-1",calibratedAt:"2026-10-01T00:00:00Z",
+  validForDays:365,certificateNo:"CERT-1",organization:"Metrology Lab",
+  operator:"Operator",result:"pass"
+ })];
+ const current=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-10-25",equipment,calibrationRecords,at
+ });
+ assert.equal(current.ready,true);
+ assert.equal(current.calibrationReady,true);
+ assert.equal(current.maintenanceReady,true);
+ assert.equal(current.maintenanceStatus,"scheduled");
+ assert.equal(current.consumablesStatus,"not-assessed",
+  "unlinked consumables must remain explicitly outside automatic readiness");
+ assert.ok(current.consumablesMessage.includes("SOP"));
+
+ const overdue=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-10-25",
+  equipment:[{...equipment[0],next:"2026-10-18"}],calibrationRecords,at
+ });
+ assert.equal(overdue.ready,false);
+ assert.equal(overdue.maintenanceStatus,"overdue");
+ assert.equal(overdue.preflightStatus,"blocked");
+
+ const unscheduled=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-10-25",
+  equipment:[{...equipment[0],next:""}],calibrationRecords,at
+ });
+ assert.equal(unscheduled.ready,false);
+ assert.equal(unscheduled.maintenanceStatus,"unscheduled");
+
+ const plannedAfterMaintenance=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-11-01",
+  equipment:[{...equipment[0],next:"2026-10-30"}],calibrationRecords,at
+ });
+ assert.equal(plannedAfterMaintenance.ready,false);
+ assert.equal(plannedAfterMaintenance.maintenanceStatus,"due-soon");
+ assert.ok(plannedAfterMaintenance.message.includes("晚于下次维护日期"));
+
+ const dueSoonButBeforeMaintenance=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-10-25",
+  equipment:[{...equipment[0],next:"2026-10-30"}],calibrationRecords,at
+ });
+ assert.equal(dueSoonButBeforeMaintenance.ready,true);
+ assert.equal(dueSoonButBeforeMaintenance.preflightStatus,"ready-with-warning");
+ assert.ok(dueSoonButBeforeMaintenance.warning.includes("5 天后"));
+
+ const failedCalibration=getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-10-25",equipment,
+  calibrationRecords:[createCalibrationRecord({
+   id:"CAL-FAIL",assetId:"BENCH-1",calibratedAt:"2026-10-01T00:00:00Z",
+   validForDays:365,certificateNo:"CERT-FAIL",organization:"Metrology Lab",
+   operator:"Operator",result:"fail"
+  })],at
+ });
+ assert.equal(failedCalibration.ready,false);
+ assert.equal(failedCalibration.calibrationReady,false);
+ assert.throws(()=>getExperimentPreflightReadiness({
+  assetId:"BENCH-1",plannedDate:"2026-02-30",equipment,calibrationRecords,at
+ }),TypeError);
+});
 
 test("rejects duplicate canonical calibration record IDs for one asset",()=>{
  const record=(id,calibratedAt)=>createCalibrationRecord({
