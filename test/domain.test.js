@@ -25,7 +25,7 @@ test("validates a full experiment lifecycle and its chronological audit chain",(
   owner:"Operator A",purpose:"Verify planned operation",actor:"operator-1",
   createdAt:"2026-10-18T01:00:00.000Z"
  });
- const started=transitionExperiment(created,"in-progress","operator-2","2026-10-18T01:01:00.000Z");
+ const started=transitionExperiment(created,"in-progress","operator-2","2026-10-18T01:01:00.000Z","SOP FC-01; batch B-01; quantity and expiry verified");
  const completed=transitionExperiment(started,"completed","reviewer-1","2026-10-18T01:02:00.000Z");
  const imported=validateExperimentRecord(completed);
  assert.equal(imported.status,"completed");
@@ -62,7 +62,7 @@ test("rejects impossible, skipped, reordered or tampered experiment audit chains
   owner:"Operator",purpose:"Traceable test plan",actor:"operator-1",
   createdAt:"2026-10-18T01:00:00.000Z"
  });
- const started=transitionExperiment(base,"in-progress","operator-2","2026-10-18T01:01:00.000Z");
+ const started=transitionExperiment(base,"in-progress","operator-2","2026-10-18T01:01:00.000Z","SOP FC-01; batch B-01; quantity and expiry verified");
  assert.throws(
   ()=>transitionExperiment(started,"completed","operator-3","2026-10-18T00:59:00.000Z"),
   /chronological/
@@ -90,7 +90,7 @@ test("records authorized experiment lifecycle transition only from a complete tr
   owner:"Operator",purpose:"Verify traceable lifecycle transitions",actor:"operator-0",
   createdAt:"2026-10-18T01:00:00.000Z"
  });
- const next=transitionExperiment(created,"in-progress","operator-1","2026-10-18T01:01:00.000Z");
+ const next=transitionExperiment(created,"in-progress","operator-1","2026-10-18T01:01:00.000Z","SOP FC-01; batch B-01; quantity and expiry verified");
  assert.equal(next.status,"in-progress"); assert.equal(next.audit.length,2);
  assert.equal(validateExperimentRecord(next).status,"in-progress");
  assert.throws(()=>transitionExperiment({id:"EXP-1",status:"planned",audit:[]},"in-progress","operator-1"),/asset reference is required/);
@@ -271,7 +271,7 @@ test("freezes copied experiment audit history and rejects malformed entries",()=
  });
  const prior={...created.audit[0]};
  const source={...created,audit:[prior]};
- const next=transitionExperiment(source,"in-progress","operator-1","2026-10-17T09:00:00.000Z");
+ const next=transitionExperiment(source,"in-progress","operator-1","2026-10-17T09:00:00.000Z","SOP FC-01; batch B-01; quantity and expiry verified");
  assert.ok(Object.isFrozen(next.audit));
  assert.ok(Object.isFrozen(next.audit[0]));
  assert.ok(Object.isFrozen(next.audit[1]));
