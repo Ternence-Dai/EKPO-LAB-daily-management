@@ -572,3 +572,31 @@ test("rejects oversized experiment audit histories before scanning entries",()=>
  };
  assert.throws(()=>validateExperimentRecord(oversized),RangeError);
 });
+
+
+test("starting an experiment requires a recorded manual SOP and consumables attestation", () => {
+ const created = createExperimentRecord({
+  id:"EXP-CONSUMABLES-1", title:"Consumables gate", assetId:"2",
+  plannedDate:"2026-10-24", owner:"Operator A", purpose:"Verify the consumables start gate",
+  actor:"planner", createdAt:"2026-10-23T01:00:00.000Z"
+ });
+ assert.throws(
+  () => transitionExperiment(created,"in-progress","operator-2","2026-10-23T01:01:00.000Z"),
+  /consumables SOP attestation is required/
+ );
+ const started = transitionExperiment(
+  created,"in-progress","operator-2","2026-10-23T01:01:00.000Z",
+  "SOP FC-TEST-04; batch B-2026-10; remaining quantity verified; expiry covers planned date"
+ );
+ assert.equal(started.status,"in-progress");
+ assert.equal(started.audit[1].consumablesCheckNote,
+  "SOP FC-TEST-04; batch B-2026-10; remaining quantity verified; expiry covers planned date");
+ assert.throws(() => validateExperimentRecord({
+  ...started,
+  audit:[started.audit[0],{...started.audit[1],consumablesCheckNote:" "}]
+ }),/consumables SOP attestation must be bounded non-empty text/);
+ assert.throws(() => validateExperimentRecord({
+  ...started,
+  audit:[started.audit[0],{...started.audit[1],consumablesCheckNote:"x".repeat(501)}]
+ }),/consumables SOP attestation must be bounded non-empty text/);
+});
