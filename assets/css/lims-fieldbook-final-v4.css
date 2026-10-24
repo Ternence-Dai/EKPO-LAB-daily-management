@@ -1,0 +1,78 @@
+/* eLabFTW / SENAITE-inspired laboratory fieldbook v4.
+   A calm field-record palette distinct from ERP's blue transaction desk. */
+body[data-workspace="ekpo"]{
+  --ekpo-bg:#eef3ef;--ekpo-surface:#fff;--ekpo-panel:#fff;--ekpo-line:#d6e2d9;
+  --ekpo-muted:#687b70;--ekpo-text:#21392e;--ekpo-cyan:#2b8060;--ekpo-blue:#426f84;
+  background:var(--ekpo-bg)!important;color:var(--ekpo-text)!important;
+}
+body[data-workspace="ekpo"] .sidebar{
+  background:linear-gradient(180deg,#173b30,#102e26)!important;
+  border-right:1px solid #254c3e!important;box-shadow:8px 0 24px rgba(20,54,40,.10)!important;
+}
+body[data-workspace="ekpo"] .sidebar-header{color:#edf7ef!important;border-color:#315846!important}
+body[data-workspace="ekpo"] .sidebar .nav-item{color:#c0d4c8!important;border-radius:7px!important}
+body[data-workspace="ekpo"] .sidebar .nav-item:hover{background:#244b3c!important;color:#fff!important}
+body[data-workspace="ekpo"] .sidebar .nav-item.active{
+  color:#f4fff7!important;background:#285642!important;border-color:#4c8268!important;
+  box-shadow:inset 3px 0 #8bd3a8!important;
+}
+body[data-workspace="ekpo"] .main-content{
+  background:radial-gradient(ellipse at 78% -8%,#77a98b22,transparent 34%),var(--ekpo-bg)!important;
+}
+body[data-workspace="ekpo"] .topbar{
+  background:#fff!important;border-bottom:1px solid #d8e3db!important;
+  box-shadow:0 2px 8px rgba(28,62,44,.035)!important;color:#21392e!important;
+}
+body[data-workspace="ekpo"] .page-title{color:#21392e!important}
+body[data-workspace="ekpo"] .topbar .btn{
+  background:#f3f8f4!important;color:#315b45!important;border-color:#d5e3d9!important;
+}
+body[data-workspace="ekpo"] .content-body{background:transparent!important}
+body[data-workspace="ekpo"] .ekpo-operations-cockpit{color:#21392e!important}
+body[data-workspace="ekpo"] .ekpo-oc-hero{
+  min-height:142px!important;padding:22px 25px!important;border:1px solid #28533f!important;
+  border-radius:10px!important;background:
+   radial-gradient(circle at 88% 20%,#9bd7b22b,transparent 25%),
+   linear-gradient(112deg,#173d30,#24533f 62%,#16382c)!important;
+  box-shadow:0 9px 24px rgba(26,66,46,.12)!important;
+}
+body[data-workspace="ekpo"] .ekpo-oc-hero h1{color:#f1faf3!important}
+body[data-workspace="ekpo"] .ekpo-oc-hero p{color:#d0e2d5!important}
+body[data-workspace="ekpo"] .ekpo-oc-eyebrow{color:#a5d9b8!important}
+body[data-workspace="ekpo"] .ekpo-oc-status{
+  background:#f4faf5!important;border:1px solid #c9dfd0!important;color:#315c43!important;
+}
+body[data-workspace="ekpo"] .ekpo-oc-status strong{color:#315c43!important}
+body[data-workspace="ekpo"] .ekpo-oc-status small{color:#718a78!important}
+body[data-workspace="ekpo"] .ekpo-oc-metric,
+body[data-workspace="ekpo"] .ekpo-oc-workflow,
+body[data-workspace="ekpo"] .ekpo-oc-panel,
+body[data-workspace="ekpo"] .ekpo-oc-inspector-card{
+  background:#fff!important;border:1px solid #d6e2d9!important;color:#21392e!important;
+  box-shadow:0 3px 12px rgba(29,65,45,.045)!important;
+}
+body[data-workspace="ekpo"] .ekpo-oc-section-head h2,
+body[data-workspace="ekpo"] .ekpo-oc-inspector-card h2{color:#234334!important}
+body[data-workspace="ekpo"] .ekpo-oc-section-head p,
+body[data-workspace="ekpo"] .ekpo-oc-inspector-card p{color:#687b70!important}
+body[data-workspace="ekpo"] .ekpo-oc-steps button{
+  background:#f7faf7!important;border:1px solid #d5e3d8!important;color:#294b38!important;
+}
+body[data-workspace="ekpo"] .ekpo-oc-steps button:hover{background:#eef6ef!important;border-color:#87b79a!important}
+body[data-workspace="ekpo"] .ekpo-oc-steps button>strong{color:#264a36!important}
+body[data-workspace="ekpo"] .ekpo-oc-steps button>small{color:#687e70!important}
+body[data-workspace="ekpo"] .ekpo-oc-steps button>b{color:#2b8060!important}
+body[data-workspace="ekpo"] .ekpo-oc-attention-list>*,
+body[data-workspace="ekpo"] .ekpo-oc-table-wrap,
+body[data-workspace="ekpo"] .ekpo-oc-table{border-color:#dce6de!important}
+body[data-workspace="ekpo"] .ekpo-oc-panel table th{background:#f2f7f3!important;color:#536d5c!important}
+body[data-workspace="ekpo"] .ekpo-oc-panel table td{color:#344e3d!important;border-color:#e5ece6!important}
+body[data-workspace="ekpo"] :focus-visible{outline:3px solid #3c936b!important;outline-offset:2px}
+@media(max-width:760px){
+ body[data-workspace="ekpo"] .topbar{padding-inline:12px!important}
+ body[data-workspace="ekpo"] .ekpo-oc-hero{align-items:flex-start!important;flex-direction:column!important;padding:17px!important}
+ body[data-workspace="ekpo"] .ekpo-oc-status{align-self:flex-start!important}
+}
+@media(prefers-reduced-motion:reduce){
+ body[data-workspace="ekpo"] *,body[data-workspace="ekpo"] *::before,body[data-workspace="ekpo"] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
