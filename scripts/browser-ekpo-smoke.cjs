@@ -525,7 +525,7 @@ const fs = require('node:fs');
     }
     await page.evaluate(() => document.activeElement?.blur());
     const cleanPreflightEvidence = await page.addStyleTag({
-      content: '.topbar,#mobileNav,.bottomnav,.sidebar,#toastRoot,.toast,.toast-container{display:none!important}'
+      content: '.topbar,#mobileNav,.bottomnav,#toastRoot,.toast,.toast-container{display:none!important}.sidebar{visibility:hidden!important}'
     });
     await page.evaluate(() => {
       document.querySelector('.ekpo-preflight')?.scrollIntoView({block:'start',behavior:'instant'});
