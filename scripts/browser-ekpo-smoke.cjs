@@ -12,6 +12,22 @@ const fs = require('node:fs');
 
   try {
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 30000 });
+    const semanticNavigation = await page.evaluate(() => ({
+      buttons: [...document.querySelectorAll('.sidebar .nav-item[data-tab]')].every(node => node.tagName === 'BUTTON'),
+      mobileButtons: document.querySelectorAll('.mobile-nav button[data-tab]').length === 8,
+      current: document.querySelector('.sidebar .nav-item[data-tab="dashboard"]')?.getAttribute('aria-current')
+    }));
+    if (!semanticNavigation.buttons || !semanticNavigation.mobileButtons || semanticNavigation.current !== 'page') {
+      throw new Error('EKPO desktop and mobile module navigation must be semantic and expose the active page: ' +
+        JSON.stringify(semanticNavigation));
+    }
+    const beforeInvalidTab = await page.locator('.content-body > section:not(.hidden)').getAttribute('id');
+    const invalidTabResult = await page.evaluate(() => window.switchTab('__invalid_lab_module__'));
+    const afterInvalidTab = await page.locator('.content-body > section:not(.hidden)').getAttribute('id');
+    if (invalidTabResult !== false || beforeInvalidTab !== afterInvalidTab) {
+      throw new Error('Unknown EKPO module navigation must not blank the active workspace');
+    }
+
     const seedResponse = await page.request.get('http://127.0.0.1:4173/assets/js/demo-seed-data.js?v=20261022-demo-migration-v2');
     const seedSource = await seedResponse.text();
     if (!seedResponse.ok() || !seedSource.includes("dataProvenance: 'demo-seed'") ||
