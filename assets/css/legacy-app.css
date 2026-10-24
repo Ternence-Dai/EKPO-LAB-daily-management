@@ -8,7 +8,7 @@
         body { display: flex; height: 100vh; background: var(--bg-body); overflow: hidden; }
         .sidebar { width: 250px; background: var(--bg-sidebar); color: white; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
         .sidebar-header { padding: 20px; font-size: 18px; font-weight: bold; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 10px; }
-        .nav-item { padding: 15px 25px; cursor: pointer; transition: 0.2s; color: #cbd5e1; display: flex; align-items: center; gap: 12px; font-size: 14px; user-select: none; }
+        .nav-item { width:100%; padding:15px 25px; cursor:pointer; transition:background .2s,color .2s; color:#cbd5e1; display:flex; align-items:center; gap:12px; font:inherit; font-size:14px; text-align:left; user-select:none; appearance:none; background:transparent; border:0; border-left:4px solid transparent; }
         .nav-item:hover, .nav-item.active { background: #1e293b; color: white; border-left: 4px solid var(--primary); }
         .icon { width: 18px; height: 18px; fill: currentColor; }
         .sidebar-footer { margin-top: auto; padding: 20px; font-size: 12px; color: #94a3b8; border-top: 1px solid #334155; line-height: 1.8; }
