@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../assets/js/legacy-app.js", import.meta.url), "utf8");
+const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
 test("chart rendering degrades safely when the ECharts CDN is unavailable", () => {
   const initStart = source.indexOf("function initChart(domId)");
