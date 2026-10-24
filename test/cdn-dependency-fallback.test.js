@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../assets/js/legacy-app.js", import.meta.url), "utf8");
+const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
 test("chart rendering degrades safely when the ECharts CDN is unavailable", () => {
   const initStart = source.indexOf("function initChart(domId)");
@@ -32,4 +33,12 @@ test("Excel export reports a missing SheetJS dependency without throwing", () =>
     exporter.indexOf("typeof XLSX ===") < exporter.indexOf("XLSX.utils.book_new"),
     "the missing-library guard must run before any SheetJS API access"
   );
+});
+
+
+test("primary CDN failures retry independent CDNJS mirrors", () => {
+  assert.match(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/echarts\/5\.4\.3\/echarts\.min\.js/);
+  assert.match(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/xlsx\/0\.18\.5\/xlsx\.full\.min\.js/);
+  assert.match(html, /echartsUnavailable/);
+  assert.match(html, /xlsxUnavailable/);
 });
