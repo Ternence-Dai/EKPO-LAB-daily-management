@@ -28,7 +28,7 @@ jobs:
       - name: Install browser test runtime
         run: npm install --no-save --package-lock=false playwright
       - name: Install Chromium and OS dependencies
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps --only-shell chromium
       - name: Run JavaScript syntax and static checks
         run: npm run check
       - name: Run domain regression tests
