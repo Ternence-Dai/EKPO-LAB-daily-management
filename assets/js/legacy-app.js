@@ -261,7 +261,13 @@
                 return false;
             }
             document.querySelectorAll('.content-body > section').forEach(el => el.classList.toggle('hidden', el !== target));
-            document.querySelectorAll('.nav-item, .mobile-nav button').forEach(el => {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                const active = el.dataset.tab === tabId;
+                el.classList.toggle('active', active);
+                if (active) el.setAttribute('aria-current', 'page');
+                else el.removeAttribute('aria-current');
+            });
+            document.querySelectorAll('.mobile-nav button').forEach(el => {
                 const active = el.dataset.tab === tabId;
                 el.classList.toggle('active', active);
                 if (active) el.setAttribute('aria-current', 'page');
