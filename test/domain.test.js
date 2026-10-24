@@ -641,3 +641,25 @@ test("rejects imported experiment start events that omit the consumables SOP att
   ...created,status:"in-progress",audit:[...created.audit,validStart]
  }).status,"in-progress");
 });
+
+
+test("experiment lifecycle transitions cannot be posted ahead of the reference clock",()=>{
+ const created=createExperimentRecord({
+  id:"EXP-FUTURE-TRANSITION",title:"Future transition guard",assetId:"BENCH-1",
+  plannedDate:"2026-10-25",owner:"Operator",purpose:"Prevent premature lifecycle state changes",
+  actor:"planner",createdAt:"2026-10-23T09:00:00.000Z"
+ });
+ const asOf=new Date("2026-10-24T09:00:00.000Z");
+ const evidence="SOP FC-TEST-04; batch B-2026-10; quantity and expiry verified";
+ assert.throws(()=>transitionExperiment(
+  created,"in-progress","operator-1","2026-10-25T09:00:00.000Z",evidence,asOf
+ ),/future-dated experiment lifecycle transition/);
+ assert.throws(()=>transitionExperiment(
+  created,"in-progress","operator-1","2026-10-24T09:00:00.000Z",evidence,"2026-10-24"
+ ),/reference time must be a valid Date/);
+ const started=transitionExperiment(
+  created,"in-progress","operator-1","2026-10-24T09:00:00.000Z",evidence,asOf
+ );
+ assert.equal(started.status,"in-progress",
+  "a transition at the reference time remains valid");
+});

@@ -241,7 +241,7 @@ export function validateExperimentRecord(entry) {
     audit: Object.freeze(audit)
   });
 }
-export function transitionExperiment(experiment, nextStatus, actor, at = new Date().toISOString(), consumablesCheckNote) {
+export function transitionExperiment(experiment, nextStatus, actor, at = new Date().toISOString(), consumablesCheckNote, asOf = new Date()) {
   // A transition is only valid from a complete, traceable record. Do not let
   // callers append an audit event to a status-only or otherwise corrupt object.
   const current = validateExperimentRecord(experiment);
@@ -251,6 +251,12 @@ export function transitionExperiment(experiment, nextStatus, actor, at = new Dat
     throw new RangeError(`transition ${current.status} -> ${nextStatus} is not allowed`);
   }
   const normalizedAt = normalizeExperimentInstant(at, "audit timestamp");
+  if (!(asOf instanceof Date) || !Number.isFinite(asOf.getTime())) {
+    throw new TypeError("experiment transition reference time must be a valid Date");
+  }
+  if (Date.parse(normalizedAt) > asOf.getTime()) {
+    throw new RangeError("future-dated experiment lifecycle transition cannot be posted");
+  }
   const previousAt = Date.parse(current.audit[current.audit.length - 1].at);
   if (Date.parse(normalizedAt) < previousAt) {
     throw new RangeError("experiment audit timestamps must be chronological");
