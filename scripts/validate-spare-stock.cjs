@@ -27,6 +27,9 @@ async function run(action, qty, stock, saveAllowed = true, selectedPartId = '1',
     showToast:message=>messages.push(message),saveToLocal:async()=>saveAllowed,closeModal:()=>{},
     renderSpareParts:()=>{},renderSpareLogs:()=>{},console:{error(){}}};
   vm.runInNewContext(source,context);
+  // The application declares its own getToday(); reapply the fixed clock after evaluation
+  // so date-boundary tests remain deterministic on every CI calendar day.
+  context.getToday = () => '2026-10-23';
   context.showToast = message => messages.push(message);
   context.closeModal = () => {};
   context.renderSpareParts = () => {};
