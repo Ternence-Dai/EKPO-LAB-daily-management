@@ -33,3 +33,11 @@ test("Excel export reports a missing SheetJS dependency without throwing", () =>
     "the missing-library guard must run before any SheetJS API access"
   );
 });
+
+
+test("primary CDN failures retry independent CDNJS mirrors", () => {
+  assert.match(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/echarts\/5\.4\.3\/echarts\.min\.js/);
+  assert.match(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/xlsx\/0\.18\.5\/xlsx\.full\.min\.js/);
+  assert.match(html, /echartsUnavailable/);
+  assert.match(html, /xlsxUnavailable/);
+});
