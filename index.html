@@ -63,7 +63,7 @@
         </div>
     </aside>
 
-    <main class="main-content" id="main-content" tabindex="-1">
+    <main class="main-content" id="main-content" tabindex="-1" aria-label="实验室设备、气体、备件、校准与实验运营工作区">
         <header class="topbar">
             <div class="page-title" id="pageTitle">总览仪表盘</div>
             <div class="topbar-actions">
@@ -78,6 +78,14 @@
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importFromLocal(event)">
             </div>
         </header>
+
+        <nav class="ekpo-operations-route" aria-label="实验室运营工作流" style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;background:#edf5f4;border-bottom:1px solid #c9dcd8">
+            <button type="button" onclick="switchTab('gases', this)">01 气体批次与消耗</button>
+            <button type="button" onclick="switchTab('maintenance', this)">02 设备维保与校准</button>
+            <button type="button" onclick="switchTab('spareParts', this)">03 备件台账</button>
+            <button type="button" onclick="switchTab('testDiary', this)">04 测试日志</button>
+            <button type="button" onclick="switchTab('experiments', this)">05 实验计划与预检</button>
+        </nav>
 
         <div class="content-body">
             <!-- 1. 仪表盘 -->
