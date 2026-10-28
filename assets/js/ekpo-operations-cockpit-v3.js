@@ -20,10 +20,21 @@
   };
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
   const count = value => Number(value || 0).toLocaleString('zh-CN');
-  const openTab = key => {
+  const SUB_PARENTS = { maintenance: 'maint', spareParts: 'spare' };
+  const openTarget = (target, modal) => {
+    const parts = String(target || '').split(':');
+    const key = parts[0];
+    const sub = parts[1];
     const item = document.querySelector('.sidebar .nav-item[data-tab="' + key + '"]');
     if (typeof switchTab === 'function') switchTab(key, item || null);
+    if (sub && SUB_PARENTS[key] && typeof switchSubTab === 'function') {
+      setTimeout(() => switchSubTab(SUB_PARENTS[key], sub), 90);
+    }
+    if (modal && typeof openModal === 'function') {
+      setTimeout(() => openModal(modal), 160);
+    }
   };
+  const openTab = key => openTarget(key);
   const provenanceInfo = provenance => {
     if (provenance === 'empty-ledger') return {
       label: '新建空台账', tone: 'empty',
@@ -87,7 +98,7 @@
     }));
     uncertifiedEquipment.slice(0,3).forEach(row => attention.push({
       tone:'warning', title:row.name, detail:'未找到标记为有效的校准记录；状态保持待核验。',
-      action:'maintenance', actionLabel:'核对校准证据'
+      action:'maintenance:calibration', actionLabel:'核对校准证据'
     }));
     replenishment.slice(0,3).forEach(row => attention.push({
       tone:'warning', title:row.desc || row.category || row.catalog || '备件条目',
@@ -97,7 +108,7 @@
     const metrics = [
       {metric:'gas-records',label:'气体资源记录',value:count(gases.length),numeric:gases.length,foot:gases.length ? '本机已登记批次' : '尚未导入气体批次',icon:'H₂',key:'gases'},
       {metric:'equipment',label:'设备资产',value:count(equipment.length),numeric:equipment.length,foot:equipment.length ? '本机设备台账条目' : '尚未导入设备资产',icon:'EQ',key:'maintenance'},
-      {metric:'calibration',label:'有效校准证据',value:equipment.length ? (calibratedEquipment + ' / ' + equipment.length) : '—',numeric:calibratedEquipment,foot:equipment.length ? '仅统计明确标记为有效的记录' : '设备和证书均未导入',icon:'QA',key:'maintenance'},
+      {metric:'calibration',label:'有效校准证据',value:equipment.length ? (calibratedEquipment + ' / ' + equipment.length) : '—',numeric:calibratedEquipment,foot:equipment.length ? '仅统计明确标记为有效的记录' : '设备和证书均未导入',icon:'QA',key:'maintenance:calibration'},
       {metric:'test-records',label:'测试运行日志',value:count(diary.length),numeric:diary.length,foot:diary.length ? (failedTests.length + ' 条含异常描述') : '尚无测试原始日志',icon:'RUN',key:'testDiary'},
       {metric:'active-experiments',label:'实验计划',value:count(experiments.length),numeric:experiments.length,foot:experiments.length ? '本机已登记实验任务' : '尚未登记实验计划',icon:'EXP',key:'experiments'}
     ];
@@ -122,19 +133,19 @@
 
     const equipmentHtml = equipment.length ? equipment.slice(0,6).map(row => {
       const isCalibrated = calibratedIds.has(String(row.id));
-      return '<article class="ekpo-oc-equipment"><div><strong>' + esc(row.name) + '</strong>' +
+      return '<article class="ekpo-oc-equipment" data-ekpo-open="maintenance" tabindex="0" role="button" title="打开设备台账"><div><strong>' + esc(row.name) + '</strong>' +
         '<small>' + esc(row.category || '类别未记录') + ' · ' + esc(row.location || '位置未记录') + '</small></div>' +
         '<span class="ekpo-oc-status ' + (isCalibrated ? 'is-ok' : 'is-unknown') + '">' +
         (isCalibrated ? '校准记录标记有效' : '校准证据待核验') + '</span></article>';
     }).join('') :
       '<div class="ekpo-oc-empty"><strong>设备台账为空</strong><p>不预填设备名称、数量、负责人或保养日期。</p>' +
-      '<button type="button" data-ekpo-open="maintenance">登记第一台设备 ↗</button></div>';
+      '<button type="button" data-ekpo-open="maintenance" data-ekpo-modal="modal-maint">登记第一台设备 ↗</button></div>';
 
     const recentTests = diary.length ? diary.slice(-5).reverse().map(row => {
       const result = row.error && String(row.error).trim()
         ? '有异常描述：' + String(row.error).slice(0,100)
         : (row.result || '结果未记录');
-      return '<article class="ekpo-oc-test"><span class="ekpo-oc-test__date">' +
+      return '<article class="ekpo-oc-test" data-ekpo-open="testDiary" tabindex="0" role="button" title="打开测试日志"><span class="ekpo-oc-test__date">' +
         esc(dateText(row.start || row.date || row.end)) + '</span><div><strong>' +
         esc(row.unit || row.station || '未命名测试台') + '</strong><small>' +
         esc(row.operator || '操作人未记录') + '</small></div><span>' + esc(result) + '</span></article>';
@@ -143,7 +154,7 @@
       '<button type="button" data-ekpo-open="testDiary">打开测试日志 ↗</button></div>';
 
     const gasRows = gases.length ? gases.slice(-5).reverse().map(row =>
-      '<article class="ekpo-oc-resource"><span>' + esc(dateText(row.month ? row.month + '-01' : '')) + '</span>' +
+      '<article class="ekpo-oc-resource" data-ekpo-open="gases" tabindex="0" role="button" title="打开气体台账"><span>' + esc(dateText(row.month ? row.month + '-01' : '')) + '</span>' +
       '<strong>' + esc(row.item || row.name || '气体条目') + '</strong><small>' +
       esc(row.spec || '规格未记录') + ' · ' + esc(row.supplier || '供应商未记录') + '</small>' +
       '<b>' + esc(Number.isFinite(Number(row.consumption)) ? count(row.consumption) : '—') +
@@ -170,7 +181,7 @@
             '<div class="ekpo-oc-steps">' +
               '<button type="button" data-ekpo-open="gases"><i>01</i><strong>资源登记</strong><small>气体、批次、消耗与费用</small><b>打开资源台账 ↗</b></button>' +
               '<button type="button" data-ekpo-open="maintenance"><i>02</i><strong>设备保障</strong><small>资产、维保与位置记录</small><b>打开设备台账 ↗</b></button>' +
-              '<button type="button" data-ekpo-open="maintenance"><i>03</i><strong>校准核验</strong><small>证书、机构、有效状态</small><b>查看校准记录 ↗</b></button>' +
+              '<button type="button" data-ekpo-open="maintenance:calibration"><i>03</i><strong>校准核验</strong><small>证书、机构、有效状态</small><b>查看校准记录 ↗</b></button>' +
               '<button type="button" data-ekpo-open="testDiary"><i>04</i><strong>测试执行</strong><small>台架、操作人、结果与异常</small><b>打开测试日志 ↗</b></button>' +
             '</div></section>' +
           '<div class="ekpo-oc-panels"><section class="ekpo-oc-panel"><div class="ekpo-oc-section-head"><div><span class="ekpo-oc-eyebrow">ATTENTION QUEUE</span>' +
@@ -193,17 +204,23 @@
               '<div class="ekpo-oc-source"><i></i><strong>' + esc(source.label) + '</strong></div><p>' + esc(inspectorNote) + '</p>' +
               '<ul><li>空白字段不等于零或正常。</li><li>校准有效性只按明确记录的状态计数。</li><li>费用与库存仅反映本机台账，不是外部实时数据。</li><li>实验室安全状态仍需现场检查和原始凭证。</li></ul></section>' +
             '<section class="ekpo-oc-inspector-card"><span class="ekpo-oc-eyebrow">QUICK ACTIONS</span><h2>快捷操作</h2>' +
-              '<button type="button" class="ekpo-oc-action" data-ekpo-open="gases">＋ 登记气体批次 <b>↗</b></button>' +
-              '<button type="button" class="ekpo-oc-action" data-ekpo-open="maintenance">＋ 登记设备 / 校准 <b>↗</b></button>' +
-              '<button type="button" class="ekpo-oc-action" data-ekpo-open="spareParts">＋ 登记备件流水 <b>↗</b></button>' +
-              '<button type="button" class="ekpo-oc-action" data-ekpo-open="testDiary">＋ 录入测试日志 <b>↗</b></button></section>' +
+              '<button type="button" class="ekpo-oc-action" data-ekpo-open="gases" data-ekpo-modal="modal-gas">＋ 登记气体批次 <b>↗</b></button>' +
+              '<button type="button" class="ekpo-oc-action" data-ekpo-open="maintenance" data-ekpo-modal="modal-maint">＋ 登记设备 / 校准 <b>↗</b></button>' +
+              '<button type="button" class="ekpo-oc-action" data-ekpo-open="spareParts" data-ekpo-modal="modal-spare-log">＋ 登记备件流水 <b>↗</b></button>' +
+              '<button type="button" class="ekpo-oc-action" data-ekpo-open="testDiary" data-ekpo-modal="modal-testDiary">＋ 录入测试日志 <b>↗</b></button></section>' +
             '<section class="ekpo-oc-inspector-card ekpo-oc-inspector-card--note"><span class="ekpo-oc-eyebrow">SYSTEM MODE</span>' +
               '<h2>本机运营记录</h2><p>当前工作台不连接气体供应商、校准机构或测试台控制器。真实数据必须通过导入或手动登记并核对来源。</p>' +
               '<button type="button" data-ekpo-open="system">打开系统设置 ↗</button></section>' +
           '</aside></div></section>';
 
     host.querySelectorAll('[data-ekpo-open]').forEach(button => {
-      button.addEventListener('click', () => openTab(button.dataset.ekpoOpen));
+      const go = () => openTarget(button.dataset.ekpoOpen, button.dataset.ekpoModal);
+      button.addEventListener('click', go);
+      if (button.tagName !== 'BUTTON') {
+        button.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); go(); }
+        });
+      }
     });
   }
 
