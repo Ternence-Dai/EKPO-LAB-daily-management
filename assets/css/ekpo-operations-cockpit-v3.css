@@ -317,3 +317,14 @@ body[data-workspace="ekpo"] .ekpo-oc-inspector button:focus-visible {
   body[data-workspace="ekpo"] .ekpo-oc-metric,
   body[data-workspace="ekpo"] .ekpo-oc-steps button { transition:none; }
 }
+
+/* Clickable cockpit rows: whole row navigates (affordance + keyboard focus). */
+body[data-workspace="ekpo"] .ekpo-oc-equipment[data-ekpo-open],
+body[data-workspace="ekpo"] .ekpo-oc-test[data-ekpo-open],
+body[data-workspace="ekpo"] .ekpo-oc-resource[data-ekpo-open] { cursor:pointer; }
+body[data-workspace="ekpo"] .ekpo-oc-equipment[data-ekpo-open]:hover,
+body[data-workspace="ekpo"] .ekpo-oc-test[data-ekpo-open]:hover,
+body[data-workspace="ekpo"] .ekpo-oc-resource[data-ekpo-open]:hover { background:rgba(98,212,220,.06); }
+body[data-workspace="ekpo"] .ekpo-oc-equipment[data-ekpo-open]:focus-visible,
+body[data-workspace="ekpo"] .ekpo-oc-test[data-ekpo-open]:focus-visible,
+body[data-workspace="ekpo"] .ekpo-oc-resource[data-ekpo-open]:focus-visible { outline:2px solid #62d4dc; outline-offset:-2px; }
