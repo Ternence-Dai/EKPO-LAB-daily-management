@@ -394,7 +394,7 @@
                     <td>${g.delivery||0}</td><td>${g.return||0}</td><td>${g.consumption||0}</td>
                     <td>${g.cost ? '¥'+g.cost.toLocaleString() : '-'}</td><td>${g.rent ? '¥'+g.rent.toLocaleString() : '-'}</td><td>${g.freight ? '¥'+g.freight.toLocaleString() : '-'}</td>
                     <td><strong>¥${total.toLocaleString()}</strong></td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editGas(${Number(g.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${Number(g.id)})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editGas(${labInlineId(g.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${labInlineId(g.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -425,7 +425,7 @@
                 });
             }
         }
-        function editGas(id) { let g = DB.gases.find(x => x.id === id); document.getElementById('g-id').value=g.id; document.getElementById('g-item').value=g.item||'Hydrogen'; document.getElementById('g-spec').value=g.spec||''; document.getElementById('g-supplier').value=g.supplier||''; document.getElementById('g-batch').value=g.batch||''; document.getElementById('g-year').value=g.year||new Date().getFullYear(); document.getElementById('g-month').value=g.monthNum||(new Date().getMonth()+1); document.getElementById('g-delivery').value=g.delivery||0; document.getElementById('g-return').value=g.return||0; document.getElementById('g-consumption').value=g.consumption||0; document.getElementById('g-cost').value=g.cost||0; document.getElementById('g-rent').value=g.rent||0; document.getElementById('g-freight').value=g.freight||0; openModal('modal-gas'); }
+        function editGas(id) { let g = DB.gases.find(x => sameLabId(x.id, id)); if(!g){showToast('气体记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('g-id').value=g.id; document.getElementById('g-item').value=g.item||'Hydrogen'; document.getElementById('g-spec').value=g.spec||''; document.getElementById('g-supplier').value=g.supplier||''; document.getElementById('g-batch').value=g.batch||''; document.getElementById('g-year').value=g.year||new Date().getFullYear(); document.getElementById('g-month').value=g.monthNum||(new Date().getMonth()+1); document.getElementById('g-delivery').value=g.delivery||0; document.getElementById('g-return').value=g.return||0; document.getElementById('g-consumption').value=g.consumption||0; document.getElementById('g-cost').value=g.cost||0; document.getElementById('g-rent').value=g.rent||0; document.getElementById('g-freight').value=g.freight||0; openModal('modal-gas'); }
         async function saveGas() {
             const id = document.getElementById('g-id').value;
             const year = Number(document.getElementById('g-year').value);
@@ -1007,7 +1007,7 @@
             filtered.forEach(t => {
                 tbody.innerHTML += `<tr>
                     <td>${esc(t.start||'')}</td><td>${esc(t.end||'')}</td><td>${esc(t.duration||0)}</td><td><strong>${esc(t.unit||'')}</strong></td><td>${esc(t.operator||'')}</td><td>${esc(t.sap||'')}</td><td>${esc(t.result||'')}</td><td>${esc(t.cycle||'')}</td><td>${esc(t.error || '-')}</td><td>${esc(t.errorDesc || '-')}</td>
-                    <td><button class="btn btn-outline btn-sm" onclick="editTestDiary(${Number(t.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('testDiary', ${Number(t.id)})">删除</button></td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editTestDiary(${labInlineId(t.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('testDiary', ${labInlineId(t.id)})">删除</button></td>
                 </tr>`;
             });
 
@@ -1049,7 +1049,7 @@
                 });
             }
         }
-        function editTestDiary(id) { let t = DB.testDiary.find(x => x.id === id); if(!t){showToast('测试记录不存在，请刷新后重试','error');return;} document.getElementById('t-id').value=t.id; document.getElementById('t-start').value=t.start||''; document.getElementById('t-end').value=t.end||''; document.getElementById('t-duration').value=t.duration||0; document.getElementById('t-unit').value=t.unit||''; document.getElementById('t-operator').value=t.operator||''; document.getElementById('t-sap').value=t.sap||''; document.getElementById('t-result').value=t.result||''; document.getElementById('t-cycle').value=t.cycle||''; document.getElementById('t-error').value=t.error||''; document.getElementById('t-errorDesc').value=t.errorDesc||''; openModal('modal-testDiary'); }
+        function editTestDiary(id) { let t = DB.testDiary.find(x => sameLabId(x.id, id)); if(!t){showToast('测试记录不存在，请刷新后重试','error');return;} document.getElementById('t-id').value=t.id; document.getElementById('t-start').value=t.start||''; document.getElementById('t-end').value=t.end||''; document.getElementById('t-duration').value=t.duration||0; document.getElementById('t-unit').value=t.unit||''; document.getElementById('t-operator').value=t.operator||''; document.getElementById('t-sap').value=t.sap||''; document.getElementById('t-result').value=t.result||''; document.getElementById('t-cycle').value=t.cycle||''; document.getElementById('t-error').value=t.error||''; document.getElementById('t-errorDesc').value=t.errorDesc||''; openModal('modal-testDiary'); }
         async function saveTestDiary() {
             const id = document.getElementById('t-id').value;
             const data = {
@@ -1523,7 +1523,7 @@
             let html = '<table><thead><tr>' + keys.map(k => `<th>${esc(k)}</th>`).join('') + '<th>操作</th></tr></thead><tbody>';
             data.forEach(row => {
                 html += '<tr>' + keys.map(k => `<td>${esc(row[k] !== undefined ? row[k] : '')}</td>`).join('');
-                html += `<td><button class="btn btn-outline btn-sm" onclick="systemEdit('${table}', ${Number(row.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('${table}', ${row.id}); renderSystemTable('${table}');">删除</button></td></tr>`;
+                html += `<td><button class="btn btn-outline btn-sm" onclick="systemEdit('${table}', ${labInlineId(row.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('${table}', ${labInlineId(row.id)}); renderSystemTable('${table}');">删除</button></td></tr>`;
             });
             html += '</tbody></table>';
             container.innerHTML = html;
