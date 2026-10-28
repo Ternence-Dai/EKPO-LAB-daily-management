@@ -64,7 +64,7 @@ function zipFolder(folder, zipPath) {
   if (fs.existsSync(zipPath)) fs.rmSync(zipPath);
   if (process.platform === 'win32') {
     execFileSync('powershell', ['-NoProfile', '-Command',
-      `Compress-Archive -LiteralPath '${folder}\\*' -DestinationPath '${zipPath}' -Force`], { stdio: 'inherit' });
+      `Compress-Archive -Path '${folder}\\*' -DestinationPath '${zipPath}' -Force`], { stdio: 'inherit' });
   } else {
     execFileSync('zip', ['-r', '-q', zipPath, '.'], { cwd: folder, stdio: 'inherit' });
   }
