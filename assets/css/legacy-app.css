@@ -61,7 +61,7 @@
         .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-        .toast { position: fixed; top: 20px; right: 20px; padding: 14px 24px; border-radius: 8px; color: white; font-weight: 500; z-index: 2000; opacity: 0; transition: 0.3s; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 14px 24px; border-radius: 8px; color: white; font-weight: 500; z-index: 2000; opacity: 0; transition: 0.3s; pointer-events: none; }
         .toast.show { opacity: 1; } .toast-success { background: var(--success); } .toast-error { background: var(--danger); }
         .hidden { display: none !important; }
     

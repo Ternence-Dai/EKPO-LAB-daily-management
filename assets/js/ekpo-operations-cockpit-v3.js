@@ -21,6 +21,14 @@
   const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
   const count = value => Number(value || 0).toLocaleString('zh-CN');
   const SUB_PARENTS = { maintenance: 'maint', spareParts: 'spare' };
+  // Quick actions are "new record" entries: route them through the legacy
+  // openXxxModal functions so forms always start cleared, never pre-filled
+  // with the previously edited record.
+  const NEW_MODAL_OPENERS = {
+    'modal-gas': 'openGasModal', 'modal-maint': 'openMaintModal',
+    'modal-maint-log': 'openMaintLogModal', 'modal-spare': 'openSpareModal',
+    'modal-spare-log': 'openSpareLogModal', 'modal-testDiary': 'openTestDiaryModal'
+  };
   const openTarget = (target, modal) => {
     const parts = String(target || '').split(':');
     const key = parts[0];
@@ -30,8 +38,12 @@
     if (sub && SUB_PARENTS[key] && typeof switchSubTab === 'function') {
       setTimeout(() => switchSubTab(SUB_PARENTS[key], sub), 90);
     }
-    if (modal && typeof openModal === 'function') {
-      setTimeout(() => openModal(modal), 160);
+    if (modal) {
+      setTimeout(() => {
+        const opener = NEW_MODAL_OPENERS[modal];
+        if (opener && typeof window[opener] === 'function') window[opener]();
+        else if (typeof openModal === 'function') openModal(modal);
+      }, 160);
     }
   };
   const openTab = key => openTarget(key);
@@ -74,10 +86,32 @@
       : provenanceInfo(provenance);
     const provenanceNote = $('#labos-data-note [data-provenance-note]');
     if (provenanceNote) provenanceNote.textContent = source.note;
-    const validCalibrations = calibrations.filter(row =>
-      /valid|有效|通过|ok/i.test(String(row.status || row.result || ''))
-    );
-    const calibratedIds = new Set(validCalibrations.map(row => String(row.eqId ?? row.assetId ?? '')));
+    // Calibration validity mirrors the domain rule behind the maintenance
+    // register (isCalibrationCurrent on the latest record per asset): a record
+    // counts only when its conclusion is 'pass' and today falls inside
+    // [calibratedAt, calibratedAt + validForDays]. The previous free-text regex
+    // could never match the stored 'pass'/'fail' conclusions, so the cockpit
+    // reported 0 valid certificates even with a current one on file.
+    const latestCalibrationByAsset = new Map();
+    calibrations.forEach(row => {
+      if (!row) return;
+      const key = String(row.assetId ?? '').trim();
+      if (!key) return;
+      const current = latestCalibrationByAsset.get(key);
+      if (!current || String(row.calibratedAt) > String(current.calibratedAt)) {
+        latestCalibrationByAsset.set(key, row);
+      }
+    });
+    const nowMs = Date.now();
+    const calibratedIds = new Set();
+    latestCalibrationByAsset.forEach((row, key) => {
+      if (row.result !== 'pass') return;
+      const calibratedMs = Date.parse(row.calibratedAt);
+      const validDays = Number(row.validForDays);
+      if (!Number.isFinite(calibratedMs) || !Number.isSafeInteger(validDays) || validDays < 0) return;
+      const expiryMs = calibratedMs + validDays * 86400000;
+      if (calibratedMs <= nowMs && nowMs <= expiryMs) calibratedIds.add(key);
+    });
     const calibratedEquipment = equipment.filter(row => calibratedIds.has(String(row.id))).length;
     const uncertifiedEquipment = equipment.filter(row => !calibratedIds.has(String(row.id)));
     const overdue = equipment.filter(row => validDate(row.next) && row.next < today());
@@ -97,7 +131,7 @@
       detail:String(row.error).slice(0,140), action:'testDiary', actionLabel:'检查测试日志'
     }));
     uncertifiedEquipment.slice(0,3).forEach(row => attention.push({
-      tone:'warning', title:row.name, detail:'未找到标记为有效的校准记录；状态保持待核验。',
+      tone:'warning', title:row.name, detail:'未找到结论通过且在有效期内的校准记录；状态保持待核验。',
       action:'maintenance:calibration', actionLabel:'核对校准证据'
     }));
     replenishment.slice(0,3).forEach(row => attention.push({
@@ -108,7 +142,7 @@
     const metrics = [
       {metric:'gas-records',label:'气体资源记录',value:count(gases.length),numeric:gases.length,foot:gases.length ? '本机已登记批次' : '尚未导入气体批次',icon:'H₂',key:'gases'},
       {metric:'equipment',label:'设备资产',value:count(equipment.length),numeric:equipment.length,foot:equipment.length ? '本机设备台账条目' : '尚未导入设备资产',icon:'EQ',key:'maintenance'},
-      {metric:'calibration',label:'有效校准证据',value:equipment.length ? (calibratedEquipment + ' / ' + equipment.length) : '—',numeric:calibratedEquipment,foot:equipment.length ? '仅统计明确标记为有效的记录' : '设备和证书均未导入',icon:'QA',key:'maintenance:calibration'},
+      {metric:'calibration',label:'有效校准证据',value:equipment.length ? (calibratedEquipment + ' / ' + equipment.length) : '—',numeric:calibratedEquipment,foot:equipment.length ? '按每台设备最新记录的结论与有效期判定' : '设备和证书均未导入',icon:'QA',key:'maintenance:calibration'},
       {metric:'test-records',label:'测试运行日志',value:count(diary.length),numeric:diary.length,foot:diary.length ? (failedTests.length + ' 条含异常描述') : '尚无测试原始日志',icon:'RUN',key:'testDiary'},
       {metric:'active-experiments',label:'实验计划',value:count(experiments.length),numeric:experiments.length,foot:experiments.length ? '本机已登记实验任务' : '尚未登记实验计划',icon:'EXP',key:'experiments'}
     ];
@@ -136,7 +170,7 @@
       return '<article class="ekpo-oc-equipment" data-ekpo-open="maintenance" tabindex="0" role="button" title="打开设备台账"><div><strong>' + esc(row.name) + '</strong>' +
         '<small>' + esc(row.category || '类别未记录') + ' · ' + esc(row.location || '位置未记录') + '</small></div>' +
         '<span class="ekpo-oc-status ' + (isCalibrated ? 'is-ok' : 'is-unknown') + '">' +
-        (isCalibrated ? '校准记录标记有效' : '校准证据待核验') + '</span></article>';
+        (isCalibrated ? '校准有效' : '校准证据待核验') + '</span></article>';
     }).join('') :
       '<div class="ekpo-oc-empty"><strong>设备台账为空</strong><p>不预填设备名称、数量、负责人或保养日期。</p>' +
       '<button type="button" data-ekpo-open="maintenance" data-ekpo-modal="modal-maint">登记第一台设备 ↗</button></div>';
@@ -188,7 +222,7 @@
             '<h2>需要核验的事项</h2><p>仅显示台账中已有证据的日期、状态和异常描述。</p></div><span class="ekpo-oc-count">' + count(alertSummary) + ' 项</span></div>' +
             '<div class="ekpo-oc-attention-list">' + attentionHtml + '</div></section>' +
           '<section class="ekpo-oc-panel"><div class="ekpo-oc-section-head"><div><span class="ekpo-oc-eyebrow">EQUIPMENT REGISTER</span>' +
-            '<h2>设备与校准证据</h2><p>' + count(calibratedEquipment) + ' / ' + count(equipment.length) + ' 台设备有明确标记有效的校准记录。</p></div>' +
+            '<h2>设备与校准证据</h2><p>' + count(calibratedEquipment) + ' / ' + count(equipment.length) + ' 台设备有有效校准记录。</p></div>' +
             '<button type="button" class="ekpo-oc-text-action" data-ekpo-open="maintenance">完整台账 ↗</button></div>' +
             '<div class="ekpo-oc-equipment-list">' + equipmentHtml + '</div></section></div>' +
           '<div class="ekpo-oc-panels"><section class="ekpo-oc-panel"><div class="ekpo-oc-section-head"><div><span class="ekpo-oc-eyebrow">TEST HISTORY</span>' +
@@ -202,7 +236,7 @@
           '</div><aside class="ekpo-oc-inspector">' +
             '<section class="ekpo-oc-inspector-card"><span class="ekpo-oc-eyebrow">DATA PROVENANCE</span><h2>数据来源与边界</h2>' +
               '<div class="ekpo-oc-source"><i></i><strong>' + esc(source.label) + '</strong></div><p>' + esc(inspectorNote) + '</p>' +
-              '<ul><li>空白字段不等于零或正常。</li><li>校准有效性只按明确记录的状态计数。</li><li>费用与库存仅反映本机台账，不是外部实时数据。</li><li>实验室安全状态仍需现场检查和原始凭证。</li></ul></section>' +
+              '<ul><li>空白字段不等于零或正常。</li><li>校准有效性按每台设备最新记录的结论与有效期判定，与维保页口径一致。</li><li>费用与库存仅反映本机台账，不是外部实时数据。</li><li>实验室安全状态仍需现场检查和原始凭证。</li></ul></section>' +
             '<section class="ekpo-oc-inspector-card"><span class="ekpo-oc-eyebrow">QUICK ACTIONS</span><h2>快捷操作</h2>' +
               '<button type="button" class="ekpo-oc-action" data-ekpo-open="gases" data-ekpo-modal="modal-gas">＋ 登记气体批次 <b>↗</b></button>' +
               '<button type="button" class="ekpo-oc-action" data-ekpo-open="maintenance" data-ekpo-modal="modal-maint">＋ 登记设备 / 校准 <b>↗</b></button>' +

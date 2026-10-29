@@ -69,8 +69,9 @@ console.log('Maintenance calendar interval regression checks passed.');
 assert.ok(html.includes('domain.validateMaintenanceAsset(data)'),
   'maintenance asset edits must pass through the shared domain validator');
 assert.ok(html.includes('domain.validateMaintenanceAsset(asset)') &&
-  html.includes('imported.maintenance = imported.maintenance.map(asset => ({') &&
-  html.includes('...asset,\n                        ...domain.validateMaintenanceAsset(asset)'),
+  html.includes('imported.maintenance = imported.maintenance.map(asset => {') &&
+  html.includes('delete asset.id;') &&
+  html.includes('...domain.validateMaintenanceAsset(asset)'),
   'backup restore must normalize and validate every maintenance asset while preserving its identifier');
 const restoreStart = html.indexOf('function importFromLocal(event)');
 const restoreEnd = html.indexOf('// ==================== 初始化', restoreStart);

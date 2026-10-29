@@ -192,6 +192,24 @@
             return JSON.parse(JSON.stringify(DB));
         }
 
+        // A modal's save button stays disabled for the whole async commit, so
+        // a double click cannot pass the conflict checks twice and insert the
+        // same new record two times.
+        const modalSavePending = new Set();
+        async function withSaveGuard(modalId, task) {
+            if (modalSavePending.has(modalId)) return;
+            modalSavePending.add(modalId);
+            const button = typeof document.querySelector === 'function'
+                ? document.querySelector('#' + modalId + ' .modal button') : null;
+            const originalText = button ? button.textContent : '';
+            if (button) { button.disabled = true; button.textContent = '保存中…'; }
+            try { await task(); }
+            finally {
+                modalSavePending.delete(modalId);
+                if (button) { button.disabled = false; button.textContent = originalText; }
+            }
+        }
+
         async function commitLabMutation(previousDB, failureMessage) {
             let saved = false;
             try { saved = await saveToLocal(); }
@@ -209,9 +227,117 @@
             const d = String(now.getDate()).padStart(2, '0');
             return y + '-' + m + '-' + d;
         }
-        function showToast(msg, type = 'success') { let t = document.getElementById('toast'); t.className = `toast toast-${type} show`; t.innerText = msg; setTimeout(() => t.classList.remove('show'), 3000); }
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        let toastTimer = null;
+        function showToast(msg, type = 'success') {
+            let t = document.getElementById('toast');
+            if (!t) return;
+            t.className = `toast toast-${type} show`;
+            t.innerText = msg;
+            // Every message gets its full display window: a previous toast's
+            // timer must never cut a newer message short.
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+        }
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+            // Registration dialogs depend on live master data; refill their
+            // entity selects on every open so the primary entry points (view
+            // buttons, cockpit quick actions, system page) never show empty lists.
+            if (id === 'modal-maint-log' || id === 'modal-spare-log') fillEntitySelects();
+        }
+        function fillEntitySelects() {
+            const eqSelect = document.getElementById('ml-eq');
+            if (eqSelect) {
+                const selectedEq = eqSelect.value;
+                eqSelect.innerHTML = DB.maintenance.map(m => `<option value="${esc(labIdKey(m.id))}">${esc(m.name)}</option>`).join('');
+                if (DB.maintenance.some(m => labIdKey(m.id) === selectedEq)) eqSelect.value = selectedEq;
+            }
+            const partSelect = document.getElementById('sl-part');
+            if (partSelect) {
+                const selectedPart = partSelect.value;
+                partSelect.innerHTML = DB.spareParts.map(p => `<option value="${esc(labIdKey(p.id))}">${esc(p.desc)}</option>`).join('');
+                if (DB.spareParts.some(p => labIdKey(p.id) === selectedPart)) partSelect.value = selectedPart;
+            }
+        }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        // "New record" entry points must never inherit the previously edited
+        // record: clear the hidden id and every input before opening, so saving
+        // always creates a new row instead of silently overwriting the last edit.
+        function openGasModal() {
+            document.getElementById('g-id').value = '';
+            document.getElementById('g-item').value = 'Hydrogen';
+            generateYearOptions('g-year');
+            generateMonthOptions('g-month');
+            document.getElementById('g-spec').value = '';
+            document.getElementById('g-supplier').value = '';
+            document.getElementById('g-batch').value = '';
+            document.getElementById('g-unit').value = '';
+            document.getElementById('g-delivery').value = '';
+            document.getElementById('g-return').value = '';
+            document.getElementById('g-consumption').value = '';
+            document.getElementById('g-cost').value = '';
+            document.getElementById('g-rent').value = '';
+            document.getElementById('g-freight').value = '';
+            openModal('modal-gas');
+        }
+        function openMaintModal() {
+            document.getElementById('m-id').value = '';
+            document.getElementById('m-name').value = '';
+            document.getElementById('m-category').value = '';
+            document.getElementById('m-location').value = '';
+            document.getElementById('m-qty').value = '';
+            document.getElementById('m-cycle').value = '一级保养';
+            document.getElementById('m-freq').value = '';
+            document.getElementById('m-last').value = '';
+            document.getElementById('m-next').value = '';
+            document.getElementById('m-responsible').value = '';
+            document.getElementById('m-record').value = '';
+            openModal('modal-maint');
+        }
+        function openMaintLogModal() {
+            document.getElementById('ml-id').value = '';
+            document.getElementById('ml-date').value = getToday();
+            document.getElementById('ml-checker').value = '';
+            document.getElementById('ml-operator').value = '';
+            document.getElementById('ml-cost').value = '';
+            document.getElementById('ml-record').value = '';
+            openModal('modal-maint-log');
+        }
+        function openSpareModal() {
+            document.getElementById('s-id').value = '';
+            document.getElementById('s-category').value = '';
+            document.getElementById('s-desc').value = '';
+            document.getElementById('s-catalog').value = '';
+            document.getElementById('s-purpose').value = '';
+            document.getElementById('s-brand').value = '';
+            document.getElementById('s-location').value = '';
+            document.getElementById('s-qty').value = '';
+            document.getElementById('s-price').value = '';
+            document.getElementById('s-update').value = '';
+            openModal('modal-spare');
+        }
+        function openSpareLogModal() {
+            document.getElementById('sl-date').value = getToday();
+            document.getElementById('sl-action').value = '入库';
+            document.getElementById('sl-qty').value = '';
+            document.getElementById('sl-operator').value = '';
+            document.getElementById('sl-note').value = '';
+            openModal('modal-spare-log');
+        }
+        function openTestDiaryModal() {
+            document.getElementById('t-id').value = '';
+            document.getElementById('t-start').value = '';
+            document.getElementById('t-end').value = '';
+            document.getElementById('t-duration').value = '';
+            document.getElementById('t-unit').value = '';
+            document.getElementById('t-operator').value = '';
+            document.getElementById('t-sap').value = '';
+            document.getElementById('t-result').value = '';
+            document.getElementById('t-cycle').value = '';
+            document.getElementById('t-error').value = '';
+            document.getElementById('t-errorDesc').value = '';
+            openModal('modal-testDiary');
+        }
         function initChart(domId) {
             let dom = document.getElementById(domId);
             if (!dom) return null;
@@ -344,7 +470,16 @@
                 document.getElementById('saveText').innerText = '本地硬盘实时保存已开启！';
                 showToast('本地实时保存已开启！');
             } catch (err) {
-                if (err.name !== 'AbortError') showToast('开启失败: ' + err.message, 'error');
+                if (err.name === 'AbortError') {
+                    // Cancelling the file picker is a legitimate choice, not an
+                    // error — but it must not look like the button did nothing.
+                    if (!fileHandle) {
+                        const status = document.getElementById('saveText');
+                        if (status) status.innerText = '已取消开启本地保存';
+                    }
+                } else {
+                    showToast('开启失败: ' + err.message, 'error');
+                }
             }
         }
 
@@ -368,12 +503,19 @@
 
         function renderYearFilter() {
             let select = document.getElementById('filter-gas-year');
-            if (select.options.length <= 1) {
-                let years = [...new Set(DB.gases.map(g => g.year || new Date(g.month).getFullYear()))].sort((a,b) => b - a);
-                years.forEach(y => {
-                    let opt = document.createElement('option'); opt.value = y; opt.innerText = y + '年'; select.appendChild(opt);
-                });
-            }
+            if (!select) return;
+            // Rebuild from current data on every render: a one-shot fill froze
+            // the option list at first paint, so records added later for other
+            // years could never be selected until a full page reload.
+            const selected = select.value;
+            let years = [...new Set(DB.gases.map(g => g.year || new Date(g.month).getFullYear()))]
+                .filter(y => Number.isFinite(y)).sort((a,b) => b - a);
+            select.innerHTML = '';
+            let allOpt = document.createElement('option'); allOpt.value = 'all'; allOpt.innerText = '全部年份'; select.appendChild(allOpt);
+            years.forEach(y => {
+                let opt = document.createElement('option'); opt.value = y; opt.innerText = y + '年'; select.appendChild(opt);
+            });
+            if ([...select.options].some(opt => opt.value === String(selected))) select.value = selected;
         }
 
         function renderGases() {
@@ -391,7 +533,7 @@
                 let total = (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0);
                 tbody.innerHTML += `<tr>
                     <td>${esc(g.year || '-')}</td><td>${esc(g.monthNum || '-')}月</td><td><strong>${esc(g.item||'')}</strong></td><td>${esc(g.spec||'-')}</td><td>${esc(g.supplier||'-')}</td>
-                    <td>${g.delivery||0}</td><td>${g.return||0}</td><td>${g.consumption||0}</td>
+                    <td>${g.delivery||0}</td><td>${g.return||0}</td><td>${g.consumption||0}${g.unit ? ' ' + esc(g.unit) : ''}</td>
                     <td>${g.cost ? '¥'+g.cost.toLocaleString() : '-'}</td><td>${g.rent ? '¥'+g.rent.toLocaleString() : '-'}</td><td>${g.freight ? '¥'+g.freight.toLocaleString() : '-'}</td>
                     <td><strong>¥${total.toLocaleString()}</strong></td>
                     <td><button class="btn btn-outline btn-sm" onclick="editGas(${labInlineId(g.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${labInlineId(g.id)})">删除</button></td>
@@ -407,11 +549,12 @@
                 });
                 treemapChart.setOption({
                     tooltip: { formatter: '{b}: ¥{c}' },
-                    series: [{ type: 'treemap', data: Object.keys(gasCosts).map(k => ({ name: k, value: gasCosts[k] || 1 })) }]
+                    series: [{ type: 'treemap', data: Object.keys(gasCosts).map(k => ({ name: k, value: gasCosts[k] })) }]
                 });
             }
             
             let timeChart = initChart('chart-gas-timeline');
+            if (timeChart && filtered.length === 0) timeChart.clear();
             if(timeChart && filtered.length > 0) {
                 let sorted = [...filtered].sort((a,b) => (a.month||'').localeCompare(b.month||''));
                 timeChart.setOption({
@@ -425,8 +568,12 @@
                 });
             }
         }
-        function editGas(id) { let g = DB.gases.find(x => sameLabId(x.id, id)); if(!g){showToast('气体记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('g-id').value=g.id; document.getElementById('g-item').value=g.item||'Hydrogen'; document.getElementById('g-spec').value=g.spec||''; document.getElementById('g-supplier').value=g.supplier||''; document.getElementById('g-batch').value=g.batch||''; document.getElementById('g-year').value=g.year||new Date().getFullYear(); document.getElementById('g-month').value=g.monthNum||(new Date().getMonth()+1); document.getElementById('g-delivery').value=g.delivery||0; document.getElementById('g-return').value=g.return||0; document.getElementById('g-consumption').value=g.consumption||0; document.getElementById('g-cost').value=g.cost||0; document.getElementById('g-rent').value=g.rent||0; document.getElementById('g-freight').value=g.freight||0; openModal('modal-gas'); }
+        function editGas(id) { let g = DB.gases.find(x => sameLabId(x.id, id)); if(!g){showToast('气体记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('g-id').value=g.id; document.getElementById('g-item').value=g.item||'Hydrogen'; document.getElementById('g-spec').value=g.spec||''; document.getElementById('g-supplier').value=g.supplier||''; document.getElementById('g-batch').value=g.batch||''; document.getElementById('g-unit').value=g.unit||''; document.getElementById('g-year').value=g.year||new Date().getFullYear(); document.getElementById('g-month').value=g.monthNum||(new Date().getMonth()+1); document.getElementById('g-delivery').value=g.delivery||0; document.getElementById('g-return').value=g.return||0; document.getElementById('g-consumption').value=g.consumption||0; document.getElementById('g-cost').value=g.cost||0; document.getElementById('g-rent').value=g.rent||0; document.getElementById('g-freight').value=g.freight||0; openModal('modal-gas'); }
         async function saveGas() {
+            if (typeof withSaveGuard === 'function') return withSaveGuard('modal-gas', saveGasImpl);
+            return saveGasImpl();
+        }
+        async function saveGasImpl() {
             const id = document.getElementById('g-id').value;
             const year = Number(document.getElementById('g-year').value);
             const monthNum = Number(document.getElementById('g-month').value);
@@ -443,7 +590,7 @@
                 values[key] = value;
             }
             const data = { item, spec:document.getElementById('g-spec').value, supplier:document.getElementById('g-supplier').value,
-                batch:document.getElementById('g-batch').value, year, monthNum,
+                batch:document.getElementById('g-batch').value, unit:document.getElementById('g-unit').value.trim(), year, monthNum,
                 month:year + '-' + String(monthNum).padStart(2, '0'), ...values };
             const previousDB = snapshotLabDB();
             if (id) {
@@ -460,6 +607,7 @@
             if (!await commitLabMutation(previousDB, '气体记录保存失败，本次修改已撤销')) return;
             closeModal('modal-gas');
             renderGases();
+            showToast(id ? '气体记录已更新' : '气体记录已新增');
         }
 
         function isValidDateOnly(value) {
@@ -587,6 +735,7 @@
             }
 
             let timelineChart = initChart('chart-maint-timeline');
+            if (timelineChart && filtered.length === 0) timelineChart.clear();
             if(timelineChart && filtered.length > 0) {
                 let data = filtered.map((m, index) => {
                     const last = m.last ? new Date(m.last + 'T00:00:00').getTime() : NaN;
@@ -623,6 +772,10 @@
 
         function editMaint(id) { let m = DB.maintenance.find(x => sameLabId(x.id, id)); if(!m){showToast('设备记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('m-id').value=m.id; document.getElementById('m-name').value=m.name||''; document.getElementById('m-category').value=m.category||''; document.getElementById('m-location').value=m.location||''; document.getElementById('m-qty').value=m.qty||0; document.getElementById('m-cycle').value=m.cycle||'一级保养'; document.getElementById('m-freq').value=m.freq||''; document.getElementById('m-last').value=m.last||''; document.getElementById('m-next').value=m.next||''; document.getElementById('m-responsible').value=m.responsible||''; document.getElementById('m-record').value=m.record||''; openModal('modal-maint'); }
         async function saveMaint() {
+            if (typeof withSaveGuard === 'function') return withSaveGuard('modal-maint', saveMaintImpl);
+            return saveMaintImpl();
+        }
+        async function saveMaintImpl() {
             const id = document.getElementById('m-id').value;
             const data = {
                 name: document.getElementById('m-name').value,
@@ -680,8 +833,7 @@
             let l = DB.maintLogs.find(x => sameLabId(x.id, id));
             if (!l) { showToast('维保记录不存在或已被删除，请刷新后重试', 'error'); return; }
             // 动态生成设备下拉框
-            let eqSelect = document.getElementById('ml-eq');
-            eqSelect.innerHTML = DB.maintenance.map(m => `<option value="${esc(labIdKey(m.id))}">${esc(m.name)}</option>`).join('');
+            fillEntitySelects();
             document.getElementById('ml-id').value = l.id;
             document.getElementById('ml-eq').value = labIdKey(l.eqId);
             document.getElementById('ml-date').value = l.date;
@@ -692,6 +844,10 @@
             openModal('modal-maint-log');
         }
         async function saveMaintLog() {
+            if (typeof withSaveGuard === 'function') return withSaveGuard('modal-maint-log', saveMaintLogImpl);
+            return saveMaintLogImpl();
+        }
+        async function saveMaintLogImpl() {
             const id = document.getElementById('ml-id').value;
             const eqIdInput = document.getElementById('ml-eq').value;
             const selectedEquipment = DB.maintenance.find(item => sameLabId(item.id, eqIdInput));
@@ -725,6 +881,7 @@
             closeModal('modal-maint-log');
             renderMaintenance();
             renderMaintLogs();
+            showToast(id ? '维保记录已更新' : '维保记录已新增');
         }
 
                 function calibrationDateToIso(value) {
@@ -849,11 +1006,12 @@
                 filtered.forEach(s => { catData[s.category] = (catData[s.category] || 0) + ((s.qty||0) * (s.price||0)); });
                 treemapChart.setOption({
                     tooltip: { formatter: '{b}: ¥{c}' },
-                    series: [{ type: 'treemap', data: Object.keys(catData).map(k => ({ name: k, value: catData[k] || 1 })) }]
+                    series: [{ type: 'treemap', data: Object.keys(catData).map(k => ({ name: k, value: catData[k] })) }]
                 });
             }
             
             let timeChart = initChart('chart-spare-timeline');
+            if (timeChart && filtered.length === 0) timeChart.clear();
             if(timeChart && filtered.length > 0) {
                 let sorted = [...filtered].sort((a,b) => (a.update||'').localeCompare(b.update||''));
                 timeChart.setOption({
@@ -879,6 +1037,10 @@
 
         function editSpare(id) { let s = DB.spareParts.find(x => sameLabId(x.id, id)); if(!s){showToast('备件记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('s-id').value=s.id; document.getElementById('s-category').value=s.category||''; document.getElementById('s-desc').value=s.desc||''; document.getElementById('s-catalog').value=s.catalog||''; document.getElementById('s-purpose').value=s.purpose||''; document.getElementById('s-qty').value=s.qty||0; document.getElementById('s-brand').value=s.brand||''; document.getElementById('s-price').value=s.price||0; document.getElementById('s-location').value=s.location||''; document.getElementById('s-update').value=s.update||''; openModal('modal-spare'); }
         async function saveSpare() {
+            if (typeof withSaveGuard === 'function') return withSaveGuard('modal-spare', saveSpareImpl);
+            return saveSpareImpl();
+        }
+        async function saveSpareImpl() {
             const id = document.getElementById('s-id').value;
             const update = document.getElementById('s-update').value || getToday();
             const data = {
@@ -929,9 +1091,14 @@
             if (!await commitLabMutation(previousDB, '备件台账保存失败，本次修改已撤销')) return;
             closeModal('modal-spare');
             renderSpareParts();
+            showToast(id ? '备件台账已更新' : '备件台账已新增');
         }
 
         async function saveSpareLog() {
+            if (typeof withSaveGuard === 'function') return withSaveGuard('modal-spare-log', saveSpareLogImpl);
+            return saveSpareLogImpl();
+        }
+        async function saveSpareLogImpl() {
             const partIdInput = document.getElementById('sl-part').value;
             const action = document.getElementById('sl-action').value;
             const qtyRaw = document.getElementById('sl-qty').value;
@@ -1027,6 +1194,7 @@
             }
 
             let timeChart = initChart('chart-testDiary-timeline');
+            if (timeChart && filtered.length === 0) timeChart.clear();
             if(timeChart && filtered.length > 0) {
                 let data = filtered.map((t, index) => {
                     const start = diaryTimestamp(t.start);
@@ -1051,6 +1219,10 @@
         }
         function editTestDiary(id) { let t = DB.testDiary.find(x => sameLabId(x.id, id)); if(!t){showToast('测试记录不存在，请刷新后重试','error');return;} document.getElementById('t-id').value=t.id; document.getElementById('t-start').value=t.start||''; document.getElementById('t-end').value=t.end||''; document.getElementById('t-duration').value=t.duration||0; document.getElementById('t-unit').value=t.unit||''; document.getElementById('t-operator').value=t.operator||''; document.getElementById('t-sap').value=t.sap||''; document.getElementById('t-result').value=t.result||''; document.getElementById('t-cycle').value=t.cycle||''; document.getElementById('t-error').value=t.error||''; document.getElementById('t-errorDesc').value=t.errorDesc||''; openModal('modal-testDiary'); }
         async function saveTestDiary() {
+            if (typeof withSaveGuard === 'function') return withSaveGuard('modal-testDiary', saveTestDiaryImpl);
+            return saveTestDiaryImpl();
+        }
+        async function saveTestDiaryImpl() {
             const id = document.getElementById('t-id').value;
             const data = {
                 start: document.getElementById('t-start').value,
@@ -1086,6 +1258,7 @@
             if (!await commitLabMutation(previousDB, '测试记录保存失败，本次修改已撤销')) return;
             closeModal('modal-testDiary');
             renderTestDiary();
+            showToast(id ? '测试记录已更新' : '测试记录已新增');
         }
 
         // ==================== 10. 年度综合统计 ====================
@@ -1441,17 +1614,25 @@
 
         function renderYearlyFilter() {
             let select = document.getElementById('filter-yearly-year');
-            if (select.options.length <= 1) {
-                let years = new Set();
-                DB.gases.forEach(g => years.add(g.year));
-                DB.maintLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
-                DB.spareLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
-                DB.testDiary.forEach(t => years.add(diaryYear(t.start)));
-                let sortedYears = [...years].sort((a,b) => b - a);
-                sortedYears.forEach(y => {
-                    let opt = document.createElement('option'); opt.value = y; opt.innerText = y + '年'; select.appendChild(opt);
-                });
-            }
+            if (!select) return;
+            // Rebuild from current data on every render (see renderYearFilter),
+            // and include spare-part update years: the yearly page values spare
+            // stock by update year, so a year occurring only there must still
+            // be selectable.
+            const selected = select.value;
+            let years = new Set();
+            DB.gases.forEach(g => years.add(g.year));
+            DB.maintLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
+            DB.spareLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
+            DB.spareParts.forEach(s => years.add(new Date(s.update || getToday()).getFullYear()));
+            DB.testDiary.forEach(t => years.add(diaryYear(t.start)));
+            let sortedYears = [...years].filter(y => Number.isFinite(y)).sort((a,b) => b - a);
+            select.innerHTML = '';
+            let allOpt = document.createElement('option'); allOpt.value = 'all'; allOpt.innerText = '全部年份'; select.appendChild(allOpt);
+            sortedYears.forEach(y => {
+                let opt = document.createElement('option'); opt.value = y; opt.innerText = y + '年'; select.appendChild(opt);
+            });
+            if ([...select.options].some(opt => opt.value === String(selected))) select.value = selected;
         }
 
         function renderYearly() {
@@ -1477,9 +1658,9 @@
                     series: [{
                         type: 'treemap', roam: false, nodeClick: false, breadcrumb: { show: false },
                         data: [
-                            { name: '气体费用', value: totalGasCost || 1 },
-                            { name: '维保费用', value: totalMaintCost || 1 },
-                            { name: '备件总值', value: totalSpareCost || 1 }
+                            { name: '气体费用', value: totalGasCost },
+                            { name: '维保费用', value: totalMaintCost },
+                            { name: '备件总值', value: totalSpareCost }
                         ],
                         label: { formatter: '{b}\n¥{c}' },
                         itemStyle: { borderColor: '#fff' }
@@ -1538,20 +1719,12 @@
         }
         function systemAddNew() { 
             let table = document.getElementById('sys-table-select').value; 
-            if (table === 'gases') { generateYearOptions('g-year'); generateMonthOptions('g-month'); openModal('modal-gas'); } 
-            if (table === 'maintenance') openModal('modal-maint'); 
-            if (table === 'maintLogs') { 
-                let eqSelect = document.getElementById('ml-eq');
-                eqSelect.innerHTML = DB.maintenance.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-                openModal('modal-maint-log'); 
-            }
-            if (table === 'spareParts') openModal('modal-spare'); 
-            if (table === 'spareLogs') {
-                let partSelect = document.getElementById('sl-part');
-                partSelect.innerHTML = DB.spareParts.map(p => `<option value="${esc(labIdKey(p.id))}">${esc(p.desc)}</option>`).join('');
-                openModal('modal-spare-log');
-            }
-            if (table === 'testDiary') openModal('modal-testDiary'); 
+            if (table === 'gases') openGasModal();
+            if (table === 'maintenance') openMaintModal(); 
+            if (table === 'maintLogs') openMaintLogModal();
+            if (table === 'spareParts') openSpareModal(); 
+            if (table === 'spareLogs') openSpareLogModal();
+            if (table === 'testDiary') openTestDiaryModal(); 
         }
 
         // ==================== 12. 导出与删除 ====================
@@ -1796,10 +1969,16 @@
                     const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                     // Backup restoration is a write boundary too: normalize and
                     // validate every equipment master before it can replace live data.
-                    imported.maintenance = imported.maintenance.map(asset => ({
-                        ...asset,
-                        ...domain.validateMaintenanceAsset(asset)
-                    }));
+                    // validateMaintenanceAsset whitelists the asset schema and
+                    // rejects the id field, so validate a copy with the id stripped
+                    // and re-attach the id to the result; otherwise every backup
+                    // containing equipment fails to restore.
+                    imported.maintenance = imported.maintenance.map(asset => {
+                        const importedId = asset.id;
+                        asset = { ...asset };
+                        delete asset.id;
+                        return { ...asset, id: importedId, ...domain.validateMaintenanceAsset(asset) };
+                    });
                     imported.calibrationLogs = imported.calibrationLogs.map(row => domain.createCalibrationRecord(row));
                     const importedAssetIds = new Set(imported.maintenance.map(asset => labIdKey(asset.id)));
                     imported.experiments = imported.experiments.map(row => {
