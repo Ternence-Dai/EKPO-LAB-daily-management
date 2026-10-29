@@ -1,0 +1,25 @@
+{
+  "background_color": "#143d50",
+  "description": "EKPO LabOS - 燃料电池实验室日常运营管理",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "lang": "zh-CN",
+  "name": "EKPO LabOS · 实验室运营工作台",
+  "scope": ".",
+  "short_name": "EKPO Lab",
+  "start_url": ".",
+  "theme_color": "#143d50"
+}
