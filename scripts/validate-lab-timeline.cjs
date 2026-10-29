@@ -15,9 +15,9 @@ assert.ok(html.includes("unscheduled: '<span class=\"badge badge-normal\">未设
   'missing due dates must remain explicitly unscheduled, not healthy/normal');
 assert.ok(html.includes('schedule.status'),
   'equipment due-date display must use the domain-owned maintenance schedule status');
-assert.match(html, /年度已记录费用（气体\+维保）/,
+assert.match(html, /年度已记录费用（气体\+维保\+校准）/,
   'annual expense KPI must distinguish recorded costs from inventory valuation');
-assert.match(html, /let totalCost = totalGasCost \+ totalMaintCost;/,
+assert.match(html, /let totalCost = totalGasCost \+ totalMaintCost \+ totalCalCost;/,
   'spare inventory valuation must not be added to annual expense');
 assert.match(html, /非年度采购额/,
   'spare inventory valuation must not be mislabeled as annual procurement');

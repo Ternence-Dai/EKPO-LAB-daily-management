@@ -197,6 +197,78 @@ async function runImportNormalization(imported, domain) {
   }
   assert.equal(restored.maintenance[1].id, 2, 'equipment identifiers must be preserved by restore');
   console.log('Full backup round trip (export -> import -> re-export) checks passed.');
+
+  // ---- Legacy backups (written before the batch-4 amount fields existed) ----
+  // The fullLedger fixture above already omits every batch-4 field; assert the
+  // legacy shape explicitly so a future field addition cannot silently start
+  // rejecting older backups.
+  const legacyLedger = {
+    dataProvenance: 'local-ledger',
+    gases: [],
+    maintenance: [
+      { id: 3, name: '旧备份设备', category: '传感器', location: '实验室', qty: 2, cycle: '一级保养', freq: '季度', last: '2025-06-01', next: '2025-09-01', responsible: '示例责任人', record: '' }
+    ],
+    maintLogs: [
+      { id: 1, eqId: 3, date: '2025-06-01', checker: '示例机构', operator: '示例操作员', cost: 1200, record: '常规维保' }
+    ],
+    spareParts: [
+      { id: 4, category: 'Valve', desc: 'legacy valve', catalog: 'VLV-004', purpose: 'Stack testing', qty: 3, brand: '示例品牌', price: 250, location: '库位 A', update: '2025-05-01' }
+    ],
+    spareLogs: [
+      { id: 1, partId: 4, date: '2025-05-01', action: '入库', qty: 3, operator: '示例操作员', note: '旧备份流水无单价快照' }
+    ],
+    calibrationLogs: [],
+    experiments: [],
+    testDiary: [
+      { id: 1, start: '2025-06-02', end: '2025-06-02', duration: 1, unit: '示例台架', operator: '示例操作员', sap: '', result: 'Ok', cycle: '', error: '', errorDesc: '' }
+    ]
+  };
+  assert.equal(validatorContext.validateBackup(legacyLedger), true,
+    'a legacy backup without any batch-4 amount fields must still import');
+  const legacyRestored = await runImportNormalization(JSON.parse(JSON.stringify(legacyLedger)), domain);
+  assert.ok(legacyRestored, 'legacy backup import normalization must succeed');
+  assert.equal(legacyRestored.maintenance[0].purchasePrice, undefined,
+    'missing purchase price stays absent (treated as 0) instead of failing the import');
+  console.log('Legacy backup (no batch-4 fields) import checks passed.');
+
+  // ---- Batch-4 amount fields survive the round trip ----
+  const pricedCalibration = domain.createCalibrationRecord({
+    id: 102, assetId: 2, calibratedAt: '2026-09-01T00:00:00.000Z', validForDays: 365,
+    certificateNo: 'CERT-2026-002', organization: '示例计量机构', operator: '示例操作员',
+    result: 'pass', notes: '', cost: 3500
+  });
+  const budgetedExperiment = domain.createExperimentRecord({
+    id: 'EXP-RT-2', title: '带预算实验', assetId: 2, plannedDate: '2026-11-05',
+    owner: '示例负责人', purpose: '金额字段往返校验', actor: '示例操作员',
+    createdAt: '2026-10-20T00:00:00.000Z', budget: 8000
+  });
+  const pricedLedger = JSON.parse(JSON.stringify(fullLedger));
+  pricedLedger.maintenance[1].purchasePrice = 420000;
+  pricedLedger.maintenance[1].purchaseDate = '2025-12-20';
+  pricedLedger.calibrationLogs = [pricedCalibration];
+  pricedLedger.experiments = [budgetedExperiment];
+  pricedLedger.spareLogs[0].unitPrice = 0;
+  pricedLedger.testDiary[0].cost = 260.5;
+  assert.equal(validatorContext.validateBackup(pricedLedger), true,
+    'a backup carrying batch-4 amount fields must pass the structure gate');
+  const pricedRestored = await runImportNormalization(JSON.parse(JSON.stringify(pricedLedger)), domain);
+  for (const key of ['maintenance', 'calibrationLogs', 'experiments', 'spareLogs', 'testDiary']) {
+    assert.deepEqual(JSON.parse(JSON.stringify(pricedRestored[key])), pricedLedger[key],
+      `batch-4 amount fields in table ${key} must survive export -> import unchanged`);
+  }
+  const invalidAmounts = JSON.parse(JSON.stringify(pricedLedger));
+  invalidAmounts.calibrationLogs[0].cost = -1;
+  assert.equal(validatorContext.validateBackup(invalidAmounts), false,
+    'a negative calibration cost must be rejected');
+  invalidAmounts.calibrationLogs[0].cost = 3500;
+  invalidAmounts.spareLogs[0].unitPrice = -5;
+  assert.equal(validatorContext.validateBackup(invalidAmounts), false,
+    'a negative spare-log unit price snapshot must be rejected');
+  invalidAmounts.spareLogs[0].unitPrice = 0;
+  invalidAmounts.maintenance[1].purchasePrice = '420000';
+  assert.equal(validatorContext.validateBackup(invalidAmounts), false,
+    'a non-numeric purchase price must be rejected');
+  console.log('Batch-4 amount field round trip checks passed.');
 })().catch(error => {
   console.error(error);
   process.exit(1);

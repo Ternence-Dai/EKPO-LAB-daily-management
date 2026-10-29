@@ -131,7 +131,7 @@
                     </div>
                     <div style="overflow-x:auto;">
                         <table id="table-maintenance">
-                            <thead><tr><th>设备名称</th><th>设备类别</th><th>位置</th><th>数量 (台)</th><th>保养等级</th><th>保养频次</th><th>上次保养</th><th>下次保养</th><th>校准状态</th><th>累计维保花费 (¥)</th><th>责任人</th><th>操作</th></tr></thead>
+                            <thead><tr><th>设备名称</th><th>设备类别</th><th>位置</th><th>数量 (台)</th><th>保养等级</th><th>保养频次</th><th>上次保养</th><th>下次保养</th><th>校准状态</th><th>累计维保花费 (¥)</th><th>累计校准费用 (¥)</th><th>责任人</th><th>操作</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -180,6 +180,9 @@
                             <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">备注
                                 <input class="form-control" id="cal-notes" maxlength="500" placeholder="可选">
                             </label>
+                            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px">校准费用 (¥)
+                                <input class="form-control" type="number" id="cal-cost" min="0" step="0.01" placeholder="可选">
+                            </label>
                         </div>
                         <div style="display:flex;justify-content:flex-end;margin-top:14px">
                             <button class="btn btn-primary" type="button" onclick="saveCalibration()">保存校准记录</button>
@@ -189,7 +192,7 @@
                         <div class="card-title">校准历史与有效期</div>
                         <div style="overflow-x:auto">
                             <table id="table-calibration">
-                                <thead><tr><th>设备</th><th>校准日期</th><th>证书/报告编号</th><th>校准机构</th><th>操作人</th><th>有效期</th><th>状态</th><th>备注</th></tr></thead>
+                                <thead><tr><th>设备</th><th>校准日期</th><th>证书/报告编号</th><th>校准机构</th><th>操作人</th><th>有效期</th><th>状态</th><th>校准费用 (¥)</th><th>备注</th></tr></thead>
                                 <tbody></tbody>
                             </table>
                         </div>
@@ -225,7 +228,7 @@
                 <div id="spare-log-view" class="hidden">
                     <div style="overflow-x:auto;">
                         <table id="table-spare-logs">
-                            <thead><tr><th>日期</th><th>备件名称</th><th>动作</th><th>数量</th><th>操作人</th><th>备注</th><th>操作</th></tr></thead>
+                            <thead><tr><th>日期</th><th>备件名称</th><th>动作</th><th>数量</th><th>单价快照 (¥)</th><th>金额 (¥)</th><th>操作人</th><th>备注</th><th>操作</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -244,7 +247,7 @@
                 </div>
                 <div style="overflow-x:auto;">
                     <table id="table-testDiary">
-                        <thead><tr><th>开始日期</th><th>结束日期</th><th>时长 (h)</th><th>测试单元</th><th>操作员</th><th>气密测试</th><th>结果</th><th>循环次数</th><th>错误代码</th><th>错误描述</th><th>操作</th></tr></thead>
+                        <thead><tr><th>开始日期</th><th>结束日期</th><th>时长 (h)</th><th>测试单元</th><th>操作员</th><th>气密测试</th><th>结果</th><th>循环次数</th><th>错误代码</th><th>错误描述</th><th>运行成本 (¥)</th><th>操作</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -277,9 +280,10 @@
                             <div class="form-group"><label for="experiment-asset">关联在册设备</label><select id="experiment-asset" class="form-control" required><option value="">请选择在册设备</option></select></div>
                             <div class="form-group"><label for="experiment-planned-date">计划日期</label><input id="experiment-planned-date" class="form-control" type="date" required></div>
                         </div>
-                        <div class="form-row">
+                        <div class="form-row-3">
                             <div class="form-group"><label for="experiment-owner">实验负责人</label><input id="experiment-owner" class="form-control" maxlength="120" required placeholder="负责人姓名/工号"></div>
                             <div class="form-group"><label for="experiment-creator">计划记录人</label><input id="experiment-creator" class="form-control" maxlength="120" required placeholder="实际录入人；不会自动代填身份"></div>
+                            <div class="form-group"><label for="experiment-budget">计划预算 (¥)</label><input id="experiment-budget" class="form-control" type="number" min="0" step="0.01" placeholder="可选"></div>
                         </div>
                         <div class="form-group"><label for="experiment-purpose">实验目的与执行说明</label><textarea id="experiment-purpose" class="form-control" rows="3" maxlength="2000" required placeholder="填写目的、适用SOP编号、关键准备条件或安全注意事项；不要将计划文本当作测量结果。"></textarea></div>
                         <button id="experiment-create-button" type="button" class="btn btn-primary" onclick="createLabExperiment()">保存实验计划</button>
@@ -309,9 +313,10 @@
                     </select>
                 </div>
                 <div class="metrics-grid">
-                    <div class="card"><div class="card-title">年度已记录费用（气体+维保）</div><div class="card-value" id="year-total-cost">--</div></div>
+                    <div class="card"><div class="card-title">年度已记录费用（气体+维保+校准）</div><div class="card-value" id="year-total-cost">--</div></div>
                     <div class="card"><div class="card-title">在册设备总数</div><div class="card-value" id="year-maint-count">--</div></div>
                     <div class="card"><div class="card-title">所选年度更新的备件库存估值</div><div class="card-value" id="year-spare-cost">--</div></div>
+                    <div class="card"><div class="card-title">在册资产总值（购入原值）</div><div class="card-value" id="year-asset-value">--</div></div>
                     <div class="card"><div class="card-title">年度测试总时长 (h)</div><div class="card-value" id="year-test-hours">--</div></div>
                 </div>
                 <div class="charts-row">
@@ -327,7 +332,8 @@
             <!-- 7. 系统全量设置 -->
             <section id="page-system" class="hidden">
                 <div class="card">
-                    <div class="card-title">📋 全量数据表修改与新增</div>
+                    <div class="card-title">📋 全量数据表查看、修改与新增</div>
+                    <p style="color:var(--text-muted);font-size:13px;line-height:1.6;margin:6px 0 12px;">设备校准记录与实验计划为只读查看：校准记录只追加、实验计划带生命周期审计，写入请分别走设备维保页与实验计划页。</p>
                     <div class="form-row" style="margin-bottom:15px;">
                         <select class="form-control" id="sys-table-select" onchange="renderSystemTable(this.value)">
                             <option value="gases">📊 气体使用记录</option>
@@ -335,11 +341,19 @@
                             <option value="maintLogs">📝 维保历史记录</option>
                             <option value="spareParts">📦 备件库存台账</option>
                             <option value="spareLogs">📝 备件出入库流水</option>
+                            <option value="calibrationLogs">🧪 设备校准记录（只读）</option>
+                            <option value="experiments">⚗️ 实验计划与审计（只读）</option>
                             <option value="testDiary">📅 测试台运行日志</option>
                         </select>
                         <button class="btn btn-primary" onclick="systemAddNew()">➕ 在数据表中新增记录</button>
                     </div>
                     <div id="sys-table-container" style="overflow-x:auto;"></div>
+                    <div style="margin-top:18px;border-top:1px solid #e2e8f0;padding-top:14px;">
+                        <div class="card-title">🧪 演示数据</div>
+                        <p style="color:var(--text-muted);font-size:13px;line-height:1.6;margin:6px 0 10px;">内置演示数据是未经业务核验的示例记录，不得用于采购、结算、校准或安全判断。仅当当前账本完全为空时可以载入。</p>
+                        <button class="btn btn-outline" id="btn-load-demo-seed" onclick="loadDemoSeedData()">载入演示数据</button>
+                        <span id="demo-seed-hint" style="margin-left:10px;color:var(--text-muted);font-size:12px;"></span>
+                    </div>
                 </div>
             </section>
         </div>
@@ -393,6 +407,10 @@
                 <div class="form-group"><label>上次保养日期</label><input type="date" id="m-last" class="form-control"></div>
                 <div class="form-group"><label>下次保养日期</label><input type="date" id="m-next" class="form-control"></div>
                 <div class="form-group"><label>责任人</label><input type="text" id="m-responsible" class="form-control"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>购入价 / 资产原值 (¥)</label><input type="number" id="m-purchase-price" class="form-control" min="0" step="0.01" placeholder="可选，以采购凭证为准"></div>
+                <div class="form-group"><label>购入日期</label><input type="date" id="m-purchase-date" class="form-control"></div>
             </div>
             <div class="form-group"><label>备注</label><input type="text" id="m-record" class="form-control"></div>
             <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveMaint()">保存台账</button>
@@ -450,9 +468,12 @@
             <div class="form-row-3">
                 <div class="form-group"><label>动作</label><select id="sl-action" class="form-control"><option>入库</option><option>出库</option></select></div>
                 <div class="form-group"><label>数量</label><input type="number" id="sl-qty" class="form-control"></div>
-                <div class="form-group"><label>操作人</label><input type="text" id="sl-operator" class="form-control"></div>
+                <div class="form-group"><label>单价快照 (¥)</label><input type="number" id="sl-price" class="form-control" min="0" step="0.01" placeholder="默认带出备件现价，可修改"></div>
             </div>
-            <div class="form-group"><label>备注</label><input type="text" id="sl-note" class="form-control"></div>
+            <div class="form-row">
+                <div class="form-group"><label>操作人</label><input type="text" id="sl-operator" class="form-control"></div>
+                <div class="form-group"><label>备注</label><input type="text" id="sl-note" class="form-control"></div>
+            </div>
             <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveSpareLog()">保存流水</button>
         </div>
     </div>
@@ -475,9 +496,10 @@
                 <div class="form-group"><label>结果</label><input type="text" id="t-result" class="form-control"></div>
                 <div class="form-group"><label>循环次数</label><input type="text" id="t-cycle" class="form-control"></div>
             </div>
-            <div class="form-row">
+            <div class="form-row-3">
                 <div class="form-group"><label>错误代码</label><input type="text" id="t-error" class="form-control"></div>
                 <div class="form-group"><label>错误描述</label><input type="text" id="t-errorDesc" class="form-control"></div>
+                <div class="form-group"><label>运行成本 (¥)</label><input type="number" id="t-cost" class="form-control" min="0" step="0.01" placeholder="可选"></div>
             </div>
             <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveTestDiary()">保存记录</button>
         </div>

@@ -143,9 +143,11 @@ const fs = require('node:fs');
         provenanceNote: note
       };
     });
-    if (!dashboardPriority.cockpit || dashboardPriority.metrics !== 5 ||
+    if (!dashboardPriority.cockpit || dashboardPriority.metrics !== 8 ||
         dashboardPriority.metricColumns !== 5 ||
-        dashboardPriority.metricTopOffsets.some(value => Math.abs(value - dashboardPriority.metricTopOffsets[0]) > 2) ||
+        dashboardPriority.metricTopOffsets.slice(0, 5).some(value => Math.abs(value - dashboardPriority.metricTopOffsets[0]) > 2) ||
+        dashboardPriority.metricTopOffsets.slice(5).some(value => Math.abs(value - dashboardPriority.metricTopOffsets[5]) > 2) ||
+        !(dashboardPriority.metricTopOffsets[5] > dashboardPriority.metricTopOffsets[0]) ||
         dashboardPriority.workflowSteps !== 4 || !dashboardPriority.inspector ||
         dashboardPriority.oldMetrics || dashboardPriority.oldCharts ||
         dashboardPriority.oldLaunchpad || dashboardPriority.oldReadinessBoard ||

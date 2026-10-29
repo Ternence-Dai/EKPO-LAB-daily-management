@@ -41,7 +41,7 @@ export function validateMaintenanceAsset(entry) {
   }
   const allowedFields = new Set([
     "name", "category", "location", "qty", "cycle", "freq",
-    "last", "next", "responsible", "record"
+    "last", "next", "responsible", "record", "purchasePrice", "purchaseDate"
   ]);
   if (Object.keys(entry).some(field => !allowedFields.has(field))) {
     throw new TypeError("maintenance asset contains unsupported fields");
@@ -70,6 +70,14 @@ export function validateMaintenanceAsset(entry) {
   if (last && next && next < last) {
     throw new RangeError("next maintenance date cannot precede last maintenance date");
   }
+  let purchasePrice;
+  if (entry.purchasePrice !== undefined && entry.purchasePrice !== null && entry.purchasePrice !== "") {
+    if (typeof entry.purchasePrice !== "number" || !Number.isFinite(entry.purchasePrice) || entry.purchasePrice < 0) {
+      throw new RangeError("maintenance purchase price must be a non-negative finite number");
+    }
+    purchasePrice = entry.purchasePrice;
+  }
+  const purchaseDate = parseMaintenanceDate(entry.purchaseDate, "purchase date");
   return Object.freeze({
     name,
     category: textField("category", 80),
@@ -80,7 +88,9 @@ export function validateMaintenanceAsset(entry) {
     last,
     next,
     responsible: textField("responsible", 120),
-    record: textField("record", 2000)
+    record: textField("record", 2000),
+    ...(purchasePrice !== undefined ? { purchasePrice } : {}),
+    ...(purchaseDate ? { purchaseDate } : {})
   });
 }
 
@@ -116,7 +126,14 @@ export function createExperimentRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("experiment record must be an object");
   }
-  const allowedFields = new Set(["id","title","assetId","plannedDate","owner","purpose","actor","createdAt"]);
+  const allowedFields = new Set(["id","title","assetId","plannedDate","owner","purpose","actor","createdAt","budget"]);
+  let budget;
+  if (entry.budget !== undefined && entry.budget !== null && entry.budget !== "") {
+    if (typeof entry.budget !== "number" || !Number.isFinite(entry.budget) || entry.budget < 0) {
+      throw new RangeError("experiment budget must be a non-negative finite number");
+    }
+    budget = entry.budget;
+  }
   if (Object.keys(entry).some(field => !allowedFields.has(field))) throw new TypeError("experiment record contains unsupported creation fields");
   if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
       [...entry.id].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
@@ -141,6 +158,7 @@ export function createExperimentRecord(entry) {
     plannedDate,
     owner,
     purpose,
+    ...(budget !== undefined ? { budget } : {}),
     status: "planned",
     createdAt,
     audit: Object.freeze([Object.freeze({ from: "new", to: "planned", actor, at: createdAt })])
@@ -150,9 +168,13 @@ export function validateExperimentRecord(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new TypeError("experiment record must be an object");
   }
-  const allowedFields = new Set(["id", "title", "assetId", "plannedDate", "owner", "purpose", "status", "createdAt", "audit"]);
+  const allowedFields = new Set(["id", "title", "assetId", "plannedDate", "owner", "purpose", "status", "createdAt", "audit", "budget"]);
   if (Object.keys(entry).some(field => !allowedFields.has(field))) {
     throw new TypeError("experiment record contains unsupported fields");
+  }
+  if (entry.budget !== undefined && entry.budget !== null &&
+      (typeof entry.budget !== "number" || !Number.isFinite(entry.budget) || entry.budget < 0)) {
+    throw new RangeError("experiment budget must be a non-negative finite number");
   }
   if (typeof entry.id !== "string" || !entry.id.trim() || entry.id.trim().length > 80 ||
       [...entry.id].some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)) {
@@ -488,6 +510,13 @@ export function createCalibrationRecord(entry) {
   if (!["pass", "fail"].includes(entry.result)) {
     throw new RangeError("calibration result must be pass or fail");
   }
+  let cost;
+  if (entry.cost !== undefined && entry.cost !== null && entry.cost !== "") {
+    if (typeof entry.cost !== "number" || !Number.isFinite(entry.cost) || entry.cost < 0) {
+      throw new RangeError("calibration cost must be a non-negative finite number");
+    }
+    cost = entry.cost;
+  }
   if (entry.notes !== undefined && entry.notes !== null && typeof entry.notes !== "string") {
     throw new TypeError("calibration notes must be text");
   }
@@ -507,7 +536,8 @@ export function createCalibrationRecord(entry) {
     organization: requiredText("organization", 180),
     operator: requiredText("operator", 120),
     result: entry.result,
-    notes
+    notes,
+    ...(cost !== undefined ? { cost } : {})
   });
 }
 function normalizeDiaryDate(value, label) {
@@ -538,7 +568,7 @@ export function validateTestDiaryEntry(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError("test diary entry is required");
   const allowedFields = new Set([
     "start", "end", "duration", "unit", "operator",
-    "sap", "result", "cycle", "error", "errorDesc"
+    "sap", "result", "cycle", "error", "errorDesc", "cost"
   ]);
   if (Object.keys(entry).some(field => !allowedFields.has(field))) {
     throw new TypeError("test diary entry contains unsupported fields");
@@ -565,6 +595,13 @@ export function validateTestDiaryEntry(entry) {
     if (/[\x00-\x1F\x7F]/.test(normalized)) throw new TypeError(`test ${field} must not contain control characters`);
     return normalized;
   };
+  let cost;
+  if (entry.cost !== undefined && entry.cost !== null && entry.cost !== "") {
+    if (typeof entry.cost !== "number" || !Number.isFinite(entry.cost) || entry.cost < 0) {
+      throw new RangeError("test cost must be a non-negative finite number");
+    }
+    cost = entry.cost;
+  }
   return Object.freeze({
     start:normalizedStart,
     end:normalizedEnd,
@@ -575,7 +612,8 @@ export function validateTestDiaryEntry(entry) {
     result:optionalText(entry.result, "result", 120),
     cycle:optionalText(entry.cycle, "cycle count", 40),
     error:optionalText(entry.error, "error code", 120),
-    errorDesc:optionalText(entry.errorDesc, "error description", 2000)
+    errorDesc:optionalText(entry.errorDesc, "error description", 2000),
+    ...(cost !== undefined ? { cost } : {})
   });
 }
 

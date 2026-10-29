@@ -78,7 +78,7 @@
         // User-edited or user-added rows are retained. The original cache is archived first.
         let demoSeedMigrationNotice = '';
         function migrateUnmodifiedDemoRows() {
-            if (storageRecoveryRequired || !cachedLabRaw || !DB || DB.dataProvenance !== 'demo-seed') return;
+            if (storageRecoveryRequired || !cachedLabRaw || !DB || DB.dataProvenance !== 'demo-seed' || DB.demoSeedExplicitlyLoaded === true) return;
             const tableKeys = ['gases','maintenance','maintLogs','spareParts','spareLogs','calibrationLogs','experiments','testDiary'];
             const migrated = JSON.parse(JSON.stringify(DB));
             let removed = 0;
@@ -192,6 +192,17 @@
             return JSON.parse(JSON.stringify(DB));
         }
 
+        const LAB_BUSINESS_TABLES = ['gases','maintenance','maintLogs','spareParts','spareLogs','calibrationLogs','experiments','testDiary'];
+        function ledgerHasBusinessRows() {
+            return LAB_BUSINESS_TABLES.some(key => Array.isArray(DB[key]) && DB[key].length > 0);
+        }
+        // Provenance honesty: once a first-run empty ledger actually holds
+        // business records, it must stop describing itself as an empty ledger.
+        function evolveLedgerProvenance() {
+            if (!DB || DB.dataProvenance !== 'empty-ledger') return;
+            if (ledgerHasBusinessRows()) DB.dataProvenance = 'local';
+        }
+
         // A modal's save button stays disabled for the whole async commit, so
         // a double click cannot pass the conflict checks twice and insert the
         // same new record two times.
@@ -211,6 +222,7 @@
         }
 
         async function commitLabMutation(previousDB, failureMessage) {
+            evolveLedgerProvenance();
             let saved = false;
             try { saved = await saveToLocal(); }
             catch (error) { console.error('实验室数据保存失败', error); }
@@ -292,6 +304,8 @@
             document.getElementById('m-next').value = '';
             document.getElementById('m-responsible').value = '';
             document.getElementById('m-record').value = '';
+            document.getElementById('m-purchase-price').value = '';
+            document.getElementById('m-purchase-date').value = '';
             openModal('modal-maint');
         }
         function openMaintLogModal() {
@@ -322,7 +336,25 @@
             document.getElementById('sl-qty').value = '';
             document.getElementById('sl-operator').value = '';
             document.getElementById('sl-note').value = '';
+            document.getElementById('sl-price').value = '';
             openModal('modal-spare-log');
+            syncSpareLogPriceDefault();
+            bindSpareLogPriceDefault();
+        }
+        // The movement's unit price is a snapshot: default to the part's
+        // current price at registration time, but let the operator override it.
+        function syncSpareLogPriceDefault() {
+            const select = document.getElementById('sl-part');
+            const priceInput = document.getElementById('sl-price');
+            if (!select || !priceInput) return;
+            const part = DB.spareParts.find(p => sameLabId(p.id, select.value));
+            priceInput.value = part ? (part.price ?? '') : '';
+        }
+        function bindSpareLogPriceDefault() {
+            const select = document.getElementById('sl-part');
+            if (!select || select.dataset.priceDefaultBound === 'true') return;
+            select.dataset.priceDefaultBound = 'true';
+            select.addEventListener('change', syncSpareLogPriceDefault);
         }
         function openTestDiaryModal() {
             document.getElementById('t-id').value = '';
@@ -336,6 +368,7 @@
             document.getElementById('t-cycle').value = '';
             document.getElementById('t-error').value = '';
             document.getElementById('t-errorDesc').value = '';
+            document.getElementById('t-cost').value = '';
             openModal('modal-testDiary');
         }
         function initChart(domId) {
@@ -539,6 +572,11 @@
                     <td><button class="btn btn-outline btn-sm" onclick="editGas(${labInlineId(g.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('gases', ${labInlineId(g.id)})">删除</button></td>
                 </tr>`;
             });
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="13">${DB.gases.length
+                    ? '没有符合当前筛选条件的气体记录。'
+                    : '暂无气体记录。请点击上方「新增气体记录」登记第一批气体；供应商、批次与费用请以现场凭证为准。'}</td></tr>`;
+            }
 
             let treemapChart = initChart('chart-gas-treemap');
             if(treemapChart) {
@@ -676,6 +714,7 @@
             });
             filtered.forEach(m => {
                 let totalCost = DB.maintLogs.filter(l => sameLabId(l.eqId, m.id)).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
+                let totalCalCost = (DB.calibrationLogs || []).filter(l => sameLabId(l.assetId, m.id)).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
                 let schedule = null;
                 if (calibrationDomain && typeof calibrationDomain.getMaintenanceScheduleStatus === 'function') {
                     try {
@@ -715,11 +754,16 @@
                 }
                 const calibrationBadgeHtml = `<span class="badge ${calibrationBadge}">${calibrationLabel}</span>`;
                 tbody.innerHTML += `<tr>
-                    <td><strong>${esc(m.name||'')}</strong></td><td>${esc(m.category||'')}</td><td>${esc(m.location||'')}</td><td>${esc(m.qty||0)}</td><td>${esc(m.cycle||'')}</td><td>${esc(m.freq||'')}</td>
-                    <td>${esc(m.last || '-')}</td><td>${esc(m.next || '-')} ${badge}</td><td>${calibrationBadgeHtml}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td>${esc(m.responsible||'')}</td>
+                    <td><strong>${esc(m.name||'')}</strong>${m.record ? `<br><small style="color:#64748b;">备注：${esc(m.record)}</small>` : ''}</td><td>${esc(m.category||'')}</td><td>${esc(m.location||'')}</td><td>${esc(m.qty||0)}</td><td>${esc(m.cycle||'')}</td><td>${esc(m.freq||'')}</td>
+                    <td>${esc(m.last || '-')}</td><td>${esc(m.next || '-')} ${badge}</td><td>${calibrationBadgeHtml}</td><td><strong>¥${totalCost.toLocaleString()}</strong></td><td><strong>¥${totalCalCost.toLocaleString()}</strong></td><td>${esc(m.responsible||'')}</td>
                     <td><button class="btn btn-outline btn-sm" onclick="editMaint(${labInlineId(m.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('maintenance', ${labInlineId(m.id)})">删除</button></td>
                 </tr>`;
             });
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="13">${DB.maintenance.length
+                    ? '没有符合当前搜索条件的设备记录。'
+                    : '暂无设备台账记录。请点击上方「新增维保设备」登记第一台设备；购入价与购入日期请以采购凭证为准。'}</td></tr>`;
+            }
 
             let treemapChart = initChart('chart-maint-treemap');
             if(treemapChart) {
@@ -761,6 +805,10 @@
 
         function renderMaintLogs() {
             let tbody = document.querySelector('#table-maint-logs tbody'); tbody.innerHTML = '';
+            if (!DB.maintLogs.length) {
+                tbody.innerHTML = '<tr><td colspan="7">暂无维保历史记录。完成首次维保后请点击上方「登记维保记录」录入。</td></tr>';
+                return;
+            }
             DB.maintLogs.sort((a,b) => (b.date||'').localeCompare(a.date||'')).forEach(l => {
                 let eq = DB.maintenance.find(m => sameLabId(m.id, l.eqId));
                 tbody.innerHTML += `<tr>
@@ -770,7 +818,7 @@
             });
         }
 
-        function editMaint(id) { let m = DB.maintenance.find(x => sameLabId(x.id, id)); if(!m){showToast('设备记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('m-id').value=m.id; document.getElementById('m-name').value=m.name||''; document.getElementById('m-category').value=m.category||''; document.getElementById('m-location').value=m.location||''; document.getElementById('m-qty').value=m.qty||0; document.getElementById('m-cycle').value=m.cycle||'一级保养'; document.getElementById('m-freq').value=m.freq||''; document.getElementById('m-last').value=m.last||''; document.getElementById('m-next').value=m.next||''; document.getElementById('m-responsible').value=m.responsible||''; document.getElementById('m-record').value=m.record||''; openModal('modal-maint'); }
+        function editMaint(id) { let m = DB.maintenance.find(x => sameLabId(x.id, id)); if(!m){showToast('设备记录不存在或已被删除，请刷新后重试','error');return;} document.getElementById('m-id').value=m.id; document.getElementById('m-name').value=m.name||''; document.getElementById('m-category').value=m.category||''; document.getElementById('m-location').value=m.location||''; document.getElementById('m-qty').value=m.qty||0; document.getElementById('m-cycle').value=m.cycle||'一级保养'; document.getElementById('m-freq').value=m.freq||''; document.getElementById('m-last').value=m.last||''; document.getElementById('m-next').value=m.next||''; document.getElementById('m-responsible').value=m.responsible||''; document.getElementById('m-record').value=m.record||''; document.getElementById('m-purchase-price').value=m.purchasePrice ?? ''; document.getElementById('m-purchase-date').value=m.purchaseDate||''; openModal('modal-maint'); }
         async function saveMaint() {
             if (typeof withSaveGuard === 'function') return withSaveGuard('modal-maint', saveMaintImpl);
             return saveMaintImpl();
@@ -787,7 +835,10 @@
                 last: document.getElementById('m-last').value,
                 next: document.getElementById('m-next').value,
                 responsible: document.getElementById('m-responsible').value,
-                record: document.getElementById('m-record').value
+                record: document.getElementById('m-record').value,
+                purchasePrice: document.getElementById('m-purchase-price').value === ''
+                    ? undefined : Number(document.getElementById('m-purchase-price').value),
+                purchaseDate: document.getElementById('m-purchase-date').value || undefined
             };
             let validated;
             try {
@@ -808,7 +859,12 @@
                     return;
                 }
                 previous = DB.maintenance[existingIndex];
-                DB.maintenance[existingIndex] = { ...previous, ...validated };
+                const merged = { ...previous, ...validated };
+                // Fields the domain validator omits when left blank must not
+                // survive an edit that deliberately cleared them.
+                if (data.purchasePrice === undefined) delete merged.purchasePrice;
+                if (!data.purchaseDate) delete merged.purchaseDate;
+                DB.maintenance[existingIndex] = merged;
             } else {
                 newRecordId = Date.now();
                 if (DB.maintenance.some(item => sameLabId(item && item.id, newRecordId))) {
@@ -818,8 +874,11 @@
                 DB.maintenance.push({ ...validated, id: newRecordId });
             }
 
+            const previousProvenance = DB.dataProvenance;
+            if (typeof evolveLedgerProvenance === 'function') evolveLedgerProvenance();
             const saved = await saveToLocal();
             if (!saved) {
+                DB.dataProvenance = previousProvenance;
                 if (existingIndex >= 0) DB.maintenance[existingIndex] = previous;
                 else DB.maintenance = DB.maintenance.filter(item => !sameLabId(item.id, newRecordId));
                 showToast('设备台账保存失败，已撤销本次修改；请检查存储后重试', 'error');
@@ -897,7 +956,7 @@
             const tbody = document.querySelector('#table-calibration tbody');
             if (!select || !tbody) return;
             if (storageRecoveryRequired) {
-                tbody.innerHTML = '<tr><td colspan="8">原始缓存待恢复，校准记录暂不可读取或更改；请先导出恢复包并完成数据恢复。</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9">原始缓存待恢复，校准记录暂不可读取或更改；请先导出恢复包并完成数据恢复。</td></tr>';
                 return;
             }
             const selected = select.value;
@@ -913,14 +972,14 @@
             try {
                 domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
             } catch (error) {
-                tbody.innerHTML = '<tr><td colspan="8">校准规则模块不可用，当前无法计算有效期状态。</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9">校准规则模块不可用，当前无法计算有效期状态。</td></tr>';
                 showToast('校准规则模块加载失败，请刷新页面后重试', 'error');
                 return;
             }
             const rows = [...(DB.calibrationLogs || [])].sort((a, b) =>
                 String(b.calibratedAt).localeCompare(String(a.calibratedAt)));
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="8">暂无校准记录。请仅录入有证书或报告支持的真实校准结果。</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9">暂无校准记录。请仅录入有证书或报告支持的真实校准结果。</td></tr>';
                 return;
             }
             rows.forEach(record => {
@@ -937,6 +996,7 @@
                     <td>${esc(record.operator)}</td>
                     <td>${esc(record.validForDays)} 天</td>
                     <td><span class="badge ${badge}">${status}</span></td>
+                    <td>${record.cost != null && record.cost !== '' ? '¥' + (Number(record.cost) || 0).toLocaleString() : '-'}</td>
                     <td>${esc(record.notes || '')}</td>
                 </tr>`;
             });
@@ -956,6 +1016,8 @@
             const operator = document.getElementById('cal-operator').value.trim();
             const result = document.getElementById('cal-result').value;
             const notes = document.getElementById('cal-notes').value;
+            const costRaw = document.getElementById('cal-cost').value;
+            const cost = costRaw === '' ? undefined : Number(costRaw);
             let calibratedAt;
             try {
                 calibratedAt = calibrationDateToIso(document.getElementById('cal-date').value);
@@ -972,13 +1034,15 @@
                 while (DB.calibrationLogs.some(row => String(row.id) === String(id))) id++;
                 const record = domain.createCalibrationRecord({
                     id, assetId, calibratedAt, validForDays, certificateNo,
-                    organization, operator, result, notes
+                    organization, operator, result, notes,
+                    ...(cost !== undefined ? { cost } : {})
                 });
                 const previousDB = snapshotLabDB();
                 DB.calibrationLogs.unshift(record);
                 if (!await commitLabMutation(previousDB, '校准记录保存失败，本次新增已撤销')) return;
                 document.getElementById('cal-certificate').value = '';
                 document.getElementById('cal-notes').value = '';
+                document.getElementById('cal-cost').value = '';
                 showToast('校准记录已保存；历史记录保持不变');
                 renderCalibrationLogs();
             } catch (error) {
@@ -999,6 +1063,11 @@
                     <td><button class="btn btn-outline btn-sm" onclick="editSpare(${labInlineId(s.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('spareParts', ${labInlineId(s.id)})">删除</button></td>
                 </tr>`;
             });
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="11">${DB.spareParts.length
+                    ? '没有符合当前搜索条件的备件记录。'
+                    : '暂无备件库存记录。请点击上方「新增备件」登记第一件备件；单价请以采购凭证为准。'}</td></tr>`;
+            }
 
             let treemapChart = initChart('chart-spare-treemap');
             if(treemapChart) {
@@ -1025,11 +1094,16 @@
 
         function renderSpareLogs() {
             let tbody = document.querySelector('#table-spare-logs tbody'); tbody.innerHTML = '';
+            if (!DB.spareLogs.length) {
+                tbody.innerHTML = '<tr><td colspan="9">暂无出入库流水记录。备件出入库后请点击上方「登记出入库」录入，单价快照默认带出备件现价。</td></tr>';
+                return;
+            }
             DB.spareLogs.sort((a,b) => (b.date||'').localeCompare(a.date||'')).forEach(l => {
                 let part = DB.spareParts.find(p => sameLabId(p.id, l.partId));
                 let badge = l.action === '入库' ? '<span class="badge badge-success">入库</span>' : '<span class="badge badge-danger">出库</span>';
+                const hasPrice = l.unitPrice != null && l.unitPrice !== '';
                 tbody.innerHTML += `<tr>
-                    <td>${esc(l.date)}</td><td><strong>${esc(part ? part.desc : '未知备件')}</strong></td><td>${badge}</td><td>${esc(l.qty)}</td><td>${esc(l.operator||'')}</td><td>${esc(l.note||'')}</td>
+                    <td>${esc(l.date)}</td><td><strong>${esc(part ? part.desc : '未知备件')}</strong></td><td>${badge}</td><td>${esc(l.qty)}</td><td>${hasPrice ? '¥' + (Number(l.unitPrice) || 0).toLocaleString() : '-'}</td><td>${hasPrice ? '¥' + ((Number(l.qty) || 0) * (Number(l.unitPrice) || 0)).toLocaleString() : '-'}</td><td>${esc(l.operator||'')}</td><td>${esc(l.note||'')}</td>
                     <td><button class="btn btn-danger btn-sm" onclick="deleteItem('spareLogs', ${labInlineId(l.id)})">删除</button></td>
                 </tr>`;
             });
@@ -1134,7 +1208,10 @@
             }
             const nextQty = action === '入库' ? currentQty + qty : currentQty - qty;
             if (!Number.isFinite(nextQty) || nextQty < 0) { showToast('出入库后库存无效', 'error'); return; }
-            const data = { partId: part.id, date, action, qty, operator: document.getElementById('sl-operator').value,
+            const priceRaw = document.getElementById('sl-price').value;
+            const unitPrice = priceRaw === '' ? (Number(part.price) || 0) : Number(priceRaw);
+            if (!Number.isFinite(unitPrice) || unitPrice < 0) { showToast('单价快照必须是大于或等于 0 的有效数字', 'error'); return; }
+            const data = { partId: part.id, date, action, qty, unitPrice, operator: document.getElementById('sl-operator').value,
                 note: document.getElementById('sl-note').value, id: Date.now() };
             if (DB.spareLogs.some(item => String(item.id) === String(data.id))) {
                 showToast('出入库流水编号冲突，请重试保存', 'error'); return;
@@ -1173,10 +1250,15 @@
             let filtered = DB.testDiary.filter(t => (t.unit||'').toLowerCase().includes(search) || (t.operator||'').toLowerCase().includes(search) || (t.error||'').toLowerCase().includes(search));
             filtered.forEach(t => {
                 tbody.innerHTML += `<tr>
-                    <td>${esc(t.start||'')}</td><td>${esc(t.end||'')}</td><td>${esc(t.duration||0)}</td><td><strong>${esc(t.unit||'')}</strong></td><td>${esc(t.operator||'')}</td><td>${esc(t.sap||'')}</td><td>${esc(t.result||'')}</td><td>${esc(t.cycle||'')}</td><td>${esc(t.error || '-')}</td><td>${esc(t.errorDesc || '-')}</td>
+                    <td>${esc(t.start||'')}</td><td>${esc(t.end||'')}</td><td>${esc(t.duration||0)}</td><td><strong>${esc(t.unit||'')}</strong></td><td>${esc(t.operator||'')}</td><td>${esc(t.sap||'')}</td><td>${esc(t.result||'')}</td><td>${esc(t.cycle||'')}</td><td>${esc(t.error || '-')}</td><td>${esc(t.errorDesc || '-')}</td><td>${t.cost != null && t.cost !== '' ? '¥' + (Number(t.cost) || 0).toLocaleString() : '-'}</td>
                     <td><button class="btn btn-outline btn-sm" onclick="editTestDiary(${labInlineId(t.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('testDiary', ${labInlineId(t.id)})">删除</button></td>
                 </tr>`;
             });
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="12">${DB.testDiary.length
+                    ? '没有符合当前搜索条件的测试记录。'
+                    : '暂无测试台日志记录。请点击上方「新增测试记录」登记第一次台架测试；运行成本为可选字段。'}</td></tr>`;
+            }
 
             let treemapChart = initChart('chart-testDiary-treemap');
             if(treemapChart) {
@@ -1217,7 +1299,7 @@
                 });
             }
         }
-        function editTestDiary(id) { let t = DB.testDiary.find(x => sameLabId(x.id, id)); if(!t){showToast('测试记录不存在，请刷新后重试','error');return;} document.getElementById('t-id').value=t.id; document.getElementById('t-start').value=t.start||''; document.getElementById('t-end').value=t.end||''; document.getElementById('t-duration').value=t.duration||0; document.getElementById('t-unit').value=t.unit||''; document.getElementById('t-operator').value=t.operator||''; document.getElementById('t-sap').value=t.sap||''; document.getElementById('t-result').value=t.result||''; document.getElementById('t-cycle').value=t.cycle||''; document.getElementById('t-error').value=t.error||''; document.getElementById('t-errorDesc').value=t.errorDesc||''; openModal('modal-testDiary'); }
+        function editTestDiary(id) { let t = DB.testDiary.find(x => sameLabId(x.id, id)); if(!t){showToast('测试记录不存在，请刷新后重试','error');return;} document.getElementById('t-id').value=t.id; document.getElementById('t-start').value=t.start||''; document.getElementById('t-end').value=t.end||''; document.getElementById('t-duration').value=t.duration||0; document.getElementById('t-unit').value=t.unit||''; document.getElementById('t-operator').value=t.operator||''; document.getElementById('t-sap').value=t.sap||''; document.getElementById('t-result').value=t.result||''; document.getElementById('t-cycle').value=t.cycle||''; document.getElementById('t-error').value=t.error||''; document.getElementById('t-errorDesc').value=t.errorDesc||''; document.getElementById('t-cost').value=t.cost ?? ''; openModal('modal-testDiary'); }
         async function saveTestDiary() {
             if (typeof withSaveGuard === 'function') return withSaveGuard('modal-testDiary', saveTestDiaryImpl);
             return saveTestDiaryImpl();
@@ -1236,6 +1318,8 @@
                 error: document.getElementById('t-error').value,
                 errorDesc: document.getElementById('t-errorDesc').value
             };
+            const costRaw = document.getElementById('t-cost').value;
+            if (costRaw !== '') data.cost = Number(costRaw);
             try {
                 const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
                 Object.assign(data, domain.validateTestDiaryEntry(data));
@@ -1248,6 +1332,7 @@
                 const i = DB.testDiary.findIndex(x => String(x.id) === String(id));
                 if (i < 0) { showToast('测试记录不存在，未保存', 'error'); return; }
                 DB.testDiary[i] = { ...DB.testDiary[i], ...data };
+                if (!Object.hasOwn(data, 'cost')) delete DB.testDiary[i].cost;
             } else {
                 data.id = Date.now();
                 if (DB.testDiary.some(x => String(x.id) === String(data.id))) {
@@ -1464,7 +1549,7 @@
                         : '') + '</li>'
                 ).join('');
                 return '<tr>' +
-                    '<td><strong>' + esc(record.title) + '</strong><small>' + esc(record.id) + '</small><details class="experiment-purpose"><summary>查看目的与说明</summary><p>' + esc(record.purpose) + '</p></details></td>' +
+                    '<td><strong>' + esc(record.title) + '</strong><small>' + esc(record.id) + '</small>' + (record.budget != null ? '<small>计划预算 ¥' + (Number(record.budget) || 0).toLocaleString() + '</small>' : '') + '<details class="experiment-purpose"><summary>查看目的与说明</summary><p>' + esc(record.purpose) + '</p></details></td>' +
                     '<td><strong>' + esc(asset?.name || ('设备编号 ' + record.assetId)) + '</strong><small class="' + readinessClass + '">' + esc(readiness.label) + ' · ' + esc(readiness.message) + '</small></td>' +
                     '<td>' + esc(record.plannedDate) + '</td>' +
                     '<td>' + esc(record.owner) + '</td>' +
@@ -1499,6 +1584,7 @@
                     throw new Error('请选择当前设备台账中的有效设备');
                 }
                 const domain = await import('../../src/domain/index.js?v=20261023-experiment-preflight-v1');
+                const budgetRaw = document.getElementById('experiment-budget').value;
                 const record = domain.createExperimentRecord({
                     id: 'EXP-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
                     title: document.getElementById('experiment-title').value,
@@ -1507,7 +1593,8 @@
                     owner: document.getElementById('experiment-owner').value,
                     purpose: document.getElementById('experiment-purpose').value,
                     actor: document.getElementById('experiment-creator').value,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    ...(budgetRaw === '' ? {} : { budget: Number(budgetRaw) })
                 });
                 if (DB.experiments.some(item => item.id === record.id)) throw new Error('实验编号已存在，请重试');
                 const previousDB = snapshotLabDB();
@@ -1623,6 +1710,7 @@
             let years = new Set();
             DB.gases.forEach(g => years.add(g.year));
             DB.maintLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
+            (DB.calibrationLogs || []).forEach(l => years.add(new Date(l.calibratedAt).getFullYear()));
             DB.spareLogs.forEach(l => years.add(new Date(l.date).getFullYear()));
             DB.spareParts.forEach(s => years.add(new Date(s.update || getToday()).getFullYear()));
             DB.testDiary.forEach(t => years.add(diaryYear(t.start)));
@@ -1642,13 +1730,21 @@
 
             let totalGasCost = DB.gases.filter(g => yearFilter(g.year)).reduce((sum, g) => sum + (Number(g.cost) || 0) + (Number(g.rent) || 0) + (Number(g.freight) || 0), 0);
             let totalMaintCost = DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
+            let totalCalCost = (DB.calibrationLogs || []).filter(l => yearFilter(new Date(l.calibratedAt).getFullYear())).reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
             let totalSpareCost = DB.spareParts.filter(s => yearFilter(new Date(s.update || getToday()).getFullYear())).reduce((sum, s) => sum + ((Number(s.qty) || 0) * (Number(s.price) || 0)), 0);
+            // Movement amounts use each log's unit-price snapshot; they are
+            // cash-flow figures and stay separate from the stock valuation.
+            let sparePurchase = DB.spareLogs.filter(l => l.action === '入库' && yearFilter(new Date(l.date).getFullYear())).reduce((sum, l) => sum + ((Number(l.qty) || 0) * (Number(l.unitPrice) || 0)), 0);
+            let spareIssue = DB.spareLogs.filter(l => l.action === '出库' && yearFilter(new Date(l.date).getFullYear())).reduce((sum, l) => sum + ((Number(l.qty) || 0) * (Number(l.unitPrice) || 0)), 0);
+            let totalAssetValue = DB.maintenance.reduce((sum, m) => sum + ((Number(m.purchasePrice) || 0) * (Number(m.qty) || 0)), 0);
             let totalHours = DB.testDiary.filter(t => yearFilter(diaryYear(t.start))).reduce((sum, t) => sum + (Number(t.duration) || 0), 0);
-            let totalCost = totalGasCost + totalMaintCost;
-            
+            let totalCost = totalGasCost + totalMaintCost + totalCalCost;
+
             document.getElementById('year-total-cost').innerText = '¥' + totalCost.toLocaleString();
             document.getElementById('year-maint-count').innerText = DB.maintenance.length + ' 台';
             document.getElementById('year-spare-cost').innerText = '¥' + totalSpareCost.toLocaleString();
+            const assetValueCard = document.getElementById('year-asset-value');
+            if (assetValueCard) assetValueCard.innerText = '¥' + totalAssetValue.toLocaleString();
             document.getElementById('year-test-hours').innerText = totalHours + ' h';
 
             let treemapChart = initChart('chart-yearly-treemap');
@@ -1660,8 +1756,8 @@
                         data: [
                             { name: '气体费用', value: totalGasCost },
                             { name: '维保费用', value: totalMaintCost },
-                            { name: '备件总值', value: totalSpareCost }
-                        ],
+                            { name: '校准费用', value: totalCalCost }
+                        ].filter(item => item.value > 0),
                         label: { formatter: '{b}\n¥{c}' },
                         itemStyle: { borderColor: '#fff' }
                     }]
@@ -1689,42 +1785,105 @@
             container.innerHTML = `<table><thead><tr><th>类别</th><th>关键指标</th><th>数量/费用</th></tr></thead><tbody>
                 <tr><td>气体使用</td><td>总费用</td><td>¥${totalGasCost.toLocaleString()}</td></tr>
                 <tr><td>设备维保</td><td>维保次数 / 总费用</td><td>${DB.maintLogs.filter(l => yearFilter(new Date(l.date).getFullYear())).length} 次 / ¥${totalMaintCost.toLocaleString()}</td></tr>
+                <tr><td>设备校准</td><td>校准次数 / 校准费用</td><td>${(DB.calibrationLogs || []).filter(l => yearFilter(new Date(l.calibratedAt).getFullYear())).length} 次 / ¥${totalCalCost.toLocaleString()}</td></tr>
+                <tr><td>备件采购与领用</td><td>入库采购额 / 领用出库额（按流水单价快照）</td><td>¥${sparePurchase.toLocaleString()} / ¥${spareIssue.toLocaleString()}</td></tr>
                 <tr><td>备件库存</td><td>所选年度更新记录的当前库存估值（非年度采购额）</td><td>¥${totalSpareCost.toLocaleString()}</td></tr>
+                <tr><td>设备资产</td><td>在册资产总值（购入价 × 数量）</td><td>¥${totalAssetValue.toLocaleString()}</td></tr>
                 <tr><td>测试台日志</td><td>总运行时长 / 故障次数</td><td>${totalHours} h / ${DB.testDiary.filter(t => yearFilter(diaryYear(t.start)) && t.error).length} 次</td></tr>
             </tbody></table>`;
         }
 
         // ==================== 11. 系统全量设置 ====================
-        function renderSystem() { let table = document.getElementById('sys-table-select').value; renderSystemTable(table); }
+        // Append-only / lifecycle-governed tables are view-only here: their
+        // writes must go through the business pages that validate them.
+        const READ_ONLY_SYSTEM_TABLES = new Set(['calibrationLogs', 'experiments']);
+        function renderSystem() {
+            let table = document.getElementById('sys-table-select').value;
+            renderSystemTable(table);
+            updateDemoSeedEntry();
+        }
         function renderSystemTable(table) {
             let container = document.getElementById('sys-table-container');
             let data = DB[table];
             if (!data || data.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">暂无数据，请点击上方按钮新增</p>'; return; }
+            const readOnly = READ_ONLY_SYSTEM_TABLES.has(table);
             let keys = Object.keys(data[0]);
             let html = '<table><thead><tr>' + keys.map(k => `<th>${esc(k)}</th>`).join('') + '<th>操作</th></tr></thead><tbody>';
-            data.forEach(row => {
+            data.forEach(sourceRow => {
+                // Object values (e.g. experiment audit history) render as JSON
+                // instead of "[object Object]"; primitives render as before.
+                const row = {};
+                keys.forEach(k => {
+                    const value = sourceRow[k];
+                    row[k] = value !== undefined && value !== null && typeof value === 'object'
+                        ? JSON.stringify(value) : value;
+                });
                 html += '<tr>' + keys.map(k => `<td>${esc(row[k] !== undefined ? row[k] : '')}</td>`).join('');
-                html += `<td><button class="btn btn-outline btn-sm" onclick="systemEdit('${table}', ${labInlineId(row.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('${table}', ${labInlineId(row.id)}); renderSystemTable('${table}');">删除</button></td></tr>`;
+                html += readOnly
+                    ? '<td><span style="color:var(--text-muted)">只读</span></td></tr>'
+                    : `<td><button class="btn btn-outline btn-sm" onclick="systemEdit('${table}', ${labInlineId(row.id)})">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteItem('${table}', ${labInlineId(row.id)}); renderSystemTable('${table}');">删除</button></td></tr>`;
             });
             html += '</tbody></table>';
             container.innerHTML = html;
         }
-        function systemEdit(table, id) { 
-            if (table === 'gases') editGas(id); 
-            if (table === 'maintenance') editMaint(id); 
+        function systemEdit(table, id) {
+            if (table === 'calibrationLogs') { showToast('校准记录为只追加台账，请在设备维保页的「设备校准记录」中查看'); return; }
+            if (table === 'experiments') { showToast('实验计划请在「实验计划与生命周期」页管理'); return; }
+            if (table === 'gases') editGas(id);
+            if (table === 'maintenance') editMaint(id);
             if (table === 'maintLogs') editMaintLog(id);
-            if (table === 'spareParts') editSpare(id); 
+            if (table === 'spareParts') editSpare(id);
             if (table === 'spareLogs') { showToast('流水记录请直接删除或新增'); }
-            if (table === 'testDiary') editTestDiary(id); 
+            if (table === 'testDiary') editTestDiary(id);
         }
-        function systemAddNew() { 
-            let table = document.getElementById('sys-table-select').value; 
+        function systemAddNew() {
+            let table = document.getElementById('sys-table-select').value;
+            if (table === 'calibrationLogs') { showToast('校准记录请在设备维保页的「设备校准记录」中登记'); return; }
+            if (table === 'experiments') { showToast('实验计划请在「实验计划与生命周期」页创建'); return; }
             if (table === 'gases') openGasModal();
-            if (table === 'maintenance') openMaintModal(); 
+            if (table === 'maintenance') openMaintModal();
             if (table === 'maintLogs') openMaintLogModal();
-            if (table === 'spareParts') openSpareModal(); 
+            if (table === 'spareParts') openSpareModal();
             if (table === 'spareLogs') openSpareLogModal();
-            if (table === 'testDiary') openTestDiaryModal(); 
+            if (table === 'testDiary') openTestDiaryModal();
+        }
+        function updateDemoSeedEntry() {
+            const button = document.getElementById('btn-load-demo-seed');
+            const hint = document.getElementById('demo-seed-hint');
+            if (!button) return;
+            const hasRows = ledgerHasBusinessRows();
+            button.disabled = storageRecoveryRequired || hasRows;
+            if (hint) {
+                hint.textContent = storageRecoveryRequired
+                    ? '缓存待恢复，暂不可载入演示数据。'
+                    : hasRows
+                        ? '当前账本已有业务数据，演示数据只能载入空账本。'
+                        : '当前账本为空，可以载入演示数据。';
+            }
+        }
+        async function loadDemoSeedData() {
+            if (storageRecoveryRequired) {
+                showToast('缓存待恢复，已阻止载入演示数据；请先恢复有效备份。', 'error');
+                return;
+            }
+            if (ledgerHasBusinessRows()) {
+                showToast('当前账本已有业务数据，演示数据只能载入空账本', 'error');
+                return;
+            }
+            if (!confirm('载入内置演示数据？演示数据是未经业务核验的示例记录，不得用于采购、结算、校准或安全判断。')) return;
+            const demoLedger = JSON.parse(JSON.stringify(defaultData));
+            // An explicitly requested demo load is a deliberate choice: the
+            // startup migration that strips untouched legacy demo rows must
+            // not silently undo it on the next page load.
+            demoLedger.demoSeedExplicitlyLoaded = true;
+            const previousDB = snapshotLabDB();
+            DB = demoLedger;
+            if (!await commitLabMutation(previousDB, '演示数据载入失败，已恢复原空账本')) {
+                renderSystem();
+                return;
+            }
+            showToast('演示数据已载入；示例记录未经业务核验，请勿作为真实台账使用');
+            renderSystem();
         }
 
         // ==================== 12. 导出与删除 ====================
@@ -1899,6 +2058,19 @@
             if ((value.maintLogs || []).some(row =>
                 !maintenanceIds.has(labIdKey(row.eqId)) ||
                 !isValidDateOnly(row.date) || !Number.isFinite(Number(row.cost)) || Number(row.cost) < 0)) return false;
+            // Batch-4 amount fields are optional: backups written before they
+            // existed simply omit them and must still import (treated as 0/empty).
+            if (value.maintenance.some(row =>
+                (row.purchasePrice !== undefined && row.purchasePrice !== null && row.purchasePrice !== '' &&
+                    (typeof row.purchasePrice !== 'number' || !Number.isFinite(row.purchasePrice) || row.purchasePrice < 0)) ||
+                (row.purchaseDate !== undefined && row.purchaseDate !== null && row.purchaseDate !== '' &&
+                    !isValidDateOnly(row.purchaseDate)))) return false;
+            if ((value.experiments || []).some(row =>
+                row.budget !== undefined && row.budget !== null &&
+                (typeof row.budget !== 'number' || !Number.isFinite(row.budget) || row.budget < 0))) return false;
+            if (value.testDiary.some(row =>
+                row.cost !== undefined && row.cost !== null &&
+                (!Number.isFinite(Number(row.cost)) || Number(row.cost) < 0))) return false;
             const calibrationReferences = new Set();
             if ((value.calibrationLogs || []).some(row => {
                 const reference = JSON.stringify([labIdKey(row.assetId), String(row.organization || '').trim(), String(row.certificateNo || '').trim()]);
@@ -1934,7 +2106,9 @@
                     typeof row.organization !== 'string' || !row.organization.trim() ||
                     typeof row.operator !== 'string' || !row.operator.trim() ||
                     !['pass', 'fail'].includes(row.result) ||
-                    (row.notes !== undefined && typeof row.notes !== 'string');
+                    (row.notes !== undefined && typeof row.notes !== 'string') ||
+                    (row.cost !== undefined && row.cost !== null && row.cost !== '' &&
+                        (typeof row.cost !== 'number' || !Number.isFinite(row.cost) || row.cost < 0));
             })) return false;
             const sparePartIds = new Set(value.spareParts.map(row => String(row.id)));
             if (value.spareParts.some(row =>
@@ -1946,6 +2120,8 @@
                 !sparePartIds.has(String(row.partId)) ||
                 !['入库', '出库'].includes(row.action) ||
                 !Number.isFinite(Number(row.qty)) || Number(row.qty) <= 0 ||
+                (row.unitPrice !== undefined && row.unitPrice !== null &&
+                    (!Number.isFinite(Number(row.unitPrice)) || Number(row.unitPrice) < 0)) ||
                 !isValidDateOnly(row.date))) return false;
             return true;
         }

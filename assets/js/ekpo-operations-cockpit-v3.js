@@ -139,12 +139,33 @@
       detail:'当前台账标记为需要补充。', action:'spareParts', actionLabel:'打开备件台账'
     }));
 
+    // Amount cards reuse the yearly-statistics definitions exactly: recorded
+    // cost = gas + maintenance + calibration for the current calendar year,
+    // stock valuation = qty × current unit price, purchase amount = inbound
+    // movement qty × the unit-price snapshot stored on each movement.
+    const spareLogs = rows('spareLogs');
+    const currentYear = new Date().getFullYear();
+    const yearlyGasCost = gases.filter(row => Number(row && row.year) === currentYear)
+      .reduce((sum, row) => sum + (Number(row.cost) || 0) + (Number(row.rent) || 0) + (Number(row.freight) || 0), 0);
+    const yearlyMaintCost = maintenanceLogs.filter(row => new Date(row && row.date).getFullYear() === currentYear)
+      .reduce((sum, row) => sum + (Number(row.cost) || 0), 0);
+    const yearlyCalCost = calibrations.filter(row => new Date(row && row.calibratedAt).getFullYear() === currentYear)
+      .reduce((sum, row) => sum + (Number(row.cost) || 0), 0);
+    const yearlyRecordedCost = yearlyGasCost + yearlyMaintCost + yearlyCalCost;
+    const stockValuation = spares.reduce((sum, row) => sum + (Number(row && row.qty) || 0) * (Number(row && row.price) || 0), 0);
+    const yearlySparePurchase = spareLogs.filter(row => row && row.action === '入库' && new Date(row.date).getFullYear() === currentYear)
+      .reduce((sum, row) => sum + (Number(row.qty) || 0) * (Number(row.unitPrice) || 0), 0);
+    const money = value => '¥' + Number(value || 0).toLocaleString('zh-CN');
+
     const metrics = [
       {metric:'gas-records',label:'气体资源记录',value:count(gases.length),numeric:gases.length,foot:gases.length ? '本机已登记批次' : '尚未导入气体批次',icon:'H₂',key:'gases'},
       {metric:'equipment',label:'设备资产',value:count(equipment.length),numeric:equipment.length,foot:equipment.length ? '本机设备台账条目' : '尚未导入设备资产',icon:'EQ',key:'maintenance'},
       {metric:'calibration',label:'有效校准证据',value:equipment.length ? (calibratedEquipment + ' / ' + equipment.length) : '—',numeric:calibratedEquipment,foot:equipment.length ? '按每台设备最新记录的结论与有效期判定' : '设备和证书均未导入',icon:'QA',key:'maintenance:calibration'},
       {metric:'test-records',label:'测试运行日志',value:count(diary.length),numeric:diary.length,foot:diary.length ? (failedTests.length + ' 条含异常描述') : '尚无测试原始日志',icon:'RUN',key:'testDiary'},
-      {metric:'active-experiments',label:'实验计划',value:count(experiments.length),numeric:experiments.length,foot:experiments.length ? '本机已登记实验任务' : '尚未登记实验计划',icon:'EXP',key:'experiments'}
+      {metric:'active-experiments',label:'实验计划',value:count(experiments.length),numeric:experiments.length,foot:experiments.length ? '本机已登记实验任务' : '尚未登记实验计划',icon:'EXP',key:'experiments'},
+      {metric:'yearly-cost',label:'本年已记录费用',value:money(yearlyRecordedCost),numeric:yearlyRecordedCost,foot:'气体 + 维保 + 校准，与年度统计同口径',icon:'¥',key:'yearly'},
+      {metric:'stock-valuation',label:'当前库存估值',value:money(stockValuation),numeric:stockValuation,foot:'备件库存数量 × 当前单价',icon:'INV',key:'spareParts'},
+      {metric:'yearly-spare-purchase',label:'年度备件采购额',value:money(yearlySparePurchase),numeric:yearlySparePurchase,foot:'本年入库流水数量 × 单价快照',icon:'IN',key:'spareParts:log'}
     ];
 
     const metricHtml = metrics.map((item,index) =>
