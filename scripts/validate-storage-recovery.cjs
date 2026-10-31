@@ -15,6 +15,40 @@ const importStart = html.indexOf('function importFromLocal(event)');
 const importEnd = html.indexOf('// ==================== 初始化', importStart);
 if (importStart < 0 || importEnd < 0) throw new Error('importFromLocal source not found');
 const importSource = html.slice(importStart, importEnd);
+const sizeLimitDeclaration = html.match(/const MAX_LAB_BACKUP_BYTES = [^;]+;/);
+assert.ok(sizeLimitDeclaration, 'JSON backup import must declare a finite upload size limit');
+assert.ok(importSource.includes('!Number.isSafeInteger(file.size)') &&
+  importSource.includes('file.size > MAX_LAB_BACKUP_BYTES'),
+  'backup import must reject unknown, invalid and oversized File sizes before creating FileReader');
+function runImportSizeCheck(size) {
+  let readerCreations = 0;
+  let readCalls = 0;
+  const messages = [];
+  const context = {
+    FileReader: class {
+      constructor() { readerCreations++; }
+      readAsText() { readCalls++; }
+    },
+    showToast: (message, type) => messages.push({message, type})
+  };
+  vm.createContext(context);
+  vm.runInContext(sizeLimitDeclaration[0] + '\n' + importSource, context);
+  const event = {target:{files:[{size}], value:'selected'}};
+  context.importFromLocal(event);
+  return {readerCreations, readCalls, messages, inputValue:event.target.value,
+    limit:vm.runInContext('MAX_LAB_BACKUP_BYTES', context)};
+}
+const oversizedImport = runImportSizeCheck(16 * 1024 * 1024 + 1);
+assert.equal(oversizedImport.readerCreations, 0, 'oversized backup must be rejected before allocating FileReader');
+assert.equal(oversizedImport.readCalls, 0, 'oversized backup must never be read into memory');
+assert.equal(oversizedImport.inputValue, '', 'rejected file selection must be cleared');
+assert.equal(oversizedImport.messages.length, 1, 'oversized backup rejection must be visible');
+const invalidSizeImport = runImportSizeCheck(undefined);
+assert.equal(invalidSizeImport.readerCreations, 0, 'unknown file size must fail closed');
+assert.equal(invalidSizeImport.inputValue, '', 'invalid-size file selection must be cleared');
+const boundaryImport = runImportSizeCheck(16 * 1024 * 1024);
+assert.equal(boundaryImport.readerCreations, 1, 'a backup exactly at the documented size limit may be read');
+assert.equal(boundaryImport.readCalls, 1, 'the boundary-sized backup must be passed to FileReader');
 const importValidation = importSource.indexOf('if (!isValidLabBackup(imported))');
 const lockRelease = importSource.indexOf('storageRecoveryRequired = false;');
 const importCommit = importSource.indexOf('await commitLabMutation(previousDB');
