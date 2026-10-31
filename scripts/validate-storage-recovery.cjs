@@ -32,7 +32,7 @@ function runImportSizeCheck(size) {
     showToast: (message, type) => messages.push({message, type})
   };
   vm.createContext(context);
-  vm.runInContext(sizeLimitDeclaration[0] + '\\n' + importSource, context);
+  vm.runInContext(sizeLimitDeclaration[0] + '\n' + importSource, context);
   const event = {target:{files:[{size}], value:'selected'}};
   context.importFromLocal(event);
   return {readerCreations, readCalls, messages, inputValue:event.target.value,
