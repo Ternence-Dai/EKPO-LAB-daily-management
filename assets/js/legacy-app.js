@@ -2126,9 +2126,18 @@
             return true;
         }
 
-        function importFromLocal(event) {
+        const MAX_LAB_BACKUP_BYTES = 16 * 1024 * 1024;
+
+function importFromLocal(event) {
             const file = event && event.target && event.target.files && event.target.files[0];
             if (!file) return;
+            // JSON.parse and FileReader can amplify an untrusted upload into much larger memory use.
+            // Bound the input before allocating a reader or touching the current database.
+            if (!Number.isSafeInteger(file.size) || file.size < 0 || file.size > MAX_LAB_BACKUP_BYTES) {
+                event.target.value = '';
+                showToast('备份文件大小无效或超过 16 MiB，已拒绝导入；原数据未更改。', 'error');
+                return;
+            }
             const reader = new FileReader();
             reader.onload = async function(e) {
                 const previousDB = snapshotLabDB();
